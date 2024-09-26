@@ -135,8 +135,9 @@ class Vehicle(sim.Component):
     def setup(self, from_direction, turn, color, r=5, v=1):
         self.from_direction = from_direction
         self.turn = turn
+        road_pos1=0
         self.xfrom = border_pos
-        self.yfrom = road_pos
+        self.yfrom = road_pos1
         self.color = color
         self.v = v
         self.r = r  # ***
@@ -144,14 +145,14 @@ class Vehicle(sim.Component):
         if turn == Turns.straight:
             self.l_start_bend = self.l_end_bend = self.l_end = road_length
             self.xto = -border_pos
-            self.yto = road_pos
+            self.yto = road_pos1
         else:
             arclen = r * math.pi / 2
             if turn == Turns.right:
-                self.xto = road_pos
+                self.xto = road_pos1
                 self.yto = border_pos
             if turn == Turns.left:
-                self.xto = -road_pos
+                self.xto = -road_pos1
                 self.yto = -border_pos
             self.l_start_bend = border_pos - self.xto - r
             self.l_end_bend = self.l_start_bend + arclen
@@ -355,16 +356,19 @@ with sim.over3d():
 road_color = "30%gray"
 
 for direction in Directions:
-    for sign in (-1, 1):
-        x0, y0 = rotate(road_length / 2, sign * y_road_left * 0.1, angle=direction_to_angle[direction])
-        x1, y1 = rotate(light_pos1, sign * y_road_left * 1.9, angle=direction_to_angle[direction])
+    # for sign in (-1, 1):
+        x0, y0 = rotate(road_length / 2, y_road_left, angle=direction_to_angle[direction])#调整了道路位置
+        x1, y1 = rotate(light_pos1, y_road_right, angle=direction_to_angle[direction])
         sim.AnimateRectangle(spec=(x0, y0, x1, y1), linewidth=0, fillcolor=road_color)
         sim.Animate3dRectangle(x0=x0, y0=y0, x1=x1, y1=y1, color=road_color)
 
+        
+
 tl = TrafficLight()
 
-for direction in Directions:
-    VehicleGenerator(from_direction=direction, color=direction_to_color[direction])
+VehicleGenerator(from_direction=direction.south,color=direction_to_color[direction.south])#只在南面添加车辆生成
+# for direction in Directions:#十字路口，给每个方向都添加车辆生成
+#     VehicleGenerator(from_direction=direction, color=direction_to_color[direction])
 
 make_video=True
 if make_video:
