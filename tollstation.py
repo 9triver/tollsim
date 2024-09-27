@@ -240,25 +240,21 @@ class Vehicle(sim.Component):
 
 class TrafficLight(sim.Component):
     def setup(self):
-        self.light = {}
-        for direction, angle in direction_to_angle.items():
+            self.light = {}
+            direction=Directions.south
             self.light[direction] = Colors.red
             for distance, this_color in enumerate(Colors):
-                x, y = rotate(light_pos1 + distance, 2.2 * road_pos, angle=angle)
-                an = sim.AnimateCircle(
-                    radius=0.4,
-                    x=x,
-                    y=y,
-                    fillcolor=lambda arg, t: color_to_colorspec[arg.this_color] if self.light[arg.direction] == arg.this_color else "50%gray",
+                x0, y0 = rotate(light_pos1, 1*road_pos, angle=direction_to_angle[direction])
+                x1, y1 = rotate(light_pos1, -1*road_pos,angle=direction_to_angle[direction])
+                an = sim.AnimateRectangle(
+                    spec=(x0, y0, x1, y1),fillcolor=lambda arg, t: color_to_colorspec[arg.this_color] if self.light[arg.direction] == arg.this_color else "50%gray",
                 )
                 an.direction = direction
                 an.this_color = this_color
-                x, y = rotate(light_pos1, 2.2 * road_pos, angle=angle)
-                an = sim.Animate3dSphere(
-                    radius=0.4,
-                    x=x,
-                    y=y,
-                    z=2.5 - distance,
+                x0, y0 = rotate(light_pos1, 1*road_pos, angle=direction_to_angle[direction])
+                x1, y1 = rotate(light_pos1, -1*road_pos,angle=direction_to_angle[direction])
+                an = sim.Animate3dBar(
+                    x0=x0, y0=y0, z0=distance*2,x1=x1, y1=y1,z1=distance*2,bar_width=0.4,
                     color=lambda arg, t: color_to_colorspec[arg.this_color] if self.light[arg.direction] == arg.this_color else "50%gray",
                 )
                 an.direction = direction
@@ -315,8 +311,8 @@ road_length = 100
 road_inter_distance = 4
 light_pos = 10
 
-red_red_duration = 3
-red_green_duration = 30
+red_red_duration = 10
+red_green_duration = 3
 red_amber_duration = 3
 
 resolution = 1
@@ -341,16 +337,16 @@ x_road_down = -road_pos
 light_pos1 = light_pos - length_boundary / 2 - resolution
 
 y_text = env.height() - 80
-sim.AnimateText("Lights!", x=12, y=y_text, screen_coordinates=True, textcolor="white", font="mono", fontsize=30)
-sim.AnimateCircle(radius=6, x=39, y=y_text + 30, fillcolor=lambda: color_to_colorspec[tl.light[Directions.west]], linewidth=0, screen_coordinates=True)
-sim.AnimateCircle(radius=6, x=129, y=y_text + 5, fillcolor=lambda: color_to_colorspec[tl.light[Directions.north]], linewidth=0, screen_coordinates=True)
-sim.AnimateText("powered by salabim", x=12, y=y_text - 9, screen_coordinates=True, font="narrow", textcolor="white", fontsize=14, text_anchor="w")
+# sim.AnimateText("Lights!", x=12, y=y_text, screen_coordinates=True, textcolor="white", font="mono", fontsize=30)
+# sim.AnimateCircle(radius=6, x=39, y=y_text + 30, fillcolor=lambda: color_to_colorspec[tl.light[Directions.west]], linewidth=0, screen_coordinates=True)
+# sim.AnimateCircle(radius=6, x=129, y=y_text + 5, fillcolor=lambda: color_to_colorspec[tl.light[Directions.north]], linewidth=0, screen_coordinates=True)
+# sim.AnimateText("powered by salabim", x=12, y=y_text - 9, screen_coordinates=True, font="narrow", textcolor="white", fontsize=14, text_anchor="w")
 
-with sim.over3d():
-    sim.AnimateText("Lights!", x=12, y=y_text, screen_coordinates=True, textcolor="white", font="mono", fontsize=30)
-    sim.AnimateCircle(radius=6, x=39, y=y_text + 30, fillcolor=lambda: color_to_colorspec[tl.light[Directions.west]], linewidth=0, screen_coordinates=True)
-    sim.AnimateCircle(radius=6, x=129, y=y_text + 5, fillcolor=lambda: color_to_colorspec[tl.light[Directions.north]], linewidth=0, screen_coordinates=True)
-    sim.AnimateText("powered by salabim", x=12, y=y_text - 9, screen_coordinates=True, font="narrow", textcolor="white", fontsize=14, text_anchor="w")
+# with sim.over3d():
+#     sim.AnimateText("Lights!", x=12, y=y_text, screen_coordinates=True, textcolor="white", font="mono", fontsize=30)
+#     sim.AnimateCircle(radius=6, x=39, y=y_text + 30, fillcolor=lambda: color_to_colorspec[tl.light[Directions.west]], linewidth=0, screen_coordinates=True)
+#     sim.AnimateCircle(radius=6, x=129, y=y_text + 5, fillcolor=lambda: color_to_colorspec[tl.light[Directions.north]], linewidth=0, screen_coordinates=True)
+#     sim.AnimateText("powered by salabim", x=12, y=y_text - 9, screen_coordinates=True, font="narrow", textcolor="white", fontsize=14, text_anchor="w")
 
 
 road_color = "30%gray"
