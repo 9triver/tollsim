@@ -20,7 +20,6 @@ class Turns(enum.Enum):  # order is important as it drives the turn Pdf
 
 class Colors(enum.Enum):  # order is important for display of the trafiic lights
     red = enum.auto()
-    amber = enum.auto()
     green = enum.auto()
 
 
@@ -28,7 +27,7 @@ PositionInfo = collections.namedtuple("position_info", "x y angle is_straight")
 
 direction_to_angle = {Directions.east: 0, Directions.north: math.radians(90), Directions.west: math.radians(180), Directions.south: math.radians(270)}
 direction_to_color = {Directions.east: "red", Directions.north: "green", Directions.west: "blue", Directions.south: "purple"}
-color_to_colorspec = {Colors.green: "lime", Colors.amber: "yellow", Colors.red: "red"}
+color_to_colorspec = {Colors.green: "lime",Colors.red: "red"}
 
 
 def rotate(x, y, angle):
@@ -127,7 +126,7 @@ class Vehicle(sim.Component):
     def has_to_stop(self):  # this should (and will) be only called when none of the tryclaims overlaps with claims
         if self.l > border_pos - light_pos:
             if not self.passed_light:
-                if tl.light[self.from_direction] in (Colors.amber, Colors.red):
+                if tl.light[self.from_direction] is Colors.red:
                     return True
                 self.passed_light = True
         return False
@@ -254,7 +253,7 @@ class TrafficLight(sim.Component):
                 x0, y0 = rotate(light_pos1, 1*road_pos, angle=direction_to_angle[direction])
                 x1, y1 = rotate(light_pos1, -1*road_pos,angle=direction_to_angle[direction])
                 an = sim.Animate3dBar(
-                    x0=x0, y0=y0, z0=distance*2,x1=x1, y1=y1,z1=distance*2,bar_width=0.4,
+                    x0=x0, y0=y0, z0=distance*3,x1=x1, y1=y1,z1=distance*3,bar_width=0.4,
                     color=lambda arg, t: color_to_colorspec[arg.this_color] if self.light[arg.direction] == arg.this_color else "50%gray",
                 )
                 an.direction = direction
@@ -265,10 +264,8 @@ class TrafficLight(sim.Component):
             for lightWE, lightNS, duration in (
                 (Colors.red, Colors.red, red_red_duration),
                 (Colors.green, Colors.red, red_green_duration),
-                (Colors.amber, Colors.red, red_amber_duration),
                 (Colors.red, Colors.red, red_red_duration),
                 (Colors.red, Colors.green, red_green_duration),
-                (Colors.red, Colors.amber, red_amber_duration),
             ):
 
                 self.light[Directions.east] = self.light[Directions.west] = lightWE
@@ -312,7 +309,7 @@ road_inter_distance = 4
 light_pos = 10
 
 red_red_duration = 10
-red_green_duration = 3
+red_green_duration = 5
 red_amber_duration = 3
 
 resolution = 1
