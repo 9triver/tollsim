@@ -241,23 +241,24 @@ class TrafficLight(sim.Component):
     def setup(self):
             self.light = {}
             direction=Directions.south
-            self.light[direction] = Colors.red
-            for distance, this_color in enumerate(Colors):
-                x0, y0 = rotate(light_pos1, 1*road_pos, angle=direction_to_angle[direction])
-                x1, y1 = rotate(light_pos1, -1*road_pos,angle=direction_to_angle[direction])
-                an = sim.AnimateRectangle(
-                    spec=(x0, y0, x1, y1),fillcolor=lambda arg, t: color_to_colorspec[arg.this_color] if self.light[arg.direction] == arg.this_color else "50%gray",
-                )
-                an.direction = direction
-                an.this_color = this_color
-                x0, y0 = rotate(light_pos1, 1*road_pos, angle=direction_to_angle[direction])
-                x1, y1 = rotate(light_pos1, -1*road_pos,angle=direction_to_angle[direction])
-                an = sim.Animate3dBar(
-                    x0=x0, y0=y0, z0=distance*3,x1=x1, y1=y1,z1=distance*3,bar_width=0.4,
-                    color=lambda arg, t: color_to_colorspec[arg.this_color] if self.light[arg.direction] == arg.this_color else "50%gray",
-                )
-                an.direction = direction
-                an.this_color = this_color
+            self.light[direction] = Colors.green
+            this_color=Colors.green
+            distance=1
+            x0, y0 = rotate(light_pos1, road_pos, angle=direction_to_angle[direction])
+            x1, y1 = rotate(light_pos1, -road_pos,angle=direction_to_angle[direction])
+            an = sim.AnimateRectangle(
+                spec=(x0, y0, x1, y1),fillcolor=lambda arg, t: color_to_colorspec[arg.this_color] if self.light[arg.direction] == arg.this_color else "red",
+            )
+            an.direction = direction
+            an.this_color = this_color
+            x0, y0 = rotate(light_pos1, road_pos, angle=direction_to_angle[direction])
+            x1, y1 = rotate(light_pos1, -road_pos,angle=direction_to_angle[direction])
+            an = sim.Animate3dBar(
+                x0=x0, y0=y0, z0=distance*3,x1=x1, y1=y1,z1=distance*3,bar_width=0.4,
+                color=lambda arg, t: color_to_colorspec[arg.this_color] if self.light[arg.direction] == arg.this_color else "red",
+            )
+            an.direction = direction
+            an.this_color = this_color
 
     def process(self):
         while True:
