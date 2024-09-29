@@ -6,16 +6,16 @@ import collections
 
 
 class Directions(enum.Enum):  # order is not important
-    east = enum.auto()
-    north = enum.auto()
-    west = enum.auto()
+    # east = enum.auto()
+    # north = enum.auto()
+    # west = enum.auto()
     south = enum.auto()
 
 
 class Turns(enum.Enum):  # order is important as it drives the turn Pdf
     straight = enum.auto()
-    left = enum.auto()
-    right = enum.auto()
+    # left = enum.auto()
+    # right = enum.auto()
 
 
 class Colors(enum.Enum):  # order is important for display of the trafiic lights
@@ -25,8 +25,16 @@ class Colors(enum.Enum):  # order is important for display of the trafiic lights
 
 PositionInfo = collections.namedtuple("position_info", "x y angle is_straight")
 
-direction_to_angle = {Directions.east: 0, Directions.north: math.radians(90), Directions.west: math.radians(180), Directions.south: math.radians(270)}
-direction_to_color = {Directions.east: "red", Directions.north: "green", Directions.west: "blue", Directions.south: "purple"}
+direction_to_angle = {
+    # Directions.east: 0, 
+    # Directions.north: math.radians(90), 
+    # Directions.west: math.radians(180), 
+    Directions.south: math.radians(270)}
+direction_to_color = {
+    # Directions.east: "red", 
+    # Directions.north: "green", 
+    # Directions.west: "blue", 
+    Directions.south: "purple"}
 color_to_colorspec = {Colors.green: "lime",Colors.red: "red"}
 
 
@@ -70,27 +78,27 @@ class Vehicle(sim.Component):
             x = self.xfrom - l
             y = self.yfrom
             angle = 0
-            if self.turn == Turns.left and l > self.l_start_bend - length_vehicle / 2:
-                is_straight = False  # to prevent deadlocks
-        else:
-            target_angle = math.radians(-90 if self.turn == Turns.right else 90)
-            if l > self.l_end_bend:  # straight after bend
-                if self.turn == Turns.right:
-                    x = self.xto
-                    y = self.yto - (self.l_end - l)
-                else:
-                    x = self.xto
-                    y = self.yto + (self.l_end - l)
-                angle = target_angle
-            else:  # in the bend
-                angle = sim.interpolate(l, self.l_start_bend, self.l_end_bend, 0, target_angle)
-                is_straight = False
-                if self.turn == Turns.right:
-                    x = self.xfrom - self.l_start_bend - self.r * math.sin(-angle)
-                    y = self.yfrom + self.r - self.r * math.cos(-angle)
-                else:
-                    x = self.xfrom - self.l_start_bend + self.r * math.sin(-angle)
-                    y = self.yfrom - self.r + self.r * math.cos(-angle)
+        #     if self.turn == Turns.left and l > self.l_start_bend - length_vehicle / 2:
+        #         is_straight = False  # to prevent deadlocks
+        # else:
+        #     target_angle = math.radians(-90 if self.turn == Turns.right else 90)
+        #     if l > self.l_end_bend:  # straight after bend
+        #         if self.turn == Turns.right:
+        #             x = self.xto
+        #             y = self.yto - (self.l_end - l)
+        #         else:
+        #             x = self.xto
+        #             y = self.yto + (self.l_end - l)
+        #         angle = target_angle
+        #     else:  # in the bend
+        #         angle = sim.interpolate(l, self.l_start_bend, self.l_end_bend, 0, target_angle)
+        #         is_straight = False
+        #         if self.turn == Turns.right:
+        #             x = self.xfrom - self.l_start_bend - self.r * math.sin(-angle)
+        #             y = self.yfrom + self.r - self.r * math.cos(-angle)
+        #         else:
+        #             x = self.xfrom - self.l_start_bend + self.r * math.sin(-angle)
+        #             y = self.yfrom - self.r + self.r * math.cos(-angle)
 
         x, y = rotate(x, y, angle=direction_to_angle[self.from_direction])
         angle += direction_to_angle[self.from_direction]
@@ -134,9 +142,8 @@ class Vehicle(sim.Component):
     def setup(self, from_direction, turn, color, r=5, v=1):
         self.from_direction = from_direction
         self.turn = turn
-        road_pos1=0
         self.xfrom = border_pos
-        self.yfrom = road_pos1
+        self.yfrom = road_pos
         self.color = color
         self.v = v
         self.r = r  # ***
@@ -144,14 +151,14 @@ class Vehicle(sim.Component):
         if turn == Turns.straight:
             self.l_start_bend = self.l_end_bend = self.l_end = road_length
             self.xto = -border_pos
-            self.yto = road_pos1
+            self.yto = road_pos
         else:
             arclen = r * math.pi / 2
             if turn == Turns.right:
-                self.xto = road_pos1
+                self.xto = road_pos
                 self.yto = border_pos
             if turn == Turns.left:
-                self.xto = -road_pos1
+                self.xto = -road_pos
                 self.yto = -border_pos
             self.l_start_bend = border_pos - self.xto - r
             self.l_end_bend = self.l_start_bend + arclen
@@ -183,29 +190,29 @@ class Vehicle(sim.Component):
             x=self.x, y=self.y, z=1.5, z_angle=self.angle, x_len=length_vehicle * 0.6, y_len=width_vehicle, z_len=1, z_ref=1, color=self.color, shaded=True
         )
 
-        if self.turn in (Turns.left, Turns.right):
-            self.an_indicator = sim.AnimateRectangle(
-                spec=(-2.5, -1, -2, -0.5) if self.turn == Turns.left else (-2.5, 0.5, -2, 1),
-                visible=lambda arg, t: (t / env.speed() % arg.indicator_frequency < arg.indicator_frequency / 2) and (self.l_t(t) < self.l_end_bend),
-                angle=self.angle,
-                x=self.x,
-                y=self.y,
-                arg=self,
-            )
+        # if self.turn in (Turns.left, Turns.right):
+        #     self.an_indicator = sim.AnimateRectangle(
+        #         spec=(-2.5, -1, -2, -0.5) if self.turn == Turns.left else (-2.5, 0.5, -2, 1),
+        #         visible=lambda arg, t: (t / env.speed() % arg.indicator_frequency < arg.indicator_frequency / 2) and (self.l_t(t) < self.l_end_bend),
+        #         angle=self.angle,
+        #         x=self.x,
+        #         y=self.y,
+        #         arg=self,
+        #     )
 
-            self.an3d_indicator = sim.Animate3dBox(
-                x_len=0.5,
-                y_len=0.5,
-                z_len=0.5,
-                x=lambda arg, t: arg.x(t, xoffset=-length_vehicle / 2, yoffset=-width_vehicle / 2 if self.turn == Turns.left else width_vehicle / 2),
-                y=lambda arg, t: arg.y(t, xoffset=-length_vehicle / 2, yoffset=-width_vehicle / 2 if self.turn == Turns.left else width_vehicle / 2),
-                z=1.5,
-                color="yellow",
-                visible=lambda arg, t: (t / env.speed() % arg.indicator_frequency < arg.indicator_frequency / 2) and (self.l_t(t) < self.l_end_bend),
-                arg=self,
-            )
+        #     self.an3d_indicator = sim.Animate3dBox(
+        #         x_len=0.5,
+        #         y_len=0.5,
+        #         z_len=0.5,
+        #         x=lambda arg, t: arg.x(t, xoffset=-length_vehicle / 2, yoffset=-width_vehicle / 2 if self.turn == Turns.left else width_vehicle / 2),
+        #         y=lambda arg, t: arg.y(t, xoffset=-length_vehicle / 2, yoffset=-width_vehicle / 2 if self.turn == Turns.left else width_vehicle / 2),
+        #         z=1.5,
+        #         color="yellow",
+        #         visible=lambda arg, t: (t / env.speed() % arg.indicator_frequency < arg.indicator_frequency / 2) and (self.l_t(t) < self.l_end_bend),
+        #         arg=self,
+        #     )
 
-        while self.l <= self.l_end:
+        while self.l <= self.l_end - 2:
             if len(self.claims) == 1:
                 self.tryclaims = [self.claim(self.l + resolution)]
                 for i in itertools.count(2):
@@ -232,9 +239,9 @@ class Vehicle(sim.Component):
         self.an3d_vehicle0.remove()
         self.an3d_vehicle1.remove()
 
-        if self.turn in (Turns.right, Turns.left):
-            self.an_indicator.remove()
-            self.an3d_indicator.remove()
+        # if self.turn in (Turns.right, Turns.left):
+        #     self.an_indicator.remove()
+        #     self.an3d_indicator.remove()
 
 
 class TrafficLight(sim.Component):
@@ -244,15 +251,15 @@ class TrafficLight(sim.Component):
             self.light[direction] = Colors.green
             this_color=Colors.green
             distance=1
-            x0, y0 = rotate(light_pos1, road_pos, angle=direction_to_angle[direction])
-            x1, y1 = rotate(light_pos1, -road_pos,angle=direction_to_angle[direction])
+            x0, y0 = rotate(light_pos1+distance, road_pos, angle=direction_to_angle[direction])
+            x1, y1 = rotate(light_pos1+distance, -road_pos,angle=direction_to_angle[direction])
             an = sim.AnimateRectangle(
                 spec=(x0, y0, x1, y1),fillcolor=lambda arg, t: color_to_colorspec[arg.this_color] if self.light[arg.direction] == arg.this_color else "red",
             )
             an.direction = direction
             an.this_color = this_color
-            x0, y0 = rotate(light_pos1, road_pos, angle=direction_to_angle[direction])
-            x1, y1 = rotate(light_pos1, -road_pos,angle=direction_to_angle[direction])
+            x0, y0 = rotate(light_pos1+distance, road_pos, angle=direction_to_angle[direction])
+            x1, y1 = rotate(light_pos1+distance, -road_pos,angle=direction_to_angle[direction])
             an = sim.Animate3dBar(
                 x0=x0, y0=y0, z0=distance*3,x1=x1, y1=y1,z1=distance*3,bar_width=0.4,
                 color=lambda arg, t: color_to_colorspec[arg.this_color] if self.light[arg.direction] == arg.this_color else "red",
@@ -262,15 +269,17 @@ class TrafficLight(sim.Component):
 
     def process(self):
         while True:
-            for lightWE, lightNS, duration in (
-                (Colors.red, Colors.red, red_red_duration),
-                (Colors.green, Colors.red, red_green_duration),
-                (Colors.red, Colors.red, red_red_duration),
-                (Colors.red, Colors.green, red_green_duration),
+            # for lightWE, lightNS, duration in (
+            for light,duration in (
+                (Colors.red, red_red_duration),
+                (Colors.red, red_green_duration),
+                (Colors.red, red_red_duration),
+                (Colors.green, red_green_duration),
             ):
 
-                self.light[Directions.east] = self.light[Directions.west] = lightWE
-                self.light[Directions.north] = self.light[Directions.south] = lightNS
+                #self.light[Directions.east] = self.light[Directions.west] = lightWE
+                #self.light[Directions.north] = 
+                self.light[Directions.south] = light
                 self.hold(duration)
 
 
@@ -281,9 +290,10 @@ class VehicleGenerator(sim.Component):
 
     def process(self):
         while True:
-            turn = sim.Pdf(Turns, (50, 25, 25))()
+            #turn = sim.Pdf(Turns, (50, 25, 25))()
+            turn=Turns.straight
             v = sim.Uniform(0.5, 1.5)()
-            r = 5
+            #r = 5
             Vehicle(from_direction=self.from_direction, turn=turn, color=self.color, v=v)
             self.hold(sim.Exponential(50))
 
@@ -335,24 +345,24 @@ x_road_down = -road_pos
 light_pos1 = light_pos - length_boundary / 2 - resolution
 
 y_text = env.height() - 80
-# sim.AnimateText("Lights!", x=12, y=y_text, screen_coordinates=True, textcolor="white", font="mono", fontsize=30)
-# sim.AnimateCircle(radius=6, x=39, y=y_text + 30, fillcolor=lambda: color_to_colorspec[tl.light[Directions.west]], linewidth=0, screen_coordinates=True)
-# sim.AnimateCircle(radius=6, x=129, y=y_text + 5, fillcolor=lambda: color_to_colorspec[tl.light[Directions.north]], linewidth=0, screen_coordinates=True)
-# sim.AnimateText("powered by salabim", x=12, y=y_text - 9, screen_coordinates=True, font="narrow", textcolor="white", fontsize=14, text_anchor="w")
+sim.AnimateText("Lights!", x=12, y=y_text, screen_coordinates=True, textcolor="white", font="mono", fontsize=30)
+sim.AnimateCircle(radius=6, x=39, y=y_text + 30, fillcolor=lambda: color_to_colorspec[tl.light[Directions.south]], linewidth=0, screen_coordinates=True)
+sim.AnimateCircle(radius=6, x=129, y=y_text + 5, fillcolor=lambda: color_to_colorspec[tl.light[Directions.south]], linewidth=0, screen_coordinates=True)
+sim.AnimateText("powered by salabim", x=12, y=y_text - 9, screen_coordinates=True, font="narrow", textcolor="white", fontsize=14, text_anchor="w")
 
-# with sim.over3d():
-#     sim.AnimateText("Lights!", x=12, y=y_text, screen_coordinates=True, textcolor="white", font="mono", fontsize=30)
-#     sim.AnimateCircle(radius=6, x=39, y=y_text + 30, fillcolor=lambda: color_to_colorspec[tl.light[Directions.west]], linewidth=0, screen_coordinates=True)
-#     sim.AnimateCircle(radius=6, x=129, y=y_text + 5, fillcolor=lambda: color_to_colorspec[tl.light[Directions.north]], linewidth=0, screen_coordinates=True)
-#     sim.AnimateText("powered by salabim", x=12, y=y_text - 9, screen_coordinates=True, font="narrow", textcolor="white", fontsize=14, text_anchor="w")
+with sim.over3d():
+    sim.AnimateText("Lights!", x=12, y=y_text, screen_coordinates=True, textcolor="white", font="mono", fontsize=30)
+    sim.AnimateCircle(radius=6, x=39, y=y_text + 30, fillcolor=lambda: color_to_colorspec[tl.light[Directions.south]], linewidth=0, screen_coordinates=True)
+    sim.AnimateCircle(radius=6, x=129, y=y_text + 5, fillcolor=lambda: color_to_colorspec[tl.light[Directions.south]], linewidth=0, screen_coordinates=True)
+    sim.AnimateText("powered by salabim", x=12, y=y_text - 9, screen_coordinates=True, font="narrow", textcolor="white", fontsize=14, text_anchor="w")
 
 
 road_color = "30%gray"
 
 for direction in Directions:
     # for sign in (-1, 1):
-        x0, y0 = rotate(road_length / 2, y_road_left, angle=direction_to_angle[direction])#调整了道路位置
-        x1, y1 = rotate(light_pos1, y_road_right, angle=direction_to_angle[direction])
+        x0, y0 = rotate(road_length / 2, y_road_left*0.1, angle=direction_to_angle[direction])#调整了道路位置
+        x1, y1 = rotate(-road_length/2, y_road_left*1.9, angle=direction_to_angle[direction])
         sim.AnimateRectangle(spec=(x0, y0, x1, y1), linewidth=0, fillcolor=road_color)
         sim.Animate3dRectangle(x0=x0, y0=y0, x1=x1, y1=y1, color=road_color)
 
