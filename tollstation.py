@@ -11,6 +11,14 @@ class Directions(enum.Enum):  # order is not important
     # west = enum.auto()
     south = enum.auto()
 
+class GateNumber(enum.Enum): #为道路进行编号
+    # No1 = -30.0
+    # No2 = -20.0
+    No3 = -10.0
+    No4 = 0.0
+    No5 = 10.0
+    # No6 = 20.0
+    # No7 = 30.0
 
 class Turns(enum.Enum):  # order is important as it drives the turn Pdf
     straight = enum.auto()
@@ -179,11 +187,12 @@ class Vehicle(sim.Component):
                 self.passed_light = True
         return False
 
-    def setup(self, from_direction, turn, color, r=5, v=1):
+    def setup(self, from_direction,gateNum,turn, color, r=5, v=1):
         self.from_direction = from_direction
+        self.gateNum=gateNum
         self.turn = turn
         self.xfrom = border_pos
-        self.yfrom = road_pos
+        self.yfrom = road_pos+ self.gateNum.value
         self.color = color
         self.v = v
         self.r = r  # ***
@@ -346,102 +355,104 @@ class TrafficLightWithGate(sim.Component):
         self.light = {}
         self.gates = []
         self.gates3d = []
-        for direction, angle in direction_to_angle.items():
-            self.light[direction] = Colors.red
-            for distance, this_color in enumerate(Colors):
-                x, y = rotate(light_pos1 + distance, 2.2 * road_pos, angle=angle)
-                an = sim.AnimateCircle(
-                    radius=0.4,
-                    x=x,
-                    y=y,
-                    fillcolor=lambda arg, t: (
-                        color_to_colorspec[arg.this_color]
-                        if self.light[arg.direction] == arg.this_color
-                        else "50%gray"
-                    ),
-                )
-                an.direction = direction
-                an.this_color = this_color
+        for gateNumber in GateNumber:
+            for direction, angle in direction_to_angle.items():
+                self.light[direction] = Colors.red
+                for distance, this_color in enumerate(Colors):
+                    x, y = rotate(light_pos1 + distance, 2.2 * road_pos+gateNumber.value, angle=angle)
+                    an = sim.AnimateCircle(
+                        radius=0.4,
+                        x=x,
+                        y=y,
+                        fillcolor=lambda arg, t: (
+                            color_to_colorspec[arg.this_color]
+                            if self.light[arg.direction] == arg.this_color
+                            else "50%gray"
+                        ),
+                    )
+                    an.direction = direction
+                    an.this_color = this_color
+                    x, y = rotate(light_pos1, 2.2 * road_pos, angle=angle)
+                    an = sim.Animate3dSphere(
+                        radius=0.4,
+                        x=x,
+                        y=y,
+                        z=3 - distance,
+                        color=lambda arg, t: (
+                            color_to_colorspec[arg.this_color]
+                            if self.light[arg.direction] == arg.this_color
+                            else "50%gray"
+                        ),
+                    )
+                    an.direction = direction
+                    an.this_color = this_color
                 x, y = rotate(light_pos1, 2.2 * road_pos, angle=angle)
-                an = sim.Animate3dSphere(
-                    radius=0.4,
-                    x=x,
-                    y=y,
-                    z=3 - distance,
-                    color=lambda arg, t: (
-                        color_to_colorspec[arg.this_color]
-                        if self.light[arg.direction] == arg.this_color
-                        else "50%gray"
+                gate = sim.AnimateRectangle(
+                    x=(
+                        lambda arg, t,: (
+                            x
+                            if Colors.red == arg.light
+                            else (
+                                x + road_inter_distance
+                                if Colors.green == arg.light
+                                else (
+                                    x + gate_move_speed * (t - arg.start_move)
+                                    if Colors.amber == arg.light
+                                    else (
+                                        x
+                                        + road_inter_distance
+                                        - gate_move_speed * (t - arg.start_move)
+                                    )
+                                )
+                            )
+                        )
                     ),
+                    y=y,
+                    spec=(
+                        0,
+                        1,
+                        -road_inter_distance,
+                        2,
+                    ),
+                    fillcolor="white",
                 )
-                an.direction = direction
-                an.this_color = this_color
-            x, y = rotate(light_pos1, 2.2 * road_pos, angle=angle)
-            gate = sim.AnimateRectangle(
-                x=(
-                    lambda arg, t: (
-                        x
-                        if Colors.red == arg.light
-                        else (
-                            x + road_inter_distance
-                            if Colors.green == arg.light
+                gate3d = sim.Animate3dBox(
+                    x=(
+                        lambda arg, t: (
+                            x - 2.5
+                            if Colors.red == arg.light
                             else (
-                                x + gate_move_speed * (t - arg.start_move)
-                                if Colors.amber == arg.light
+                                x + road_inter_distance - 2.5
+                                if Colors.green == arg.light
                                 else (
-                                    x
-                                    + road_inter_distance
-                                    - gate_move_speed * (t - arg.start_move)
+                                    x + gate_move_speed * (t - arg.start_move) - 2.5
+                                    if Colors.amber == arg.light
+                                    else (
+                                        x
+                                        + road_inter_distance
+                                        - gate_move_speed * (t - arg.start_move)
+                                        - 2.5
+                                    )
                                 )
                             )
                         )
-                    )
-                ),
-                y=y,
-                spec=(
-                    0,
-                    1,
-                    -road_inter_distance,
-                    2,
-                ),
-                fillcolor="white",
-            )
-            gate3d = sim.Animate3dBox(
-                x=(
-                    lambda arg, t: (
-                        x - 2.5
-                        if Colors.red == arg.light
-                        else (
-                            x + road_inter_distance - 2.5
-                            if Colors.green == arg.light
-                            else (
-                                x + gate_move_speed * (t - arg.start_move) - 2.5
-                                if Colors.amber == arg.light
-                                else (
-                                    x
-                                    + road_inter_distance
-                                    - gate_move_speed * (t - arg.start_move)
-                                    - 2.5
-                                )
-                            )
-                        )
-                    )
-                ),
-                y=y + 1,
-                z=0.5,
-                x_len=road_inter_distance,
-                y_len=1,
-                z_len=1,
-                z_ref=1,
-                color="white",
-                shaded=True,
-            )
-            gate.light = Colors.red
-            gate.start_move = env.now()
-            gate3d.light = Colors.red
-            gate3d.start_move = env.now()
-            self.gates.append(gate)
-            self.gates3d.append(gate3d)
+                    ),
+                    y=y + 1,
+                    z=0.5,
+                    x_len=road_inter_distance,
+                    y_len=1,
+                    z_len=1,
+                    z_ref=1,
+                    color="white",
+                    shaded=True,
+                )
+                gate.light = Colors.red
+                gate.start_move = env.now()
+                gate3d.light = Colors.red
+                gate3d.start_move = env.now()
+                self.gates.append(gate)
+                self.gates3d.append(gate3d)
+
 
     def process(self):
         while True:
@@ -473,7 +484,8 @@ class TrafficLightWithGate(sim.Component):
 
 
 class VehicleGenerator(sim.Component):
-    def setup(self, from_direction, color):
+    def setup(self, from_direction, gateNum,color):
+        self.gateNum=gateNum
         self.from_direction = from_direction
         self.color = color
 
@@ -484,7 +496,7 @@ class VehicleGenerator(sim.Component):
             v = sim.Uniform(0.5, 1.5)()
             # r = 5
             Vehicle(
-                from_direction=self.from_direction, turn=turn, color=self.color, v=v
+                from_direction=self.from_direction, gateNum=self.gateNum,turn=turn, color=self.color, v=v
             )
             self.hold(sim.Exponential(50))
 
@@ -522,7 +534,7 @@ light_pos = 10
 # red_green_duration = 30
 # red_amber_duration = 3
 red_duration = 20
-amber_duration = 5
+amber_duration = 10
 green_duration = 20
 
 gate_move_speed = float(road_inter_distance) / amber_duration
@@ -626,25 +638,26 @@ with sim.over3d():
 
 road_color = "30%gray"
 
-for direction in Directions:
+direction=Directions.south
+for gateNumber in GateNumber:
     for sign in (1,):
         x0, y0 = rotate(
             road_length / 2,
-            sign * y_road_left * 0.1,
+            sign * y_road_left * 0.1+gateNumber.value,
             angle=direction_to_angle[direction],
         )
         x1, y1 = rotate(
             -road_length / 2,
-            sign * y_road_left * 1.9,
+            sign * y_road_left * 1.9+gateNumber.value,
             angle=direction_to_angle[direction],
         )
         sim.AnimateRectangle(spec=(x0, y0, x1, y1), linewidth=0, fillcolor=road_color)
         sim.Animate3dRectangle(x0=x0, y0=y0, x1=x1, y1=y1, color=road_color)
 
 tl = TrafficLightWithGate()
-
 for direction in Directions:
-    VehicleGenerator(from_direction=direction, color=direction_to_color[direction])
+    for gateNum in GateNumber:
+        VehicleGenerator(from_direction=direction,gateNum=gateNum,color=direction_to_color[direction])
 
 make_video = True
 if make_video:
