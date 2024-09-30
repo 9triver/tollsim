@@ -14,9 +14,9 @@ class Directions(enum.Enum):  # order is not important
 class GateNumber(enum.Enum): #为道路进行编号
     # No1 = -30.0
     # No2 = -20.0
-    No3 = -10.0
+    No3 = -20.0
     No4 = 0.0
-    No5 = 10.0
+    No5 = 20.0
     # No6 = 20.0
     # No7 = 30.0
 
@@ -47,6 +47,12 @@ direction_to_color = {
     # Directions.north: "green",
     # Directions.west: "blue",
     Directions.south: "purple",
+}
+Number_to_color = {
+    
+    GateNumber.No3 :"green",
+    GateNumber.No4 : "purple",
+    GateNumber.No5 : "blue",
 }
 color_to_colorspec = {
     Colors.green: "lime",
@@ -372,7 +378,7 @@ class TrafficLightWithGate(sim.Component):
                     )
                     an.direction = direction
                     an.this_color = this_color
-                    x, y = rotate(light_pos1, 2.2 * road_pos, angle=angle)
+                    x, y = rotate(light_pos1, 2.2 * road_pos+gateNumber.value, angle=angle)
                     an = sim.Animate3dSphere(
                         radius=0.4,
                         x=x,
@@ -386,7 +392,7 @@ class TrafficLightWithGate(sim.Component):
                     )
                     an.direction = direction
                     an.this_color = this_color
-                x, y = rotate(light_pos1, 2.2 * road_pos, angle=angle)
+                x, y = rotate(light_pos1, 2.2 * road_pos+gateNumber.value, angle=angle)
                 gate = sim.AnimateRectangle(
                     x=(
                         lambda arg, t,: (
@@ -657,7 +663,7 @@ for gateNumber in GateNumber:
 tl = TrafficLightWithGate()
 for direction in Directions:
     for gateNum in GateNumber:
-        VehicleGenerator(from_direction=direction,gateNum=gateNum,color=direction_to_color[direction])
+        VehicleGenerator(from_direction=direction,gateNum=gateNum,color=Number_to_color[gateNum])
 
 make_video = True
 if make_video:
