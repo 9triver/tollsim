@@ -14,9 +14,9 @@ class Directions(enum.Enum):  # order is not important
 class GateNumber(enum.Enum): #为道路进行编号
     # No1 = -30.0
     # No2 = -20.0
-    No3 = -20.0
+    No3 = -10.0
     No4 = 0.0
-    No5 = 20.0
+    # No5 = 10.0
     # No6 = 20.0
     # No7 = 30.0
 
@@ -49,10 +49,12 @@ direction_to_color = {
     Directions.south: "purple",
 }
 Number_to_color = {
-    
-    GateNumber.No3 :"green",
-    GateNumber.No4 : "purple",
-    GateNumber.No5 : "blue",
+    # GateNumber.No1 :"green",
+    # GateNumber.No2 :"purple",
+    GateNumber.No3 :"blue",
+    GateNumber.No4 :"green",
+    # GateNumber.No5 :"purple",
+    # GateNumber.No6 :"blue",
 }
 color_to_colorspec = {
     Colors.green: "lime",
@@ -80,16 +82,16 @@ class Claim:
     def set(self):
         self.vehicle.claims.append(self)
         claims.add(self)
-        if show_claims:
-            self.an = sim.AnimateRectangle(
-                spec=(self.xll, self.yll, self.xur, self.yur), fillcolor=self.color
-            )
+        # if show_claims:
+        #     self.an = sim.AnimateRectangle(
+        #         spec=(self.xll, self.yll, self.xur, self.yur), fillcolor=self.color
+        #     )
 
     def reset(self):
         self.vehicle.claims.remove(self)
         claims.remove(self)
-        if show_claims:
-            self.an.remove()
+        # if show_claims:
+        #     self.an.remove()
 
     def overlaps(self, claims):
         return any(
@@ -392,7 +394,7 @@ class TrafficLightWithGate(sim.Component):
                     )
                     an.direction = direction
                     an.this_color = this_color
-                x, y = rotate(light_pos1, 2.2 * road_pos+gateNumber.value, angle=angle)
+                x, y = rotate(light_pos1, 2.2 * road_pos, angle=angle)
                 gate = sim.AnimateRectangle(
                     x=(
                         lambda arg, t,: (
