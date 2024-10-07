@@ -74,17 +74,17 @@ class Claim:
     def set(self):
         self.vehicle.claims.append(self)
         Claim.claims.add(self)
-        if show_claims:
-            self.an = sim.AnimateRectangle(
-                spec=(self.xll, self.yll, self.xur, self.yur),
-                fillcolor=self.color,
-            )
+        # if show_claims:
+        #     self.an = sim.AnimateRectangle(
+        #         spec=(self.xll, self.yll, self.xur, self.yur),
+        #         fillcolor=self.color,
+        #     )
 
     def reset(self):
         self.vehicle.claims.remove(self)
         Claim.claims.remove(self)
-        if show_claims:
-            self.an.remove()
+        # if show_claims:
+        #     self.an.remove()
 
     def overlaps(self, claims):
         return any(
