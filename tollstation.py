@@ -1,79 +1,88 @@
 import math
 import salabim as sim
 import enum
-import itertools
 import collections
+from typing import *
+
+ROAD_NUM = 4
+ROAD_COLOR = "30%gray"
+ROAD_Y_OFFSET = 10
+ROAD_LENGTH = 100
+ROAD_WIDTH = 4
+ROAD_INTERVAL = 10
+GATE_MOVE_TIME = 2
+# road y pos = road y offset + id of road * road interval
 
 
-class Directions(enum.Enum):  # order is not important
-    # east = enum.auto()
-    # north = enum.auto()
-    # west = enum.auto()
-    south = enum.auto()
+# 在这里面直接设置的值不能重复且需要使用value域调用
+class LightColor(enum.Enum):  # the color of indicator light
+    RED = enum.auto()  # car stops
+    YELLOW = enum.auto()  # car stops and gate moves
+    GREEN = enum.auto()
+    YELLOW1 = enum.auto()
 
 
-class Turns(enum.Enum):  # order is important as it drives the turn Pdf
-    straight = enum.auto()
-    # left = enum.auto()
-    # right = enum.auto()
-
-
-class Colors(enum.Enum):  # order is important for display of the trafiic lights
-    red = enum.auto()
-    amber = enum.auto()
-    green = enum.auto()
-    # 用于指示green后的green,这样就不需要记录amber前的颜色了
-    amber1 = enum.auto()
-
-
-PositionInfo = collections.namedtuple("position_info", "x y angle is_straight")
-
-direction_to_angle = {
-    # Directions.east: 0,
-    # Directions.north: math.radians(90),
-    # Directions.west: math.radians(180),
-    Directions.south: math.radians(270),
-}
-direction_to_color = {
-    # Directions.east: "red",
-    # Directions.north: "green",
-    # Directions.west: "blue",
-    Directions.south: "purple",
-}
-color_to_colorspec = {
-    Colors.green: "lime",
-    Colors.amber: "yellow",
-    Colors.red: "red",
-    Colors.amber1: "yellow",
+LIGHT_COLOR_2_STRING = {
+    LightColor.RED: "red",
+    LightColor.YELLOW: "yellow",
+    LightColor.GREEN: "green",
+    LightColor.YELLOW1: "yellow",
 }
 
 
+PositionInfo = collections.namedtuple("position_info", "x y angle")
+
+
+# 坐标轴逆时针旋转角度
+class Direction(enum.Enum):
+    SOUTH = enum.auto()
+
+
+DIRECTION_2_ANGLE = {
+    Direction.SOUTH: math.radians(270),
+}
+
+VEHICLE_COLOR = "blue"
+
+
+# 坐标轴逆时针旋转
+# 原来y轴在上，x轴在右
 def rotate(x, y, angle):
     return x * math.cos(angle) - y * math.sin(angle), +x * math.sin(
         angle
     ) + y * math.cos(angle)
 
 
+# 位置声明，用于碰撞检测和碰撞面动画渲染
 class Claim:
+    claims = set()
+
     def __init__(self, xll, yll, xur, yur, vehicle):
+        """
+        ll lower left
+        ur upper right
+        :type vehicle: Vehicle
+        """
         self.xll = xll
         self.yll = yll
         self.xur = xur
         self.yur = yur
         self.vehicle = vehicle
-        self.color = (vehicle.color, 50)
+        self.color = (vehicle.cstr, 50)
+        self.an = None
 
     def set(self):
         self.vehicle.claims.append(self)
-        claims.add(self)
+        Claim.claims.add(self)
         if show_claims:
             self.an = sim.AnimateRectangle(
-                spec=(self.xll, self.yll, self.xur, self.yur), fillcolor=self.color
+                spec=(self.xll, self.yll, self.xur, self.yur),
+                fillcolor=self.color,
             )
 
     def reset(self):
         self.vehicle.claims.remove(self)
-        claims.remove(self)
+        Claim.claims.remove(self)
         if show_claims:
             self.an.remove()
 
@@ -93,304 +102,238 @@ class Claim:
 
 
 class Vehicle(sim.Component):
-    def position(self, l):
+    __BORDER_COLOR = "white"
+    __BORDER_WIDTH = 0.1
+    __LENGTH = 5
+    __WIDTH = 2
+    __BOUNDARY_LENGTH = __LENGTH + 1
+    __BOUNDARY_WIDTH = __WIDTH + 0.5
 
-        is_straight = True
-        if l <= self.l_start_bend:  # straight before bend
-            x = self.xfrom - l
-            y = self.yfrom
-            angle = 0
-            # if self.turn == Turns.left and l > self.l_start_bend - length_vehicle / 2:
-            #     is_straight = False  # to prevent deadlocks
-        # else:
-        #     target_angle = math.radians(-90 if self.turn == Turns.right else 90)
-        #     if l > self.l_end_bend:  # straight after bend
-        #         if self.turn == Turns.right:
-        #             x = self.xto
-        #             y = self.yto - (self.l_end - l)
-        #         else:
-        #             x = self.xto
-        #             y = self.yto + (self.l_end - l)
-        #         angle = target_angle
-        #     else:  # in the bend
-        #         angle = sim.interpolate(
-        #             l, self.l_start_bend, self.l_end_bend, 0, target_angle
-        #         )
-        #         is_straight = False
-        #         if self.turn == Turns.right:
-        #             x = self.xfrom - self.l_start_bend - self.r * math.sin(-angle)
-        #             y = self.yfrom + self.r - self.r * math.cos(-angle)
-        #         else:
-        #             x = self.xfrom - self.l_start_bend + self.r * math.sin(-angle)
-        #             y = self.yfrom - self.r + self.r * math.cos(-angle)
+    def setup(self, from_direction, cstr, v, xfrom, yfrom, gate):
+        """
+        :type from_direction: Direction
+        :param cstr: color name string
+        :type cstr: str
+        :param v: velocity
+        :type v: int
+        """
+        self.from_direction = from_direction
+        self.xfrom = xfrom
+        self.yfrom = yfrom
+        self.cstr = cstr
+        self.v = v
+        self.l = 0
+        self.l_end = ROAD_LENGTH
+        self.claims = []  # can't be a set as the order is important
+        self.t0 = env.now()
+        self.t1 = env.now()
+        self.passed_gate = False
+        self.gate = gate
 
-        x, y = rotate(x, y, angle=direction_to_angle[self.from_direction])
-        angle += direction_to_angle[self.from_direction]
+    # t时刻汽车行驶距离
+    def __time_2_length(self, t):
+        return sim.interpolate(t, self.t0, self.t1, self.l - resolution, self.l)
 
-        return PositionInfo(x=x, y=y, angle=angle, is_straight=is_straight)
+    def __length_2_x(self, l):
+        x, y = rotate(
+            self.xfrom - l, self.yfrom, DIRECTION_2_ANGLE[self.from_direction]
+        )
+        return x
 
-    def claim(self, l):
-        position_info = self.position(l)
-        xa, ya = rotate(
-            -length_boundary / 2, -width_boundary / 2, angle=position_info.angle
+    def __length_2_y(self, l):
+        x, y = rotate(
+            self.xfrom - l, self.yfrom, DIRECTION_2_ANGLE[self.from_direction]
         )
-        xb, yb = rotate(
-            length_boundary / 2, width_boundary / 2, angle=position_info.angle
-        )
-        xc, yc = rotate(
-            -length_boundary / 2, width_boundary / 2, angle=position_info.angle
-        )
-        xd, yd = rotate(
-            length_boundary / 2, -width_boundary / 2, angle=position_info.angle
-        )
+        return y
+
+    def __length_2_angle(self, l):
+        return DIRECTION_2_ANGLE[self.from_direction]
+
+    # t时刻汽车中点位置
+    def __time_2_x(self, t):
+        return self.__length_2_x(self.__time_2_length(t))
+
+    def __time_2_y(self, t):
+        return self.__length_2_y(self.__time_2_length(t))
+
+    def __time_2_angle(self, t):
+        return math.degrees(self.__length_2_angle(self.__time_2_length(t)))
+
+    # 声明当前位置
+    def __claim(self, l):
+        """
+        :param l: length have passed
+        :type l: int
+        """
+        angle = self.__length_2_angle(l)
+        x = self.__length_2_x(l)
+        y = self.__length_2_y(l)
+        len = self.__BOUNDARY_LENGTH / 2
+        wid = self.__BOUNDARY_WIDTH / 2
+        xa, ya = rotate(-len, -wid, angle=angle)
+        xb, yb = rotate(len, wid, angle=angle)
+        xc, yc = rotate(-len, wid, angle=angle)
+        xd, yd = rotate(len, -wid, angle=angle)
         xa, xb = min(xa, xb, xc, xd), max(xa, xb, xc, xd)
         ya, yb = min(ya, yb, yc, yd), max(ya, yb, yc, yd)
         return Claim(
-            xll=position_info.x + xa,
-            yll=position_info.y + ya,
-            xur=position_info.x + xb,
-            yur=position_info.y + yb,
+            xll=x + xa,
+            yll=y + ya,
+            xur=x + xb,
+            yur=y + yb,
             vehicle=self,
         )
 
-    def l_t(self, t):
-        return sim.interpolate(t, self.t0, self.t1, self.l - resolution, self.l)
-
-    def x(self, t, xoffset=0, yoffset=0):
-        position_info = self.position(self.l_t(t))
-        xdis, ydis = rotate(xoffset, yoffset, angle=position_info.angle)
-        return position_info.x + xdis
-
-    def y(self, t, xoffset=0, yoffset=0):
-        position_info = self.position(self.l_t(t))
-        xdis, ydis = rotate(xoffset, yoffset, angle=position_info.angle)
-        return position_info.y + ydis
-
-    def angle(self, t):
-        return math.degrees(self.position(self.l_t(t)).angle)
-
-    def has_to_stop(
+    def __has_to_stop(
         self,
     ):  # this should (and will) be only called when none of the tryclaims overlaps with claims
-        if self.l > border_pos - light_pos:
-            if not self.passed_light:
-                if tl.light[self.from_direction] not in (Colors.green,):
+        if self.l > self.xfrom - Gate.X_POS - self.__LENGTH / 2:
+            if not self.passed_gate:
+                if self.gate.light[self.from_direction] not in (LightColor.GREEN,):
                     return True
-                self.passed_light = True
+                self.passed_gate = True
         return False
 
-    def setup(self, from_direction, turn, color, r=5, v=1):
-        self.from_direction = from_direction
-        self.turn = turn
-        self.xfrom = border_pos
-        self.yfrom = road_pos
-        self.color = color
-        self.v = v
-        self.r = r  # ***
-
-        if turn == Turns.straight:
-            self.l_start_bend = self.l_end_bend = self.l_end = road_length
-            self.xto = -border_pos
-            self.yto = road_pos
-        else:
-            arclen = r * math.pi / 2
-            if turn == Turns.right:
-                self.xto = road_pos
-                self.yto = border_pos
-            if turn == Turns.left:
-                self.xto = -road_pos
-                self.yto = -border_pos
-            self.l_start_bend = border_pos - self.xto - r
-            self.l_end_bend = self.l_start_bend + arclen
-            self.l_end = self.l_end_bend + self.l_start_bend
-
     def process(self):
-        self.indicator_frequency = sim.Uniform(1, 2)()
-        self.t0 = env.now()
-        self.t1 = env.now()
-        self.l = 0
-        self.claims = []  # can't be a set as the order is important
-        self.passed_light = False
-        while self.claim(self.l).overlaps(claims):
+        # self.indicator_frequency = sim.Uniform(1, 2)()
+        self.passed_gate = False
+        while self.__claim(self.l).overlaps(Claim.claims):
             self.standby()
-        self.claim(self.l).set()
-        self.an_vehicle = sim.AnimateRectangle(
-            x=self.x,
-            y=self.y,
-            angle=self.angle,
+        self.__claim(self.l).set()
+        an_vehicle = sim.AnimateRectangle(
+            x=self.__time_2_x,
+            y=self.__time_2_y,
+            angle=self.__time_2_angle,
             spec=(
-                -length_vehicle / 2,
-                -width_vehicle / 2,
-                length_vehicle / 2,
-                width_vehicle / 2,
+                -self.__LENGTH / 2,
+                -self.__WIDTH / 2,
+                self.__LENGTH / 2,
+                self.__WIDTH / 2,
             ),
-            linecolor="white",
-            linewidth=unit1,
-            fillcolor=self.color,
+            linecolor=self.__BORDER_COLOR,
+            linewidth=self.__BORDER_WIDTH,
+            fillcolor=self.cstr,
         )
-        self.an3d_vehicle0 = sim.Animate3dBox(
-            x=self.x,
-            y=self.y,
+        an3d_vehicle0 = sim.Animate3dBox(
+            x=self.__time_2_x,
+            y=self.__time_2_y,
             z=0.5,
-            z_angle=self.angle,
-            x_len=length_vehicle,
-            y_len=width_vehicle,
+            z_angle=self.__time_2_angle,
+            x_len=self.__LENGTH,
+            y_len=self.__WIDTH,
             z_len=1,
             z_ref=1,
-            color=self.color,
+            color=self.cstr,
             shaded=True,
         )
-        self.an3d_vehicle1 = sim.Animate3dBox(
-            x=self.x,
-            y=self.y,
+        an3d_vehicle1 = sim.Animate3dBox(
+            x=self.__time_2_x,
+            y=self.__time_2_y,
             z=1.5,
-            z_angle=self.angle,
-            x_len=length_vehicle * 0.6,
-            y_len=width_vehicle,
+            z_angle=self.__time_2_angle,
+            x_len=self.__LENGTH * 0.6,
+            y_len=self.__WIDTH,
             z_len=1,
             z_ref=1,
-            color=self.color,
+            color=self.cstr,
             shaded=True,
         )
 
-        # if self.turn in (Turns.left, Turns.right):
-        #     self.an_indicator = sim.AnimateRectangle(
-        #         spec=(
-        #             (-2.5, -1, -2, -0.5)
-        #             if self.turn == Turns.left
-        #             else (-2.5, 0.5, -2, 1)
-        #         ),
-        #         visible=lambda arg, t: (
-        #             t / env.speed() % arg.indicator_frequency
-        #             < arg.indicator_frequency / 2
-        #         )
-        #         and (self.l_t(t) < self.l_end_bend),
-        #         angle=self.angle,
-        #         x=self.x,
-        #         y=self.y,
-        #         arg=self,
-        #     )
-
-        # self.an3d_indicator = sim.Animate3dBox(
-        #     x_len=0.5,
-        #     y_len=0.5,
-        #     z_len=0.5,
-        #     x=lambda arg, t: arg.x(
-        #         t,
-        #         xoffset=-length_vehicle / 2,
-        #         yoffset=(
-        #             -width_vehicle / 2
-        #             if self.turn == Turns.left
-        #             else width_vehicle / 2
-        #         ),
-        #     ),
-        #     y=lambda arg, t: arg.y(
-        #         t,
-        #         xoffset=-length_vehicle / 2,
-        #         yoffset=(
-        #             -width_vehicle / 2
-        #             if self.turn == Turns.left
-        #             else width_vehicle / 2
-        #         ),
-        #     ),
-        #     z=1.5,
-        #     color="yellow",
-        #     visible=lambda arg, t: (
-        #         t / env.speed() % arg.indicator_frequency
-        #         < arg.indicator_frequency / 2
-        #     )
-        #     and (self.l_t(t) < self.l_end_bend),
-        #     arg=self,
-        # )
-
-        while self.l <= self.l_end - 2:
+        while self.l <= self.l_end:
             if len(self.claims) == 1:
-                self.tryclaims = [self.claim(self.l + resolution)]
-                for i in itertools.count(2):
-                    if self.position(self.l + i * resolution).is_straight:
-                        break
-                    self.tryclaims.append(self.claim(self.l + i))
-
+                self.tryclaims = [self.__claim(self.l + resolution)]
                 while (
                     any(
-                        claim.overlaps(claims - set(self.claims))
+                        claim.overlaps(Claim.claims - set(self.claims))
                         for claim in self.tryclaims
                     )
-                    or self.has_to_stop()
+                    or self.__has_to_stop()
                 ):
                     self.standby()
 
                 for claim in self.tryclaims:
                     claim.set()
 
-            dt = resolution / self.v
-            self.t0, self.t1 = self.env.now(), self.env.now() + dt
+            duration = resolution / self.v
+            self.t0, self.t1 = self.env.now(), self.env.now() + duration
             self.l += resolution
 
-            self.hold(dt)
+            self.hold(duration)
 
             self.claims[0].reset()
         for claim in self.claims:
             claim.reset()
-        self.an_vehicle.remove()
-        self.an3d_vehicle0.remove()
-        self.an3d_vehicle1.remove()
-
-        # if self.turn in (Turns.right, Turns.left):
-        #     self.an_indicator.remove()
-        #     self.an3d_indicator.remove()
+        an_vehicle.remove()
+        an3d_vehicle0.remove()
+        an3d_vehicle1.remove()
 
 
-class TrafficLightWithGate(sim.Component):
-    def setup(self):
-        self.light = {}
+class Gate(sim.Component):
+    X_POS = ROAD_LENGTH / 2
+    __Y_OFFSET = 2
+
+    def setup(self, y_offset):
+        y_offset += self.__Y_OFFSET
+        self.light = {}  # Direction 2 LightColor
         self.gates = []
-        self.gates3d = []
-        for direction, angle in direction_to_angle.items():
-            self.light[direction] = Colors.red
-            for distance, this_color in enumerate(Colors):
-                x, y = rotate(light_pos1 + distance, 2.2 * road_pos, angle=angle)
+        self.gate3ds = []
+        for direction in Direction:
+            self.light[direction] = LightColor.RED
+            for distance, this_color in enumerate(LightColor):
+                x, y = rotate(
+                    self.X_POS + distance,
+                    y_offset,
+                    angle=DIRECTION_2_ANGLE[direction],
+                )
                 an = sim.AnimateCircle(
                     radius=0.4,
                     x=x,
                     y=y,
                     fillcolor=lambda arg, t: (
-                        color_to_colorspec[arg.this_color]
+                        LIGHT_COLOR_2_STRING[arg.this_color]
                         if self.light[arg.direction] == arg.this_color
                         else "50%gray"
                     ),
                 )
                 an.direction = direction
                 an.this_color = this_color
-                x, y = rotate(light_pos1, 2.2 * road_pos, angle=angle)
+                x, y = rotate(
+                    self.X_POS,
+                    y_offset,
+                    angle=DIRECTION_2_ANGLE[direction],
+                )
                 an = sim.Animate3dSphere(
                     radius=0.4,
                     x=x,
                     y=y,
                     z=3 - distance,
                     color=lambda arg, t: (
-                        color_to_colorspec[arg.this_color]
+                        LIGHT_COLOR_2_STRING[arg.this_color]
                         if self.light[arg.direction] == arg.this_color
                         else "50%gray"
                     ),
                 )
                 an.direction = direction
                 an.this_color = this_color
-            x, y = rotate(light_pos1, 2.2 * road_pos, angle=angle)
+            x, y = rotate(
+                self.X_POS,
+                y_offset,
+                angle=DIRECTION_2_ANGLE[direction],
+            )
             gate = sim.AnimateRectangle(
                 x=(
                     lambda arg, t: (
                         x
-                        if Colors.red == arg.light
+                        if LightColor.RED == arg.light
                         else (
-                            x + road_inter_distance
-                            if Colors.green == arg.light
+                            x + ROAD_WIDTH
+                            if LightColor.GREEN == arg.light
                             else (
                                 x + gate_move_speed * (t - arg.start_move)
-                                if Colors.amber == arg.light
+                                if LightColor.YELLOW == arg.light
                                 else (
                                     x
-                                    + road_inter_distance
+                                    + ROAD_WIDTH
                                     - gate_move_speed * (t - arg.start_move)
                                 )
                             )
@@ -401,7 +344,7 @@ class TrafficLightWithGate(sim.Component):
                 spec=(
                     0,
                     1,
-                    -road_inter_distance,
+                    -ROAD_WIDTH,
                     2,
                 ),
                 fillcolor="white",
@@ -410,16 +353,16 @@ class TrafficLightWithGate(sim.Component):
                 x=(
                     lambda arg, t: (
                         x - 2.5
-                        if Colors.red == arg.light
+                        if LightColor.RED == arg.light
                         else (
-                            x + road_inter_distance - 2.5
-                            if Colors.green == arg.light
+                            x + ROAD_WIDTH - 2.5
+                            if LightColor.GREEN == arg.light
                             else (
                                 x + gate_move_speed * (t - arg.start_move) - 2.5
-                                if Colors.amber == arg.light
+                                if LightColor.YELLOW == arg.light
                                 else (
                                     x
-                                    + road_inter_distance
+                                    + ROAD_WIDTH
                                     - gate_move_speed * (t - arg.start_move)
                                     - 2.5
                                 )
@@ -429,288 +372,127 @@ class TrafficLightWithGate(sim.Component):
                 ),
                 y=y + 1,
                 z=0.5,
-                x_len=road_inter_distance,
+                x_len=ROAD_WIDTH,
                 y_len=1,
                 z_len=1,
                 z_ref=1,
                 color="white",
                 shaded=True,
             )
-            gate.light = Colors.red
+            gate.light = LightColor.RED
             gate.start_move = env.now()
-            gate3d.light = Colors.red
+            gate3d.light = LightColor.RED
             gate3d.start_move = env.now()
             self.gates.append(gate)
-            self.gates3d.append(gate3d)
+            self.gate3ds.append(gate3d)
 
     def process(self):
         while True:
-            # for lightWE, lightNS, duration in (
-            #     (Colors.red, Colors.red, red_red_duration),
-            #     (Colors.green, Colors.red, red_green_duration),
-            #     (Colors.amber, Colors.red, red_amber_duration),
-            #     (Colors.red, Colors.red, red_red_duration),
-            #     (Colors.red, Colors.green, red_green_duration),
-            #     (Colors.red, Colors.amber, red_amber_duration),
-            # ):
-
-            #     self.light[Directions.east] = self.light[Directions.west] = lightWE
-            #     self.light[Directions.north] = self.light[Directions.south] = lightNS
             for light, duration in (
-                (Colors.red, red_duration),
-                (Colors.amber, amber_duration),
-                (Colors.green, green_duration),
-                (Colors.amber1, amber_duration),
+                (LightColor.RED, red_duration),
+                (LightColor.YELLOW, amber_duration),
+                (LightColor.GREEN, green_duration),
+                (LightColor.YELLOW1, amber_duration),
             ):
-                self.light[Directions.south] = light
+                self.light[Direction.SOUTH] = light
                 for gate in self.gates:
                     gate.light = light
                     gate.start_move = env.now()
-                for gate3d in self.gates3d:
+                for gate3d in self.gate3ds:
                     gate3d.light = light
                     gate3d.start_move = env.now()
                 self.hold(duration)
 
 
 class VehicleGenerator(sim.Component):
-    def setup(self, from_direction, color):
+    def setup(self, from_direction, cstr, xfrom, yfrom, gate):
+        """
+        :type gate: Gate
+        :type from_direction: Direction
+        :param cstr: color name string
+        :type cstr: str
+        """
+        self.cstr = cstr
         self.from_direction = from_direction
-        self.color = color
+        self.xfrom = xfrom
+        self.yfrom = yfrom
 
     def process(self):
         while True:
-            # turn = sim.Pdf(Turns, (50, 25, 25))()
-            turn = Turns.straight
             v = sim.Uniform(0.5, 1.5)()
-            # r = 5
             Vehicle(
-                from_direction=self.from_direction, turn=turn, color=self.color, v=v
+                from_direction=self.from_direction,
+                cstr=self.cstr,
+                v=v,
+                xfrom=self.xfrom,
+                yfrom=self.yfrom,
+                gate=gate,
             )
             self.hold(sim.Exponential(50))
 
 
+# define set_env():
 env = sim.Environment()
-size = 768
+# 确定画面窗口大小
+WINDOW_SIZE = 768
 env.speed(8)
 env.background_color("black")
-env.width3d(size)
-env.height3d(size)
+env.width3d(WINDOW_SIZE)
+env.height3d(WINDOW_SIZE)
 env.position3d((0, 0))
-env.width(size)
-env.height(size)
-env.position((size + 10, 0))
+env.width(WINDOW_SIZE)
+env.height(WINDOW_SIZE)
+env.position((WINDOW_SIZE + 10, 0))
 env.view(
-    x_eye=-39.748112339561004,
-    y_eye=-78.01006285162117,
-    z_eye=55.71822276394165,
+    x_eye=50,
+    y_eye=50,
+    z_eye=50,
     x_center=0,
-    y_center=0,
+    y_center=-ROAD_LENGTH,
     z_center=0,
-    field_of_view_y=45,
+    field_of_view_y=30,
 )
 
-length_vehicle = 5
-width_vehicle = 2
-length_boundary = length_vehicle + 1
-width_boundary = width_vehicle + 0.5
-
-road_length = 100
-road_inter_distance = 4
-light_pos = 10
-
-# red_red_duration = 3
-# red_green_duration = 30
-# red_amber_duration = 3
 red_duration = 20
 amber_duration = 5
 green_duration = 20
 
-gate_move_speed = float(road_inter_distance) / amber_duration
+gate_move_speed = float(ROAD_WIDTH) / amber_duration
 
 resolution = 1
 show_claims = True
 do_animation = True
 
-border_pos = road_length / 2 + length_vehicle
-road_pos = road_inter_distance / 2
+# 确定分辨率，坐标原点
+# 坐标原点在左上角
+env.x0(0)
+env.y0(-ROAD_LENGTH)
+env.x1(ROAD_LENGTH)
 
-env.x0(-road_length / 2)
-env.x1(road_length / 2)
-env.y0(-road_length / 2)
-unit1 = road_length / env.width()
-
-claims = set()
-
-y_road_left = road_pos
-y_road_right = -road_pos
-x_road_up = road_pos
-x_road_down = -road_pos
-
-light_pos1 = light_pos - length_boundary / 2 - resolution
-
-y_text = env.height() - 80
-sim.AnimateText(
-    "Gate!",
-    x=12,
-    y=y_text,
-    screen_coordinates=True,
-    textcolor="white",
-    font="mono",
-    fontsize=30,
-)
-# sim.AnimateCircle(
-#     radius=6,
-#     x=39,
-#     y=y_text + 30,
-#     fillcolor=lambda: color_to_colorspec[tl.light[Directions.west]],
-#     linewidth=0,
-#     screen_coordinates=True,
-# )
-sim.AnimateCircle(
-    radius=6,
-    x=94,
-    y=y_text + 5,
-    fillcolor=lambda: color_to_colorspec[tl.light[Directions.south]],
-    linewidth=0,
-    screen_coordinates=True,
-)
-
-sim.AnimateText(
-    "powered by salabim",
-    x=12,
-    y=y_text - 9,
-    screen_coordinates=True,
-    font="narrow",
-    textcolor="white",
-    fontsize=14,
-    text_anchor="w",
-)
-
-with sim.over3d():
-    sim.AnimateText(
-        "Gate!",
-        x=12,
-        y=y_text,
-        screen_coordinates=True,
-        textcolor="white",
-        font="mono",
-        fontsize=30,
+for i in range(ROAD_NUM):
+    offset = ROAD_Y_OFFSET + i * ROAD_INTERVAL
+    x0, y0 = rotate(
+        ROAD_LENGTH, offset - ROAD_WIDTH / 2, angle=DIRECTION_2_ANGLE[Direction.SOUTH]
     )
-    # sim.AnimateCircle(
-    #     radius=6,
-    #     x=39,
-    #     y=y_text + 30,
-    #     fillcolor=lambda: color_to_colorspec[tl.light[Directions.west]],
-    #     linewidth=0,
-    #     screen_coordinates=True,
-    # )
-    sim.AnimateCircle(
-        radius=6,
-        x=94,
-        y=y_text + 5,
-        fillcolor=lambda: color_to_colorspec[tl.light[Directions.south]],
-        linewidth=0,
-        screen_coordinates=True,
+    x1, y1 = rotate(
+        0, offset + ROAD_WIDTH / 2, angle=DIRECTION_2_ANGLE[Direction.SOUTH]
     )
-    sim.AnimateText(
-        "powered by salabim",
-        x=12,
-        y=y_text - 9,
-        screen_coordinates=True,
-        font="narrow",
-        textcolor="white",
-        fontsize=14,
-        text_anchor="w",
+    sim.AnimateRectangle(spec=(x0, y0, x1, y1), linewidth=0, fillcolor=ROAD_COLOR)
+    sim.Animate3dRectangle(x0=x0, y0=y0, x1=x1, y1=y1, color=ROAD_COLOR)
+    gate = Gate(y_offset=offset)
+    VehicleGenerator(
+        from_direction=Direction.SOUTH,
+        cstr=VEHICLE_COLOR,
+        xfrom=ROAD_LENGTH,
+        yfrom=offset,
+        gate=gate,
     )
-
-
-road_color = "30%gray"
-
-for direction in Directions:
-    for sign in (1,):
-        x0, y0 = rotate(
-            road_length / 2,
-            sign * y_road_left * 0.1,
-            angle=direction_to_angle[direction],
-        )
-        x1, y1 = rotate(
-            -road_length / 2,
-            sign * y_road_left * 1.9,
-            angle=direction_to_angle[direction],
-        )
-        sim.AnimateRectangle(spec=(x0, y0, x1, y1), linewidth=0, fillcolor=road_color)
-        sim.Animate3dRectangle(x0=x0, y0=y0, x1=x1, y1=y1, color=road_color)
-
-tl = TrafficLightWithGate()
-
-for direction in Directions:
-    VehicleGenerator(from_direction=direction, color=direction_to_color[direction])
 
 make_video = True
 if make_video:
     type_of_video = "2d"
     env.run(100)
     env.camera_auto_print(True)
-    env.camera_move(
-        """
-    view(x_eye=-39.7481,y_eye=-78.0101,z_eye=55.7182,x_center=0.0000,y_center=0.0000,z_center=0.0000,field_of_view_y=45.0000)  # t=0.0000
-    view(x_eye=-38.3806,y_eye=-78.6919)  # t=121.3576
-    view(x_eye=-37.0014,y_eye=-79.3497)  # t=126.4277
-    view(x_eye=-35.6109,y_eye=-79.9834)  # t=131.7427
-    view(x_eye=-34.2096,y_eye=-80.5927)  # t=136.4638
-    view(x_eye=-32.7978,y_eye=-81.1775)  # t=142.0032
-    view(x_eye=-29.5181,y_eye=-73.0597,z_eye=50.1464)  # t=156.5674
-    view(x_eye=-26.5662,y_eye=-65.7538,z_eye=45.1318)  # t=160.4352
-    view(x_eye=-23.9096,y_eye=-59.1784,z_eye=40.6186)  # t=165.6155
-    view(x_eye=-21.5187,y_eye=-53.2605,z_eye=36.5567)  # t=170.2758
-    view(x_eye=-22.4449,y_eye=-52.8769)  # t=181.6538
-    view(x_eye=-22.4449,y_eye=-52.8769,z_eye=32.9011)  # t=193.5282
-    view(x_eye=-22.4449,y_eye=-52.8769,z_eye=29.6109)  # t=196.9527
-    view(x_eye=-22.4449,y_eye=-52.8769,z_eye=26.6499)  # t=200.3144
-    view(x_eye=-22.4449,y_eye=-52.8769,z_eye=23.9849)  # t=205.0026
-    view(x_eye=-23.3643,y_eye=-52.4771)  # t=220.9797
-    view(x_eye=-24.2766,y_eye=-52.0614)  # t=225.3774
-    view(x_eye=-25.1815,y_eye=-51.6297)  # t=229.2660
-    view(x_eye=-26.0787,y_eye=-51.1824)  # t=233.2356
-    view(x_eye=-26.9680,y_eye=-50.7195)  # t=233.5740
-    view(x_eye=-27.8491,y_eye=-50.2411)  # t=233.9580
-    view(x_eye=-28.7217,y_eye=-49.7474)  # t=233.9580
-    view(x_eye=-29.5855,y_eye=-49.2386)  # t=234.5815
-    view(x_eye=-30.4403,y_eye=-48.7147)  # t=234.5815
-    view(x_eye=-31.2859,y_eye=-48.1760)  # t=234.5815
-    view(x_eye=-32.1219,y_eye=-47.6227)  # t=235.2451
-    view(x_eye=-32.9482,y_eye=-47.0548)  # t=235.2451
-    view(x_eye=-33.7644,y_eye=-46.4726)  # t=235.2451
-    view(x_eye=-34.5703,y_eye=-45.8763)  # t=236.0126
-    view(x_eye=-35.3657,y_eye=-45.2660)  # t=236.0126
-    view(x_eye=-36.1503,y_eye=-44.6419)  # t=236.5163
-    view(x_eye=-36.9239,y_eye=-44.0042)  # t=236.5163
-    view(x_eye=-37.6862,y_eye=-43.3530)  # t=237.1800
-    view(x_eye=-38.4371,y_eye=-42.6887)  # t=237.1800
-    view(x_eye=-39.1763,y_eye=-42.0114)  # t=237.6837
-    view(x_eye=-39.9035,y_eye=-41.3213)  # t=237.6837
-    view(x_eye=-40.6186,y_eye=-40.6186)  # t=237.6837
-    view(x_eye=-41.3213,y_eye=-39.9035)  # t=238.5312
-    view(x_eye=-42.0114,y_eye=-39.1763)  # t=238.5312
-    view(x_eye=-42.6887,y_eye=-38.4371)  # t=238.5312
-    view(x_eye=-43.3530,y_eye=-37.6862)  # t=239.2829
-    view(x_eye=-44.0042,y_eye=-36.9239)  # t=239.2829
-    view(x_eye=-44.6419,y_eye=-36.1503)  # t=239.2829
-    view(x_eye=-45.2660,y_eye=-35.3657)  # t=240.0583
-    view(x_eye=-45.8763,y_eye=-34.5703)  # t=240.0583
-    view(x_eye=-46.4726,y_eye=-33.7644)  # t=240.0583
-    view(x_eye=-47.0548,y_eye=-32.9482)  # t=240.0583
-    view(x_eye=-47.6227,y_eye=-32.1219)  # t=240.9858
-    view(x_eye=-48.1760,y_eye=-31.2859)  # t=240.9858
-    view(x_eye=-48.7147,y_eye=-30.4403)  # t=240.9858
-    view(x_eye=-49.2386,y_eye=-29.5855)  # t=241.9852
-    view(x_eye=-49.7474,y_eye=-28.7217)  # t=241.9852
-    view(x_eye=-50.2411,y_eye=-27.8491)  # t=241.9852
-    view(x_eye=-50.7195,y_eye=-26.9680)  # t=241.9852
-    view(x_eye=-51.1824,y_eye=-26.0787)  # t=241.9852
-    """,
-        lag=3,
-    )
     env.show_fps(True)
     env.animate("?")
     env.animate3d("?")
