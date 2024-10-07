@@ -20,6 +20,14 @@ class LightColor(enum.Enum):  # the color of indicator light
     GREEN = enum.auto()
     YELLOW1 = enum.auto()
 
+class GateNumber(enum.Enum): #为道路进行编号
+    No1 = -30.0
+    No2 = -20.0
+    No3 = -10.0
+    No4 = 0.0
+    No5 = 10.0
+    No6 = 20.0
+    # No7 = 30.0
 
 LIGHT_COLOR_2_STRING = {
     LightColor.RED: "red",
@@ -477,7 +485,7 @@ env.view(
 )
 
 red_duration = 20
-amber_duration = 5
+amber_duration = 10
 green_duration = 20
 
 
