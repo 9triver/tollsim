@@ -10,7 +10,6 @@ ROAD_Y_OFFSET = 10
 ROAD_LENGTH = 100
 ROAD_WIDTH = 4
 ROAD_INTERVAL = 10
-GATE_MOVE_TIME = 2
 # road y pos = road y offset + id of road * road interval
 
 
@@ -62,6 +61,7 @@ class Claim:
         ll lower left
         ur upper right
         :type vehicle: Vehicle
+        :param self.an: animate
         """
         self.xll = xll
         self.yll = yll
@@ -104,9 +104,9 @@ class Claim:
 class Vehicle(sim.Component):
     __BORDER_COLOR = "white"
     __BORDER_WIDTH = 0.1
-    __LENGTH = 5
+    LENGTH = 5
     __WIDTH = 2
-    __BOUNDARY_LENGTH = __LENGTH + 1
+    __BOUNDARY_LENGTH = LENGTH + 1
     __BOUNDARY_WIDTH = __WIDTH + 0.5
 
     def setup(self, from_direction, cstr, v, xfrom, yfrom, gate):
@@ -168,12 +168,12 @@ class Vehicle(sim.Component):
         angle = self.__length_2_angle(l)
         x = self.__length_2_x(l)
         y = self.__length_2_y(l)
-        len = self.__BOUNDARY_LENGTH / 2
-        wid = self.__BOUNDARY_WIDTH / 2
-        xa, ya = rotate(-len, -wid, angle=angle)
-        xb, yb = rotate(len, wid, angle=angle)
-        xc, yc = rotate(-len, wid, angle=angle)
-        xd, yd = rotate(len, -wid, angle=angle)
+        length = self.__BOUNDARY_LENGTH / 2
+        width = self.__BOUNDARY_WIDTH / 2
+        xa, ya = rotate(-length, -width, angle=angle)
+        xb, yb = rotate(length, width, angle=angle)
+        xc, yc = rotate(-length, width, angle=angle)
+        xd, yd = rotate(length, -width, angle=angle)
         xa, xb = min(xa, xb, xc, xd), max(xa, xb, xc, xd)
         ya, yb = min(ya, yb, yc, yd), max(ya, yb, yc, yd)
         return Claim(
@@ -187,11 +187,19 @@ class Vehicle(sim.Component):
     def __has_to_stop(
         self,
     ):  # this should (and will) be only called when none of the tryclaims overlaps with claims
-        if self.l > self.xfrom - Gate.X_POS - self.__LENGTH / 2:
+        if self.l > self.xfrom - Gate.X_POS - self.LENGTH / 2:
             if not self.passed_gate:
-                if self.gate.light[self.from_direction] not in (LightColor.GREEN,):
+                # wait the gate resets
+                if LightColor.RED != self.gate.light:
                     return True
+                # self.passed_gate = True
+                # if self.gate.light[self.from_direction] not in (LightColor.GREEN,):
+                #     return True
                 self.passed_gate = True
+                self.gate.set_light(LightColor.YELLOW, vehicle_velocity=self.v)
+                self.hold(Gate.MOVE_TIME)
+                self.gate.set_light(LightColor.GREEN, vehicle_velocity=self.v)
+                return True
         return False
 
     def process(self):
@@ -205,9 +213,9 @@ class Vehicle(sim.Component):
             y=self.__time_2_y,
             angle=self.__time_2_angle,
             spec=(
-                -self.__LENGTH / 2,
+                -self.LENGTH / 2,
                 -self.__WIDTH / 2,
-                self.__LENGTH / 2,
+                self.LENGTH / 2,
                 self.__WIDTH / 2,
             ),
             linecolor=self.__BORDER_COLOR,
@@ -219,7 +227,7 @@ class Vehicle(sim.Component):
             y=self.__time_2_y,
             z=0.5,
             z_angle=self.__time_2_angle,
-            x_len=self.__LENGTH,
+            x_len=self.LENGTH,
             y_len=self.__WIDTH,
             z_len=1,
             z_ref=1,
@@ -231,7 +239,7 @@ class Vehicle(sim.Component):
             y=self.__time_2_y,
             z=1.5,
             z_angle=self.__time_2_angle,
-            x_len=self.__LENGTH * 0.6,
+            x_len=self.LENGTH * 0.6,
             y_len=self.__WIDTH,
             z_len=1,
             z_ref=1,
@@ -269,139 +277,153 @@ class Vehicle(sim.Component):
 
 
 class Gate(sim.Component):
+    MOVE_TIME = 20
+    MOVE_SPEED = float(ROAD_WIDTH) / MOVE_TIME
     X_POS = ROAD_LENGTH / 2
     __Y_OFFSET = 2
 
     def setup(self, y_offset):
         y_offset += self.__Y_OFFSET
-        self.light = {}  # Direction 2 LightColor
+        # self.light = None
         self.gates = []
         self.gate3ds = []
-        for direction in Direction:
-            self.light[direction] = LightColor.RED
-            for distance, this_color in enumerate(LightColor):
-                x, y = rotate(
-                    self.X_POS + distance,
-                    y_offset,
-                    angle=DIRECTION_2_ANGLE[direction],
-                )
-                an = sim.AnimateCircle(
-                    radius=0.4,
-                    x=x,
-                    y=y,
-                    fillcolor=lambda arg, t: (
-                        LIGHT_COLOR_2_STRING[arg.this_color]
-                        if self.light[arg.direction] == arg.this_color
-                        else "50%gray"
-                    ),
-                )
-                an.direction = direction
-                an.this_color = this_color
-                x, y = rotate(
-                    self.X_POS,
-                    y_offset,
-                    angle=DIRECTION_2_ANGLE[direction],
-                )
-                an = sim.Animate3dSphere(
-                    radius=0.4,
-                    x=x,
-                    y=y,
-                    z=3 - distance,
-                    color=lambda arg, t: (
-                        LIGHT_COLOR_2_STRING[arg.this_color]
-                        if self.light[arg.direction] == arg.this_color
-                        else "50%gray"
-                    ),
-                )
-                an.direction = direction
-                an.this_color = this_color
+        self.light = LightColor.RED
+        for distance, this_color in enumerate(LightColor):
             x, y = rotate(
-                self.X_POS,
+                self.X_POS + distance,
                 y_offset,
-                angle=DIRECTION_2_ANGLE[direction],
+                angle=DIRECTION_2_ANGLE[Direction.SOUTH],
             )
-            gate = sim.AnimateRectangle(
-                x=(
-                    lambda arg, t: (
-                        x
-                        if LightColor.RED == arg.light
-                        else (
-                            x + ROAD_WIDTH
-                            if LightColor.GREEN == arg.light
-                            else (
-                                x + gate_move_speed * (t - arg.start_move)
-                                if LightColor.YELLOW == arg.light
-                                else (
-                                    x
-                                    + ROAD_WIDTH
-                                    - gate_move_speed * (t - arg.start_move)
-                                )
-                            )
-                        )
-                    )
-                ),
+            an = sim.AnimateCircle(
+                radius=0.4,
+                x=x,
                 y=y,
-                spec=(
-                    0,
-                    1,
-                    -ROAD_WIDTH,
-                    2,
+                fillcolor=lambda arg, t: (
+                    LIGHT_COLOR_2_STRING[arg.this_color]
+                    if self.light == arg.this_color
+                    else "50%gray"
                 ),
-                fillcolor="white",
             )
-            gate3d = sim.Animate3dBox(
-                x=(
-                    lambda arg, t: (
-                        x - 2.5
-                        if LightColor.RED == arg.light
+            an.this_color = this_color
+            x, y = rotate(
+                self.X_POS, y_offset, angle=DIRECTION_2_ANGLE[Direction.SOUTH]
+            )
+            an = sim.Animate3dSphere(
+                radius=0.4,
+                x=x,
+                y=y,
+                z=3 - distance,
+                color=lambda arg, t: (
+                    LIGHT_COLOR_2_STRING[arg.this_color]
+                    if self.light == arg.this_color
+                    else "50%gray"
+                ),
+            )
+            an.this_color = this_color
+        x, y = rotate(
+            self.X_POS,
+            y_offset,
+            angle=DIRECTION_2_ANGLE[Direction.SOUTH],
+        )
+        gate_an = sim.AnimateRectangle(
+            x=(
+                lambda arg, t: (
+                    x
+                    if LightColor.RED == arg.light
+                    else (
+                        x + ROAD_WIDTH
+                        if LightColor.GREEN == arg.light
                         else (
-                            x + ROAD_WIDTH - 2.5
-                            if LightColor.GREEN == arg.light
+                            x + self.MOVE_SPEED * (t - arg.start_move)
+                            if LightColor.YELLOW == arg.light
                             else (
-                                x + gate_move_speed * (t - arg.start_move) - 2.5
-                                if LightColor.YELLOW == arg.light
-                                else (
-                                    x
-                                    + ROAD_WIDTH
-                                    - gate_move_speed * (t - arg.start_move)
-                                    - 2.5
-                                )
+                                x + ROAD_WIDTH - self.MOVE_SPEED * (t - arg.start_move)
                             )
                         )
                     )
-                ),
-                y=y + 1,
-                z=0.5,
-                x_len=ROAD_WIDTH,
-                y_len=1,
-                z_len=1,
-                z_ref=1,
-                color="white",
-                shaded=True,
-            )
-            gate.light = LightColor.RED
-            gate.start_move = env.now()
-            gate3d.light = LightColor.RED
-            gate3d.start_move = env.now()
-            self.gates.append(gate)
-            self.gate3ds.append(gate3d)
+                )
+            ),
+            y=y,
+            spec=(
+                0,
+                1,
+                -ROAD_WIDTH,
+                2,
+            ),
+            fillcolor="white",
+        )
+        gate_an_3d = sim.Animate3dBox(
+            x=(
+                lambda arg, t: (
+                    x - 2.5
+                    if LightColor.RED == arg.light
+                    else (
+                        x + ROAD_WIDTH - 2.5
+                        if LightColor.GREEN == arg.light
+                        else (
+                            x + self.MOVE_SPEED * (t - arg.start_move) - 2.5
+                            if LightColor.YELLOW == arg.light
+                            else (
+                                x
+                                + ROAD_WIDTH
+                                - self.MOVE_SPEED * (t - arg.start_move)
+                                - 2.5
+                            )
+                        )
+                    )
+                )
+            ),
+            y=y + 1,
+            z=0.5,
+            x_len=ROAD_WIDTH,
+            y_len=1,
+            z_len=1,
+            z_ref=1,
+            color="white",
+            shaded=True,
+        )
+        gate_an.light = LightColor.RED
+        gate_an.start_move = env.now()
+        gate_an_3d.light = LightColor.RED
+        gate_an_3d.start_move = env.now()
+        self.gates.append(gate_an)
+        self.gate3ds.append(gate_an_3d)
+
+    def set_light(self, light, vehicle_velocity=1):
+        self.light = light
+        self.vehicle_velocity = vehicle_velocity
+        for g in self.gates:
+            g.light = light
+            g.start_move = env.now()
+        for g in self.gate3ds:
+            g.light = light
+            g.start_move = env.now()
 
     def process(self):
+        # while True:
+        #     for light, duration in (
+        #         (LightColor.RED, red_duration),
+        #         (LightColor.YELLOW, amber_duration),
+        #         (LightColor.GREEN, green_duration),
+        #         (LightColor.YELLOW1, amber_duration),
+        #     ):
+        #         self.light = light
+        #         for g in self.gates:
+        #             g.light = light
+        #             g.start_move = env.now()
+        #         for g in self.gate3ds:
+        #             g.light = light
+        #             g.start_move = env.now()
+        #         self.hold(duration)
         while True:
-            for light, duration in (
-                (LightColor.RED, red_duration),
-                (LightColor.YELLOW, amber_duration),
-                (LightColor.GREEN, green_duration),
-                (LightColor.YELLOW1, amber_duration),
-            ):
-                self.light[Direction.SOUTH] = light
-                for gate in self.gates:
-                    gate.light = light
-                    gate.start_move = env.now()
-                for gate3d in self.gate3ds:
-                    gate3d.light = light
-                    gate3d.start_move = env.now()
-                self.hold(duration)
+            if self.light == LightColor.GREEN:
+                self.hold(Vehicle.LENGTH / self.vehicle_velocity)
+                self.set_light(LightColor.YELLOW1)
+                self.hold(self.MOVE_TIME)
+                self.set_light(LightColor.RED)
+            else:
+                self.standby()
+        pass
 
 
 class VehicleGenerator(sim.Component):
@@ -416,6 +438,7 @@ class VehicleGenerator(sim.Component):
         self.from_direction = from_direction
         self.xfrom = xfrom
         self.yfrom = yfrom
+        self.gate = gate
 
     def process(self):
         while True:
@@ -426,9 +449,9 @@ class VehicleGenerator(sim.Component):
                 v=v,
                 xfrom=self.xfrom,
                 yfrom=self.yfrom,
-                gate=gate,
+                gate=self.gate,
             )
-            self.hold(sim.Exponential(50))
+            self.hold(sim.Exponential(100))
 
 
 # define set_env():
@@ -457,7 +480,6 @@ red_duration = 20
 amber_duration = 5
 green_duration = 20
 
-gate_move_speed = float(ROAD_WIDTH) / amber_duration
 
 resolution = 1
 show_claims = True
