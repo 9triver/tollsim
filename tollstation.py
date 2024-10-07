@@ -12,12 +12,12 @@ class Directions(enum.Enum):  # order is not important
     south = enum.auto()
 
 class GateNumber(enum.Enum): #为道路进行编号
-    # No1 = -30.0
-    # No2 = -20.0
+    No1 = -30.0
+    No2 = -20.0
     No3 = -10.0
     No4 = 0.0
-    # No5 = 10.0
-    # No6 = 20.0
+    No5 = 10.0
+    No6 = 20.0
     # No7 = 30.0
 
 class Turns(enum.Enum):  # order is important as it drives the turn Pdf
@@ -49,12 +49,12 @@ direction_to_color = {
     Directions.south: "purple",
 }
 Number_to_color = {
-    # GateNumber.No1 :"green",
-    # GateNumber.No2 :"purple",
+    GateNumber.No1 :"green",
+    GateNumber.No2 :"purple",
     GateNumber.No3 :"blue",
     GateNumber.No4 :"green",
-    # GateNumber.No5 :"purple",
-    # GateNumber.No6 :"blue",
+    GateNumber.No5 :"purple",
+    GateNumber.No6 :"blue",
 }
 color_to_colorspec = {
     Colors.green: "lime",
@@ -663,9 +663,8 @@ for gateNumber in GateNumber:
         sim.Animate3dRectangle(x0=x0, y0=y0, x1=x1, y1=y1, color=road_color)
 
 tl = TrafficLightWithGate()
-for direction in Directions:
-    for gateNum in GateNumber:
-        VehicleGenerator(from_direction=direction,gateNum=gateNum,color=Number_to_color[gateNum])
+for gateNum in GateNumber:
+    VehicleGenerator(from_direction=direction,gateNum=gateNum,color=Number_to_color[gateNum])
 
 make_video = True
 if make_video:
