@@ -4,7 +4,7 @@ import enum
 import collections
 from typing import *
 
-ROAD_NUM = 4
+ROAD_NUM = 8
 ROAD_COLOR = "30%gray"
 ROAD_Y_OFFSET = 10
 ROAD_LENGTH = 100
