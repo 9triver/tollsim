@@ -7,6 +7,7 @@ from typing import *
 ROAD_NUM = 8
 ROAD_COLOR = "30%gray"
 ROAD_Y_OFFSET = 10
+ETC_DISTANCE =15#etc感应天线距离闸门的距离
 ROAD_LENGTH = 100
 ROAD_WIDTH = 4
 ROAD_INTERVAL = 10
@@ -191,7 +192,6 @@ class Vehicle(sim.Component):
             yur=y + yb,
             vehicle=self,
         )
-
     def __has_to_stop(
         self,
     ):  # this should (and will) be only called when none of the tryclaims overlaps with claims
@@ -200,20 +200,37 @@ class Vehicle(sim.Component):
                 # wait the gate resets
                 if LightColor.RED != self.gate.light:
                     return True
-                # self.passed_gate = True
-                # if self.gate.light[self.from_direction] not in (LightColor.GREEN,):
-                #     return True
+                    # self.passed_gate = True
+                    # if self.gate.light[self.from_direction] not in (LightColor.GREEN,):
+                    #     return True
                 self.passed_gate = True
                 self.gate.set_light(LightColor.YELLOW, vehicle_velocity=self.v)
                 self.hold(Gate.MOVE_TIME)
                 self.gate.set_light(LightColor.GREEN, vehicle_velocity=self.v)
                 return True
         return False
+    def __trigger_ETC(
+        self,
+    ):
+        if self.gate.roadtype==RoadType.ETC:
+            if self.l > self.xfrom - Gate.X_POS - ETC_DISTANCE - self.LENGTH / 2:
+                if not self.passed_gate:
+                    # wait the gate resets
+                    if LightColor.RED != self.gate.light:
+                        return True
+                    # self.passed_gate = True
+                    # if self.gate.light[self.from_direction] not in (LightColor.GREEN,):
+                    #     return True
+                    self.passed_gate = True
+                    self.gate.set_light(LightColor.YELLOW, vehicle_velocity=self.v)
+                    return True
+        return False
 
     def process(self):
         # self.indicator_frequency = sim.Uniform(1, 2)()
         self.passed_gate = False
         while self.__claim(self.l).overlaps(Claim.claims):
+            self.hold(VEHICLE_STARTING_INTERVAL)
             self.standby()
         self.__claim(self.l).set()
         an_vehicle = sim.AnimateRectangle(
@@ -257,6 +274,7 @@ class Vehicle(sim.Component):
 
         while self.l <= self.l_end:
             if len(self.claims) == 1:
+                self.__trigger_ETC()
                 self.tryclaims = [self.__claim(self.l + resolution)]
                 while (
                     any(
@@ -265,12 +283,12 @@ class Vehicle(sim.Component):
                     )
                     or self.__has_to_stop()
                 ):  
-                    self.hold(VEHICLE_STARTING_INTERVAL)
+                    self.hold(VEHICLE_STARTING_INTERVAL)#起步时间间隔
                     self.standby()
-
+                
                 for claim in self.tryclaims:
                     claim.set()
-
+            
             duration = resolution / self.v
             self.t0, self.t1 = self.env.now(), self.env.now() + duration
             self.l += resolution
@@ -297,6 +315,7 @@ class Gate(sim.Component):
         self.gates = []
         self.gate3ds = []
         self.light = LightColor.RED
+        self.roadtype = road_type
         for distance, this_color in enumerate(LightColor):
             x, y = rotate(
                 self.X_POS + distance,
@@ -393,13 +412,15 @@ class Gate(sim.Component):
         )
         gate_an.light = LightColor.RED
         gate_an.start_move = env.now()
+        gate_an.roadtype = road_type
         gate_an_3d.light = LightColor.RED
         gate_an_3d.start_move = env.now()
+        gate_an_3d.roadtype=road_type
         self.gates.append(gate_an)
         self.gate3ds.append(gate_an_3d)
         self.inductionPiles= []
         self.inductionPiles3d=[]
-        if(road_type==RoadType.ETC.value):
+        if(road_type==RoadType.ETC):
             x, y = rotate(
                 self.X_POS + distance,
                 y_offset,
@@ -407,7 +428,7 @@ class Gate(sim.Component):
             )
             ip =sim.AnimateRectangle(
             x=x - ROAD_WIDTH,
-            y=y - 15,
+            y=y - ETC_DISTANCE,
             spec=(
                 0,
                 1,
@@ -417,8 +438,8 @@ class Gate(sim.Component):
             fillcolor="gray",
         )
             ip_3d =sim.Animate3dBox(
-            x=x - ROAD_WIDTH,
-            y=y - 15,
+            x=x - ROAD_WIDTH-0.5,
+            y=y - ETC_DISTANCE,
             z=0.5,
             x_len=ROAD_WIDTH/4,
             y_len=1,
@@ -429,7 +450,7 @@ class Gate(sim.Component):
         )
             self.inductionPiles.append(ip)
             self.inductionPiles3d.append(ip_3d)
-        elif(road_type==RoadType.ARTIFICIAL.value):
+        elif(road_type==RoadType.ARTIFICIAL):
             x, y = rotate(
                 self.X_POS + distance,
                 y_offset,
@@ -447,9 +468,9 @@ class Gate(sim.Component):
             fillcolor="green",
         )
             ip_3d =sim.Animate3dBox(
-            x=x - ROAD_WIDTH,
+            x=x - ROAD_WIDTH-0.5,
             y=y,
-            z=0.5,
+            z=0,
             x_len=ROAD_WIDTH/4,
             y_len=1,
             z_len=3,
@@ -486,14 +507,26 @@ class Gate(sim.Component):
         #             g.start_move = env.now()
         #         self.hold(duration)
         while True:
-            if self.light == LightColor.GREEN:
-                self.hold(Vehicle.LENGTH / self.vehicle_velocity)
-                self.set_light(LightColor.YELLOW1)
-                self.hold(self.MOVE_TIME)
-                self.set_light(LightColor.RED)
+            if self.roadtype == RoadType.ARTIFICIAL:
+                if self.light == LightColor.GREEN:
+                    self.hold(Vehicle.LENGTH / self.vehicle_velocity)
+                    self.set_light(LightColor.YELLOW1)
+                    self.hold(self.MOVE_TIME)
+                    self.set_light(LightColor.RED)
+                else:
+                    self.standby()
             else:
-                self.standby()
-        pass
+                if self.light == LightColor.GREEN:
+                    self.hold((Vehicle.LENGTH + ETC_DISTANCE)/ self.vehicle_velocity)
+                    self.set_light(LightColor.YELLOW1)
+                    self.hold(self.MOVE_TIME)
+                    self.set_light(LightColor.RED)
+                elif self.light ==LightColor.YELLOW:
+                    self.hold(self.MOVE_TIME)
+                    self.set_light(LightColor.GREEN)
+                else:
+                    self.standby()
+            pass
 
 
 class VehicleGenerator(sim.Component):
@@ -562,7 +595,9 @@ env.y0(-ROAD_LENGTH)
 env.x1(ROAD_LENGTH)
 
 for i in range(ROAD_NUM):
-    r_type=i%2+1
+    r_type=RoadType.ARTIFICIAL
+    if(RoadType.ETC.value==i%2+1):
+            r_type=RoadType.ETC
     offset = ROAD_Y_OFFSET + i * ROAD_INTERVAL
     x0, y0 = rotate(
         ROAD_LENGTH, offset - ROAD_WIDTH / 2, angle=DIRECTION_2_ANGLE[Direction.SOUTH]
