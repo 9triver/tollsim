@@ -10,9 +10,17 @@ ROAD_Y_OFFSET = 10
 ROAD_LENGTH = 100
 ROAD_WIDTH = 4
 ROAD_INTERVAL = 10
+VEHICLE_STARTING_INTERVAL = 3
 # road y pos = road y offset + id of road * road interval
 
-
+#道路类型，包括ETC和人工
+class RoadType(enum.Enum):
+    ARTIFICIAL  = enum.auto()
+    ETC = enum.auto()
+ROAD_TYPE={
+    RoadType.ARTIFICIAL:1,
+    RoadType.ETC:2,
+}
 # 在这里面直接设置的值不能重复且需要使用value域调用
 class LightColor(enum.Enum):  # the color of indicator light
     RED = enum.auto()  # car stops
@@ -256,7 +264,8 @@ class Vehicle(sim.Component):
                         for claim in self.tryclaims
                     )
                     or self.__has_to_stop()
-                ):
+                ):  
+                    self.hold(VEHICLE_STARTING_INTERVAL)
                     self.standby()
 
                 for claim in self.tryclaims:
@@ -282,7 +291,7 @@ class Gate(sim.Component):
     X_POS = ROAD_LENGTH / 2
     __Y_OFFSET = 2
 
-    def setup(self, y_offset):
+    def setup(self, y_offset,road_type):
         y_offset += self.__Y_OFFSET
         # self.light = None
         self.gates = []
@@ -388,7 +397,68 @@ class Gate(sim.Component):
         gate_an_3d.start_move = env.now()
         self.gates.append(gate_an)
         self.gate3ds.append(gate_an_3d)
-
+        self.inductionPiles= []
+        self.inductionPiles3d=[]
+        if(road_type==RoadType.ETC.value):
+            x, y = rotate(
+                self.X_POS + distance,
+                y_offset,
+                angle=DIRECTION_2_ANGLE[Direction.SOUTH],
+            )
+            ip =sim.AnimateRectangle(
+            x=x - ROAD_WIDTH,
+            y=y - 15,
+            spec=(
+                0,
+                1,
+                -ROAD_WIDTH/4,
+                2,
+            ),
+            fillcolor="gray",
+        )
+            ip_3d =sim.Animate3dBox(
+            x=x - ROAD_WIDTH,
+            y=y - 15,
+            z=0.5,
+            x_len=ROAD_WIDTH/4,
+            y_len=1,
+            z_len=5,
+            z_ref=1,
+            color="gray",
+            shaded=True,
+        )
+            self.inductionPiles.append(ip)
+            self.inductionPiles3d.append(ip_3d)
+        elif(road_type==RoadType.ARTIFICIAL.value):
+            x, y = rotate(
+                self.X_POS + distance,
+                y_offset,
+                angle=DIRECTION_2_ANGLE[Direction.SOUTH],
+            )
+            ip =sim.AnimateRectangle(
+            x=x - ROAD_WIDTH,
+            y=y,
+            spec=(
+                0,
+                1,
+                -ROAD_WIDTH/4,
+                2,
+            ),
+            fillcolor="green",
+        )
+            ip_3d =sim.Animate3dBox(
+            x=x - ROAD_WIDTH,
+            y=y,
+            z=0.5,
+            x_len=ROAD_WIDTH/4,
+            y_len=1,
+            z_len=3,
+            z_ref=1,
+            color="green",
+            shaded=True,
+        )
+            self.inductionPiles.append(ip)
+            self.inductionPiles3d.append(ip_3d)
     def set_light(self, light, vehicle_velocity=1):
         self.light = light
         self.vehicle_velocity = vehicle_velocity
@@ -492,6 +562,7 @@ env.y0(-ROAD_LENGTH)
 env.x1(ROAD_LENGTH)
 
 for i in range(ROAD_NUM):
+    r_type=i%2+1
     offset = ROAD_Y_OFFSET + i * ROAD_INTERVAL
     x0, y0 = rotate(
         ROAD_LENGTH, offset - ROAD_WIDTH / 2, angle=DIRECTION_2_ANGLE[Direction.SOUTH]
@@ -501,7 +572,7 @@ for i in range(ROAD_NUM):
     )
     sim.AnimateRectangle(spec=(x0, y0, x1, y1), linewidth=0, fillcolor=ROAD_COLOR)
     sim.Animate3dRectangle(x0=x0, y0=y0, x1=x1, y1=y1, color=ROAD_COLOR)
-    gate = Gate(y_offset=offset)
+    gate = Gate(y_offset=offset,road_type=r_type)
     VehicleGenerator(
         from_direction=Direction.SOUTH,
         cstr=VEHICLE_COLOR,
