@@ -7,7 +7,7 @@ from typing import *
 ROAD_NUM = 8
 ROAD_COLOR = "30%gray"
 ROAD_Y_OFFSET = 10
-ETC_DISTANCE =15#etc感应天线距离闸门的距离
+ETC_DISTANCE =15 #etc感应天线距离闸门的距离
 ROAD_LENGTH = 100
 ROAD_WIDTH = 4
 ROAD_INTERVAL = 10
@@ -138,6 +138,7 @@ class Vehicle(sim.Component):
         self.t1 = env.now()
         self.passed_gate = False
         self.gate = gate
+        self.gate.set_velocity(self.v)
 
     # t时刻汽车行驶距离
     def __time_2_length(self, t):
@@ -204,9 +205,11 @@ class Vehicle(sim.Component):
                     # if self.gate.light[self.from_direction] not in (LightColor.GREEN,):
                     #     return True
                 self.passed_gate = True
-                self.gate.set_light(LightColor.YELLOW, vehicle_velocity=self.v)
+                self.gate.activate()
+                # self.gate.set_light(LightColor.YELLOW, vehicle_velocity=self.v)
                 self.hold(Gate.MOVE_TIME)
-                self.gate.set_light(LightColor.GREEN, vehicle_velocity=self.v)
+                # self.gate.set_light(LightColor.GREEN, vehicle_velocity=self.v)
+                
                 return True
         return False
     def __trigger_ETC(
@@ -222,7 +225,7 @@ class Vehicle(sim.Component):
                     # if self.gate.light[self.from_direction] not in (LightColor.GREEN,):
                     #     return True
                     self.passed_gate = True
-                    self.gate.set_light(LightColor.YELLOW, vehicle_velocity=self.v)
+                    self.gate.activate()
                     return True
         return False
 
@@ -283,7 +286,7 @@ class Vehicle(sim.Component):
                     )
                     or self.__has_to_stop()
                 ):  
-                    self.hold(VEHICLE_STARTING_INTERVAL)#起步时间间隔
+                    #self.hold(VEHICLE_STARTING_INTERVAL)#起步时间间隔
                     self.standby()
                 
                 for claim in self.tryclaims:
@@ -312,6 +315,7 @@ class Gate(sim.Component):
     def setup(self, y_offset,road_type):
         y_offset += self.__Y_OFFSET
         # self.light = None
+        self.vehicle_velocity=1
         self.gates = []
         self.gate3ds = []
         self.light = LightColor.RED
@@ -480,9 +484,10 @@ class Gate(sim.Component):
         )
             self.inductionPiles.append(ip)
             self.inductionPiles3d.append(ip_3d)
-    def set_light(self, light, vehicle_velocity=1):
-        self.light = light
+    def set_velocity(self,vehicle_velocity=1):
         self.vehicle_velocity = vehicle_velocity
+    def set_light(self, light):
+        self.light = light
         for g in self.gates:
             g.light = light
             g.start_move = env.now()
@@ -513,15 +518,26 @@ class Gate(sim.Component):
                     self.set_light(LightColor.YELLOW1)
                     self.hold(self.MOVE_TIME)
                     self.set_light(LightColor.RED)
-                else:
-                    self.standby()
+                    self.passivate()
+                elif self.light == LightColor.RED:
+                    # self.hold(Vehicle.LENGTH / self.vehicle_velocity)
+                    self.set_light(LightColor.YELLOW)
+                    self.hold(self.MOVE_TIME)
+                    self.set_light(LightColor.GREEN)
+                    # self.standby()
             else:
                 if self.light == LightColor.GREEN:
                     self.hold((Vehicle.LENGTH + ETC_DISTANCE)/ self.vehicle_velocity)
                     self.set_light(LightColor.YELLOW1)
                     self.hold(self.MOVE_TIME)
                     self.set_light(LightColor.RED)
-                elif self.light ==LightColor.YELLOW:
+                    self.passivate()
+                # elif self.light ==LightColor.YELLOW:
+                #     self.hold(self.MOVE_TIME)
+                #     self.set_light(LightColor.GREEN)
+                elif self.light == LightColor.RED:
+                    # self.hold((Vehicle.LENGTH + ETC_DISTANCE)/ self.vehicle_velocity)
+                    self.set_light(LightColor.YELLOW)
                     self.hold(self.MOVE_TIME)
                     self.set_light(LightColor.GREEN)
                 else:
