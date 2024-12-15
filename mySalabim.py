@@ -14653,7 +14653,7 @@ class Environment:
             xy_anchor="ne",
             env=self,
         )
-        # ao.text = self.clocktext
+        ao.text = self.clocktext
 
     def an_half(self):
         self._speed /= 2
