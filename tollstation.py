@@ -3,16 +3,20 @@ from __future__ import annotations
 import enum
 from typing import Optional
 
-import salabim as sim
+import myEnhancedSalabim
+import mySalabim as sim
 
 # sim.Animate spec = (xll, yll, xur, yur) and Coordinate origin is x, y
 
-ROAD_NUM = 2
+ROAD_NUM = 10
 ROAD_COLOR = "30%gray"
 ROAD_X_OFFSET = 10
-ROAD_LENGTH = 100
+VIEWPORT_LENGTH = 100
+ROAD_LENGTH = 900
 ROAD_WIDTH = 4
 ROAD_INTERVAL = 10
+
+ENABLE_3D = False
 
 # simulator setting
 SIMULATE_SPEED = 8
@@ -123,7 +127,7 @@ class Road:
 class Gate(sim.Component):
     __GATE_WIDTH = ROAD_WIDTH
     __GATE_LENGTH = 1
-    _MOVE_TIME = 20
+    _MOVE_TIME = 1
     _MOVE_SPEED = float(ROAD_WIDTH) / _MOVE_TIME
     __ETC_DISTANCE = 15
     __ETC_SENSOR_WIDTH = 1
@@ -279,8 +283,8 @@ GATE_TYPE_2_SUBCLASS = {Gate.Type.ETC: EtcGate, Gate.Type.MANUAL: ManualGate}
 
 
 class VehicleGenerator(sim.Component):
-    __SLOWEST_V = 0.5
-    __FASTEST_V = 1.5
+    __SLOWEST_V = 5
+    __FASTEST_V = 5
 
     def setup(self, x_pos: float, vehicle_color: str, claim_set: ClaimSet):
         self.cstr = vehicle_color
@@ -305,7 +309,7 @@ class VehicleGenerator(sim.Component):
                 claim_set=self.claim_set,
                 vehicle_color=self.cstr,
             )
-            self.hold(sim.Exponential(100))
+            self.hold(sim.Exponential(10))
 
 
 class Vehicle(sim.Component):
@@ -346,6 +350,18 @@ class Vehicle(sim.Component):
             linewidth=self.__BORDER_WIDTH,
             fillcolor=self.cstr,
         )
+        if ENABLE_3D:
+            an_3d = sim.Animate3dBox(
+                x=self.__time_2_x,
+                y=self.__time_2_y,
+                z=0.5,
+                x_len=self.LENGTH,
+                y_len=self.__WIDTH,
+                z_len=1,
+                z_ref=1,
+                color=self.cstr,
+                shaded=True,
+            )
         while self.length_passed < self.length_to_end:
             self.next_claim = self.__claim(self.length_passed + STEP_LENGTH)
 
@@ -373,6 +389,8 @@ class Vehicle(sim.Component):
             self.hold(t)
         self.claim.reset()
         an_vehicle.remove()
+        if ENABLE_3D:
+            an_3d.remove()
 
     def __claim(self, length_passed) -> Claim:
         return Claim(
@@ -403,18 +421,20 @@ if __name__ == "__main__":
     env = sim.Environment()
 
     # 界面左上角在显示器中的位置, 原点为屏幕左上角, x朝右y朝下
-    env.position3d((0, 0))
+    if ENABLE_3D:
+        env.position3d((0, 0))
     env.position((WINDOW_SIZE + 10, 0))
 
     # 设置界面大小
-    env.width3d(WINDOW_SIZE)
-    env.height3d(WINDOW_SIZE)
+    if ENABLE_3D:
+        env.width3d(WINDOW_SIZE)
+        env.height3d(WINDOW_SIZE)
     env.width(WINDOW_SIZE)
     env.height(WINDOW_SIZE)
     # 设置界面中坐标轴原点,x0y0为lower left坐标,x朝右y朝上
     env.x0(0)
     env.y0(0)
-    env.x1(ROAD_LENGTH)
+    env.x1(VIEWPORT_LENGTH)
 
     for i in range(ROAD_NUM):
         x_pos = ROAD_X_OFFSET + i * ROAD_INTERVAL
@@ -424,10 +444,16 @@ if __name__ == "__main__":
         show_claims = SHOW_CLAIMS
         claim_set = ClaimSet(x_pos, show_claims)
         half_width = ROAD_WIDTH / 2
+        x0 = x_pos - half_width
+        y0 = 0
+        x1 = x_pos + half_width
+        y1 = ROAD_LENGTH
         sim.AnimateRectangle(
-            spec=(x_pos - half_width, 0, x_pos + half_width, ROAD_LENGTH),
+            spec=(x0, y0, x1, y1),
             fillcolor=ROAD_COLOR,
         )
+        if ENABLE_3D:
+            sim.Animate3dRectangle(x0=x0, y0=y0, x1=x1, y1=y1, color=ROAD_COLOR)
         GATE_TYPE_2_SUBCLASS[toll_type](
             toll_type=toll_type, x_pos=x_pos, claim_set=claim_set
         )
@@ -440,13 +466,12 @@ if __name__ == "__main__":
     env.speed(SIMULATE_SPEED)
     env.background_color("black")
     env.view(
-        x_eye=50,
-        y_eye=50,
-        z_eye=50,
-        x_center=0,
-        y_center=-ROAD_LENGTH,
+        x_eye=38.8856,
+        y_eye=-108.9437,
+        z_eye=30,
+        x_center=ROAD_LENGTH / 2,
+        y_center=ROAD_LENGTH / 2,
         z_center=0,
-        field_of_view_y=30,
     )
 
     make_video = True
@@ -456,7 +481,8 @@ if __name__ == "__main__":
         env.camera_auto_print(True)
         env.show_fps(True)
         env.animate("?")
-        env.animate3d("?")
+        if ENABLE_3D:
+            env.animate3d("?")
         env.video_mode(type_of_video)
         env.video_repeat(0)
         env.video_pingpong(False)
@@ -465,5 +491,6 @@ if __name__ == "__main__":
         env.video_close()
     else:
         env.animate(True)
-        env.animate3d(True)
+        if ENABLE_3D:
+            env.animate3d(True)
         env.run()
