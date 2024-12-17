@@ -16766,58 +16766,9 @@ class Animate2dBase(DynamicClass):
                             rscaled.append(maxry - r[i + 1] + linewidth)
                         rscaled = tuple(rscaled)  # to make it hashable
 
-                        if as_points:
-                            self._image = Image.new(
-                                "RGBA",
-                                (
-                                    int(maxrx - minrx + 2 * linewidth),
-                                    int(maxry - minry + 2 * linewidth),
-                                ),
-                                (0, 0, 0, 0),
-                            )
-                            point_image = Image.new(
-                                "RGBA", (int(linewidth), int(linewidth)), linecolor
-                            )
+                        self.my_img_width = int(maxrx - minrx + 2 * linewidth)
+                        self.my_img_height = int(maxry - minry + 2 * linewidth)
 
-                            for i in range(0, len(r), 2):
-                                rx = rscaled[i]
-                                ry = rscaled[i + 1]
-                                self._image.paste(
-                                    point_image,
-                                    (
-                                        int(rx - 0.5 * linewidth),
-                                        int(ry - 0.5 * linewidth),
-                                    ),
-                                    point_image,
-                                )
-
-                        else:
-                            self._image = Image.new(
-                                "RGBA",
-                                (
-                                    int(maxrx - minrx + 2 * linewidth),
-                                    int(maxry - minry + 2 * linewidth),
-                                ),
-                                (0, 0, 0, 0),
-                            )
-                            draw = ImageDraw.Draw(self._image)
-                            if fillcolor[3] != 0:
-                                draw.polygon(rscaled, fill=fillcolor)
-                            if (round(linewidth) > 0) and (linecolor[3] != 0):
-                                if self.type == "circle" and not draw_arc:
-                                    draw.line(
-                                        rscaled[2:-2],
-                                        fill=linecolor,
-                                        width=int(linewidth),
-                                    )
-                                    # get rid of the first and last point (=center)
-                                else:
-                                    draw.line(
-                                        rscaled,
-                                        fill=linecolor,
-                                        width=int(round(linewidth)),
-                                    )
-                            del draw
                         self.minrx = minrx
                         self.minry = minry
                         self.maxrx = maxrx
@@ -16826,23 +16777,112 @@ class Animate2dBase(DynamicClass):
                         self.minpy = minpy
                         self.maxpx = maxpx
                         self.maxpy = maxpy
+                        self._image_x = (
+                            qx
+                            + self.minrx
+                            - linewidth
+                            + (offsetx * cosa - offsety * sina)
+                        )
+                        self._image_y = (
+                            qy
+                            + self.minry
+                            - linewidth
+                            + (offsetx * sina + offsety * cosa)
+                        )
+                        if self.over3d:
+                            width = self.env._width3d
+                            height = self.env._height3d
+                        else:
+                            width = self.env._width
+                            height = self.env._height
+                        self._image_visible = (
+                            (self._image_x <= width)
+                            and (self._image_y <= height)
+                            and (self._image_x + self.my_img_width >= 0)
+                            and (self._image_y + self.my_img_height >= 0)
+                        )
+                        if self._image_visible:
+                            if as_points:
+                                self._image = Image.new(
+                                    "RGBA",
+                                    (
+                                        self.my_img_width,
+                                        self.my_img_height,
+                                    ),
+                                    (0, 0, 0, 0),
+                                )
+                                point_image = Image.new(
+                                    "RGBA", (int(linewidth), int(linewidth)), linecolor
+                                )
 
-                    if self.type == "circle":
-                        self.env._centerx = qx
-                        self.env._centery = qy
-                        self.env._dimx = 2 * radius0
-                        self.env._dimy = 2 * radius1
-                    else:
-                        self.env._centerx = qx + (self.minrx + self.maxrx) / 2
-                        self.env._centery = qy + (self.minry + self.maxry) / 2
-                        self.env._dimx = self.maxpx - self.minpx
-                        self.env._dimy = self.maxpy - self.minpy
+                                for i in range(0, len(r), 2):
+                                    rx = rscaled[i]
+                                    ry = rscaled[i + 1]
+                                    self._image.paste(
+                                        point_image,
+                                        (
+                                            int(rx - 0.5 * linewidth),
+                                            int(ry - 0.5 * linewidth),
+                                        ),
+                                        point_image,
+                                    )
+
+                            else:
+                                self._image = Image.new(
+                                    "RGBA",
+                                    (
+                                        self.my_img_width,
+                                        self.my_img_height,
+                                    ),
+                                    (0, 0, 0, 0),
+                                )
+                                draw = ImageDraw.Draw(self._image)
+                                if fillcolor[3] != 0:
+                                    draw.polygon(rscaled, fill=fillcolor)
+                                if (round(linewidth) > 0) and (linecolor[3] != 0):
+                                    if self.type == "circle" and not draw_arc:
+                                        draw.line(
+                                            rscaled[2:-2],
+                                            fill=linecolor,
+                                            width=int(linewidth),
+                                        )
+                                        # get rid of the first and last point (=center)
+                                    else:
+                                        draw.line(
+                                            rscaled,
+                                            fill=linecolor,
+                                            width=int(round(linewidth)),
+                                        )
+                                del draw
+
+                        if self.type == "circle":
+                            self.env._centerx = qx
+                            self.env._centery = qy
+                            self.env._dimx = 2 * radius0
+                            self.env._dimy = 2 * radius1
+                        else:
+                            self.env._centerx = qx + (self.minrx + self.maxrx) / 2
+                            self.env._centery = qy + (self.minry + self.maxry) / 2
+                            self.env._dimx = self.maxpx - self.minpx
+                            self.env._dimy = self.maxpy - self.minpy
 
                     self._image_x = (
                         qx + self.minrx - linewidth + (offsetx * cosa - offsety * sina)
                     )
                     self._image_y = (
                         qy + self.minry - linewidth + (offsetx * sina + offsety * cosa)
+                    )
+                    if self.over3d:
+                        width = self.env._width3d
+                        height = self.env._height3d
+                    else:
+                        width = self.env._width
+                        height = self.env._height
+                    self._image_visible = (
+                        (self._image_x <= width)
+                        and (self._image_y <= height)
+                        and (self._image_x + self.my_img_width >= 0)
+                        and (self._image_y + self.my_img_height >= 0)
                     )
 
                 elif self.type == "image":
@@ -16951,6 +16991,19 @@ class Animate2dBase(DynamicClass):
 
                     self._image_x = qx + ex - imrwidth / 2
                     self._image_y = qy + ey - imrheight / 2
+                    if self.over3d:
+                        width = self.env._width3d
+                        height = self.env._height3d
+                    else:
+                        width = self.env._width
+                        height = self.env._height
+
+                    self._image_visible = (
+                        (self._image_x <= width)
+                        and (self._image_y <= height)
+                        and (self._image_x + self._image.size[0] >= 0)
+                        and (self._image_y + self._image.size[1] >= 0)
+                    )
 
                 elif self.type == "text":
                     # text contains self.text()
@@ -17102,23 +17155,36 @@ class Animate2dBase(DynamicClass):
                     imrwidth, imrheight = self._image.size
                     self._image_x = qx + ex - imrwidth / 2
                     self._image_y = qy + ey - imrheight / 2
+                    if self.over3d:
+                        width = self.env._width3d
+                        height = self.env._height3d
+                    else:
+                        width = self.env._width
+                        height = self.env._height
+
+                    self._image_visible = (
+                        (self._image_x <= width)
+                        and (self._image_y <= height)
+                        and (self._image_x + self._image.size[0] >= 0)
+                        and (self._image_y + self._image.size[1] >= 0)
+                    )
                 else:
                     raise ValueError(
                         "Internal error: animate type" + self.type + "not recognized."
                     )
-                if self.over3d:
-                    width = self.env._width3d
-                    height = self.env._height3d
-                else:
-                    width = self.env._width
-                    height = self.env._height
-
-                self._image_visible = (
-                    (self._image_x <= width)
-                    and (self._image_y <= height)
-                    and (self._image_x + self._image.size[0] >= 0)
-                    and (self._image_y + self._image.size[1] >= 0)
-                )
+                # if self.over3d:
+                #     width = self.env._width3d
+                #     height = self.env._height3d
+                # else:
+                #     width = self.env._width
+                #     height = self.env._height
+                #
+                # self._image_visible = (
+                #     (self._image_x <= width)
+                #     and (self._image_y <= height)
+                #     and (self._image_x + self._image.size[0] >= 0)
+                #     and (self._image_y + self._image.size[1] >= 0)
+                # )
             else:
                 self._image_visible = False
         except Exception as e:

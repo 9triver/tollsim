@@ -3,12 +3,12 @@ from __future__ import annotations
 import enum
 from typing import Optional
 
-import myEnhancedSalabim
-import mySalabim as sim
+# import mySalabim_2dEnhanced as sim
+import mySalabim_3dEnhanced as sim
 
 # sim.Animate spec = (xll, yll, xur, yur) and Coordinate origin is x, y
 
-ROAD_NUM = 10
+ROAD_NUM = 4
 ROAD_COLOR = "30%gray"
 ROAD_X_OFFSET = 10
 VIEWPORT_LENGTH = 100
@@ -16,7 +16,8 @@ ROAD_LENGTH = 900
 ROAD_WIDTH = 4
 ROAD_INTERVAL = 10
 
-ENABLE_3D = False
+ENABLE_3D = True
+ENABLE_2D = False
 
 # simulator setting
 SIMULATE_SPEED = 8
@@ -60,7 +61,7 @@ class Claim:
 
     def set(self) -> None:
         self.claim_set.claims.add(self)
-        if self.claim_set.show_animate:
+        if ENABLE_2D and self.claim_set.show_animate:
             self.an = sim.AnimateRectangle(
                 spec=(
                     self.claim_set.x - ROAD_WIDTH / 2,
@@ -73,7 +74,7 @@ class Claim:
 
     def reset(self) -> None:
         self.claim_set.claims.remove(self)
-        if self.claim_set.show_animate:
+        if ENABLE_2D and self.claim_set.show_animate:
             self.an.remove()
 
     # todo 改进算法减少计算量
@@ -309,7 +310,8 @@ class VehicleGenerator(sim.Component):
                 claim_set=self.claim_set,
                 vehicle_color=self.cstr,
             )
-            self.hold(sim.Exponential(10))
+            # self.hold(sim.Exponential(10))
+            self.hold(10)
 
 
 class Vehicle(sim.Component):
@@ -337,19 +339,20 @@ class Vehicle(sim.Component):
     def process(self):
         self.claim = self.__claim(self.length_passed)
         self.claim.set()
-        an_vehicle = sim.AnimateRectangle(
-            x=self.__time_2_x,
-            y=self.__time_2_y,
-            spec=(
-                -self.__WIDTH / 2,
-                -self.LENGTH / 2,
-                self.__WIDTH / 2,
-                self.LENGTH / 2,
-            ),
-            linecolor=self.__BORDER_COLOR,
-            linewidth=self.__BORDER_WIDTH,
-            fillcolor=self.cstr,
-        )
+        if ENABLE_2D:
+            an_vehicle = sim.AnimateRectangle(
+                x=self.__time_2_x,
+                y=self.__time_2_y,
+                spec=(
+                    -self.__WIDTH / 2,
+                    -self.LENGTH / 2,
+                    self.__WIDTH / 2,
+                    self.LENGTH / 2,
+                ),
+                linecolor=self.__BORDER_COLOR,
+                linewidth=self.__BORDER_WIDTH,
+                fillcolor=self.cstr,
+            )
         if ENABLE_3D:
             an_3d = sim.Animate3dBox(
                 x=self.__time_2_x,
@@ -358,7 +361,6 @@ class Vehicle(sim.Component):
                 x_len=self.LENGTH,
                 y_len=self.__WIDTH,
                 z_len=1,
-                z_ref=1,
                 color=self.cstr,
                 shaded=True,
             )
@@ -388,7 +390,8 @@ class Vehicle(sim.Component):
             self.length_passed += STEP_LENGTH
             self.hold(t)
         self.claim.reset()
-        an_vehicle.remove()
+        if ENABLE_2D:
+            an_vehicle.remove()
         if ENABLE_3D:
             an_3d.remove()
 
@@ -466,12 +469,13 @@ if __name__ == "__main__":
     env.speed(SIMULATE_SPEED)
     env.background_color("black")
     env.view(
-        x_eye=38.8856,
-        y_eye=-108.9437,
-        z_eye=30,
-        x_center=ROAD_LENGTH / 2,
-        y_center=ROAD_LENGTH / 2,
-        z_center=0,
+        x_eye=-6.9024,
+        y_eye=-95.8334,
+        z_eye=30.0000,
+        x_center=93.4761,
+        y_center=623.7552,
+        z_center=0.0000,
+        field_of_view_y=55.5556,
     )
 
     make_video = True
