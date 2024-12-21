@@ -8,11 +8,11 @@ import mySalabim_3dEnhanced as sim
 
 # sim.Animate spec = (xll, yll, xur, yur) and Coordinate origin is x, y
 
-ROAD_NUM = 4
+ROAD_NUM = 10
 ROAD_COLOR = "30%gray"
 ROAD_X_OFFSET = 10
 VIEWPORT_LENGTH = 100
-ROAD_LENGTH = 900
+ROAD_LENGTH = 1000
 ROAD_WIDTH = 4
 ROAD_INTERVAL = 10
 
@@ -20,7 +20,7 @@ ENABLE_3D = True
 ENABLE_2D = False
 
 # simulator setting
-SIMULATE_SPEED = 8
+SIMULATE_SPEED = 1000
 WINDOW_SIZE = 768
 SHOW_CLAIMS = True
 
@@ -451,10 +451,11 @@ if __name__ == "__main__":
         y0 = 0
         x1 = x_pos + half_width
         y1 = ROAD_LENGTH
-        sim.AnimateRectangle(
-            spec=(x0, y0, x1, y1),
-            fillcolor=ROAD_COLOR,
-        )
+        if ENABLE_2D:
+            sim.AnimateRectangle(
+                spec=(x0, y0, x1, y1),
+                fillcolor=ROAD_COLOR,
+            )
         if ENABLE_3D:
             sim.Animate3dRectangle(x0=x0, y0=y0, x1=x1, y1=y1, color=ROAD_COLOR)
         GATE_TYPE_2_SUBCLASS[toll_type](
@@ -469,16 +470,23 @@ if __name__ == "__main__":
     env.speed(SIMULATE_SPEED)
     env.background_color("black")
     env.view(
-        x_eye=-6.9024,
-        y_eye=-95.8334,
+        # x_eye=-6.9024,
+        # y_eye=-95.8334,
+        # z_eye=30.0000,
+        # x_center=93.4761,
+        # y_center=623.7552,
+        # z_center=0.0000,
+        # field_of_view_y=55.5556,
+        x_eye=176.9024,
+        y_eye=295.8334,
         z_eye=30.0000,
-        x_center=93.4761,
-        y_center=623.7552,
+        x_center=993.4761,
+        y_center=123.7552,
         z_center=0.0000,
         field_of_view_y=55.5556,
     )
 
-    make_video = True
+    make_video = False
     if make_video:
         type_of_video = "2d"
         # env.run(100)
@@ -491,10 +499,12 @@ if __name__ == "__main__":
         env.video_repeat(0)
         env.video_pingpong(False)
         env.video(f"lights {type_of_video}.gif")
-        env.run(till=3000)
+        env.run(till=300)
         env.video_close()
     else:
+        env.show_fps(True)
         env.animate(True)
         if ENABLE_3D:
             env.animate3d(True)
-        env.run()
+        env.camera_auto_print(True)
+        env.run(till=1000)

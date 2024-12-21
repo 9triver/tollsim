@@ -1,13 +1,13 @@
 #               _         _      _               ____   _  _        ___      _  _____
-#   ___   __ _ | |  __ _ | |__  (_) _ __ ___    |___ \ | || |      / _ \    / ||___ /
-#  / __| / _` || | / _` || '_ \ | || '_ ` _ \     __) || || |_    | | | |   | |  |_ \
-#  \__ \| (_| || || (_| || |_) || || | | | | |   / __/ |__   _| _ | |_| | _ | | ___) |
-#  |___/ \__,_||_| \__,_||_.__/ |_||_| |_| |_|  |_____|   |_|  (_) \___/ (_)|_||____/
+#   ___   __ _ | |  __ _ | |__  (_) _ __ ___    |___ \ | || |      / _ \    / ||___  |
+#  / __| / _` || | / _` || '_ \ | || '_ ` _ \     __) || || |_    | | | |   | |   / /
+#  \__ \| (_| || || (_| || |_) || || | | | | |   / __/ |__   _| _ | |_| | _ | |  / /
+#  |___/ \__,_||_| \__,_||_.__/ |_||_| |_| |_|  |_____|   |_|  (_) \___/ (_)|_| /_/
 #                    discrete event simulation
 #
 #  see www.salabim.org for more information, the documentation and license information
 
-__version__ = "24.0.13"
+__version__ = "24.0.17"
 
 import heapq
 import random
@@ -46,24 +46,7 @@ import zipfile
 
 from pathlib import Path
 
-from typing import (
-    Any,
-    Union,
-    Iterable,
-    Tuple,
-    List,
-    Callable,
-    TextIO,
-    Dict,
-    Set,
-    Type,
-    Hashable,
-    Optional,
-)
-# added
-from pympler import tracker
-from pympler import summary
-# added
+from typing import Any, Union, Iterable, Tuple, List, Callable, TextIO, Dict, Set, Type, Hashable, Optional
 
 # module = salabim  # for PythonInExcel runner
 
@@ -79,13 +62,6 @@ Chromebook = "penguin" in platform.uname()
 PythonInExcel = not ("__file__" in globals())
 AnacondaCode = sys.platform == "emscripten"
 
-# added
-Enable_frustum_culling = False
-Projection_dot_view_matrix = None
-tr = tracker.SummaryTracker()
-SUMMARY_INTERVAL = 100
-SUMMARY_CNT = 0
-# added
 
 def a_log(*args):
     if not hasattr(a_log, "a_logfile_name"):
@@ -103,8 +79,10 @@ class g: ...
 if PythonInExcel or AnacondaCode:
     _pie_result = []
 
+
     def pie_result():
         return _pie_result
+
 
     class b64_file_handler(io.IOBase):
         """
@@ -162,7 +140,6 @@ if PythonInExcel or AnacondaCode:
                 b64 = b64[n:]
             self._result.append("</file>")
             super().close()
-
 
 if Pythonista:
     try:
@@ -460,18 +437,18 @@ class Monitor:
     """
 
     def __init__(
-        self,
-        name: str = None,
-        monitor: bool = True,
-        level: bool = False,
-        initial_tally: Any = None,
-        type: str = None,
-        weight_legend: str = None,
-        fill: Iterable = None,
-        stats_only: bool = False,
-        env: "Environment" = None,
-        *args,
-        **kwargs,
+            self,
+            name: str = None,
+            monitor: bool = True,
+            level: bool = False,
+            initial_tally: Any = None,
+            type: str = None,
+            weight_legend: str = None,
+            fill: Iterable = None,
+            stats_only: bool = False,
+            env: "Environment" = None,
+            *args,
+            **kwargs,
     ):
         self.env = _set_env(env)
 
@@ -480,11 +457,7 @@ class Monitor:
         else:
             self._name = name
         self._level = level
-        self._weight_legend = (
-            ("duration" if self._level else "weight")
-            if weight_legend is None
-            else weight_legend
-        )
+        self._weight_legend = ("duration" if self._level else "weight") if weight_legend is None else weight_legend
         if self._level:
             if weight_legend is None:
                 self.weight_legend = "duration"
@@ -527,9 +500,7 @@ class Monitor:
     def __eq__(self, other):
         if isinstance(other, Monitor):
             return super().__eq__(other)
-        raise TypeError(
-            f"Not allowed to compare Monitor with {type(other).__name__} . Add parentheses?"
-        )
+        raise TypeError(f"Not allowed to compare Monitor with {type(other).__name__} . Add parentheses?")
 
     def __add__(self, other):
         self._block_stats_only()
@@ -573,12 +544,7 @@ class Monitor:
             function = inspect.getframeinfo(frame).function
             if function == "__init__":
                 function = frame.f_locals["self"].__class__.__name__
-            raise NotImplementedError(
-                function
-                + " not available for "
-                + self.name()
-                + " because it is stats_only"
-            )
+            raise NotImplementedError(function + " not available for " + self.name() + " because it is stats_only")
 
     def stats_only(self) -> bool:
         return self._stats_only
@@ -617,23 +583,15 @@ class Monitor:
         self._block_stats_only()
         name = kwargs.pop("name", None)
         if kwargs:
-            raise TypeError(
-                "merge() got an unexpected keyword argument '" + tuple(kwargs)[0] + "'"
-            )
+            raise TypeError("merge() got an unexpected keyword argument '" + tuple(kwargs)[0] + "'")
         new_xtype = self.xtype
 
         for m in monitors:
             m._block_stats_only()
             if not isinstance(m, Monitor):
-                raise TypeError(
-                    "not possible to merge monitor with "
-                    + object_to_str(m, True)
-                    + " type"
-                )
+                raise TypeError("not possible to merge monitor with " + object_to_str(m, True) + " type")
             if self._level != m._level:
-                raise TypeError(
-                    "not possible to mix level monitor with non level monitor"
-                )
+                raise TypeError("not possible to mix level monitor with non level monitor")
             if self.xtype != m.xtype:
                 new_xtype = "any"
             if self.env != m.env:
@@ -661,11 +619,7 @@ class Monitor:
             curx = [new.off] * len(merge)
             new._t = array.array("d")
             for t, index, x in heapq.merge(
-                *[
-                    zip(merge[index]._t, itertools.repeat(index), merge[index]._x)
-                    for index in range(len(merge))
-                ]
-            ):
+                    *[zip(merge[index]._t, itertools.repeat(index), merge[index]._x) for index in range(len(merge))]):
                 if new.xtypecode:
                     curx[index] = x
                 else:
@@ -689,19 +643,13 @@ class Monitor:
             new.start = new._t[0]
         else:
             for t, _, x, weight in heapq.merge(
-                *[
-                    zip(
-                        merge[index]._t,
-                        itertools.repeat(index),
-                        merge[index]._x,
-                        (
-                            merge[index]._weight
-                            if merge[index]._weight
-                            else (1,) * len(merge[index]._x)
-                        ),
-                    )
-                    for index in range(len(merge))
-                ]
+                    *[
+                        zip(
+                            merge[index]._t, itertools.repeat(index), merge[index]._x,
+                            merge[index]._weight if merge[index]._weight else (1,) * len(merge[index]._x)
+                        )
+                        for index in range(len(merge))
+                    ]
             ):
                 if weight == 1:
                     if new._weight:
@@ -726,9 +674,7 @@ class Monitor:
         if factor <= 0:
             raise TypeError(f"factor {factor} <= 0")
 
-        new = _SystemMonitor(
-            name=name, type=self.xtype, level=self._level, env=self.env
-        )
+        new = _SystemMonitor(name=name, type=self.xtype, level=self._level, env=self.env)
         new._x = []
         new._t = []
         for x in self._x:
@@ -742,9 +688,7 @@ class Monitor:
         new.isgenerated = True
         return new
 
-    def x_map(
-        self, func: Callable, monitors: List["Monitor"] = [], name: str = None
-    ) -> "Monitor":
+    def x_map(self, func: Callable, monitors: List["Monitor"] = [], name: str = None) -> "Monitor":
         """
         maps a function to the x-values of the given monitors (static method)
 
@@ -793,15 +737,8 @@ class Monitor:
             curx = [new.off] * len(monitors)
             new._t = array.array("d")
             for t, index, x in heapq.merge(
-                *[
-                    zip(
-                        monitors[index]._t,
-                        itertools.repeat(index),
-                        monitors[index]._x_any,
-                    )
-                    for index in range(len(monitors))
-                ]
-            ):
+                    *[zip(monitors[index]._t, itertools.repeat(index), monitors[index]._x_any) for index in
+                      range(len(monitors))]):
                 curx[index] = x
 
                 if any(val == new.off for val in curx):
@@ -861,11 +798,7 @@ class Monitor:
         """
         self._block_stats_only()
         self_env = self.env
-        self.env = Environment(
-            to_freeze=True,
-            name=self.env.name() + ".copy.",
-            time_unit=self.env.get_time_unit(),
-        )
+        self.env = Environment(to_freeze=True, name=self.env.name() + ".copy.", time_unit=self.env.get_time_unit())
         m = copy.deepcopy(self)
         self.env = self_env
         m.isgenerated = True
@@ -876,13 +809,7 @@ class Monitor:
         m.env._t = self.env._t
         return m
 
-    def slice(
-        self,
-        start: float = None,
-        stop: float = None,
-        modulo: float = None,
-        name: str = None,
-    ) -> "Monitor":
+    def slice(self, start: float = None, stop: float = None, modulo: float = None, name: str = None) -> "Monitor":
         """
         slices this monitor (creates a subset)
 
@@ -921,9 +848,7 @@ class Monitor:
         self._block_stats_only()
         if name is None:
             name = self.name() + ".sliced"
-        new = _SystemMonitor(
-            level=self._level, type=self.xtype, name=name, env=self.env
-        )
+        new = _SystemMonitor(level=self._level, type=self.xtype, name=name, env=self.env)
         actions = []
         if modulo is None:
             if start is None:
@@ -940,9 +865,7 @@ class Monitor:
             if self.env._animate:
                 stop = min(stop, self.env._t)
             else:
-                stop = min(
-                    stop, self.env._now - self.env._offset
-                )  # not self.now() in order to support frozen monitors
+                stop = min(stop, self.env._now - self.env._offset)  # not self.now() in order to support frozen monitors
             actions.append((start, "a", 0, 0))
             actions.append((stop, stop_action, 0, 0))
         else:
@@ -998,15 +921,9 @@ class Monitor:
                 _weight.append(self.weight[-1])
             except AttributeError:
                 ...  # ignore if bool
-        for t, type, x, weight in heapq.merge(
-            actions,
-            zip(
-                self._t,
-                itertools.repeat("c"),
-                _x,
-                _weight if (_weight and not self._level) else (1,) * len(_x),
-            ),
-        ):
+        for t, type, x, weight in heapq.merge(actions, zip(self._t, itertools.repeat("c"), _x,
+                                                           _weight if (_weight and not self._level) else (1,) * len(
+                                                                   _x))):
             if new._level:
                 if type == "a":
                     enabled = True
@@ -1116,15 +1033,15 @@ class Monitor:
 
     def __repr__(self):
         return (
-            object_to_str(self)
-            + ("[level]" if self._level else "")
-            + " ("
-            + self.name()
-            + ")"
-            + ("[stats_only]" if self._stats_only else "")
-            + " ("
-            + self.name()
-            + ")"
+                object_to_str(self)
+                + ("[level]" if self._level else "")
+                + " ("
+                + self.name()
+                + ")"
+                + ("[stats_only]" if self._stats_only else "")
+                + " ("
+                + self.name()
+                + ")"
         )
 
     def __call__(self, t=None):
@@ -1137,9 +1054,7 @@ class Monitor:
         if t == self.env._now:
             return self._tally  # even if monitor is off, the current value is valid
         if self._stats_only:
-            raise NotImplementedError(
-                "__call__(t) not supported for stats_only monitors"
-            )
+            raise NotImplementedError("__call__(t) not supported for stats_only monitors")
         if t < self._t[0]:
             return self.off
         i = bisect.bisect_left(list(zip(self._t, itertools.count())), (t, float("inf")))
@@ -1303,9 +1218,7 @@ class Monitor:
                     self._x.append(self.off)
                 self._t.append(self.env._now)
             else:
-                self._weight = (
-                    False  # weights are only stored if there is a non 1 weight
-                )
+                self._weight = False  # weights are only stored if there is a non 1 weight
         self.cached_xweight.clear()  # invalidate cache
 
         self.monitor(monitor)
@@ -1339,9 +1252,7 @@ class Monitor:
         else:
             if value is not None:
                 if value and self.isgenerated:
-                    raise TypeError(
-                        "sliced, merged or frozen monitors cannot be turned on"
-                    )
+                    raise TypeError("sliced, merged or frozen monitors cannot be turned on")
                 self._monitor = value
                 if self._level:
                     if self._monitor:
@@ -1378,9 +1289,7 @@ class Monitor:
         if self._stats_only:
             if self._level:
                 if weight != 1:
-                    raise ValueError(
-                        "level monitor supports only weight=1, not: " + str(weight)
-                    )
+                    raise ValueError("level monitor supports only weight=1, not: " + str(weight))
                 if self._monitor:
                     weight = self.env._now - self._ttally_monitored
                     value_num = self._tally
@@ -1406,12 +1315,8 @@ class Monitor:
                     # algorithm based on https://fanf2.user.srcf.net/hermes/doc/antiforgery/stats.pdf
                     self.sumw[ex0] += weight
                     mun1 = self.mun[ex0]
-                    self.mun[ex0] = mun1 + (weight / self.sumw[ex0]) * (
-                        value_num - mun1
-                    )
-                    self.sn[ex0] = self.sn[ex0] + weight * (value_num - mun1) * (
-                        value_num - self.mun[ex0]
-                    )
+                    self.mun[ex0] = mun1 + (weight / self.sumw[ex0]) * (value_num - mun1)
+                    self.sn[ex0] = self.sn[ex0] + weight * (value_num - mun1) * (value_num - self.mun[ex0])
                     self._minimum[ex0] = min(self._minimum[ex0], value_num)
                     self._maximum[ex0] = max(self._maximum[ex0], value_num)
                 if weight != 1:
@@ -1422,9 +1327,7 @@ class Monitor:
             if self._level:
                 if weight != 1:
                     if self._level:
-                        raise ValueError(
-                            "level monitor supports only weight=1, not: " + str(weight)
-                        )
+                        raise ValueError("level monitor supports only weight=1, not: " + str(weight))
                 if value == self.off:
                     raise ValueError("not allowed to tally " + str(self.off) + " (off)")
                 self._tally = value
@@ -1693,9 +1596,7 @@ class Monitor:
         """
         self._block_stats_only()
         self.env._check_time_unit_na()
-        return self.multiply(
-            _time_unit_lookup(time_unit) / self.env._time_unit, name=name
-        )
+        return self.multiply(_time_unit_lookup(time_unit) / self.env._time_unit, name=name)
 
     def multiply(self, scale: float = 1, name: str = None) -> "Monitor":
         """
@@ -1727,18 +1628,14 @@ class Monitor:
         if self.xtype == "float":
             if name is None:
                 name = self.name()
-            new = _SystemMonitor(
-                name=name, monitor=False, type="float", level=False, env=self.env
-            )
+            new = _SystemMonitor(name=name, monitor=False, type="float", level=False, env=self.env)
             new.isgenerated = True
             new._x = [x * scale for x in self._x]
             new._t = [t for t in self._t]
             return new
 
         else:
-            raise ValueError(
-                "type", self.xtype, " monitors can't be multiplied (only float)"
-            )
+            raise ValueError("type", self.xtype, " monitors can't be multiplied (only float)")
 
     def name(self, value: str = None) -> str:
         """
@@ -1869,10 +1766,7 @@ class Monitor:
             sumweight = sum(weight)
             if sumweight:
                 wmean = self.mean(ex0=ex0)
-                wvar = (
-                    sum((vweight * (vx - wmean) ** 2) for vx, vweight in zip(x, weight))
-                    / sumweight
-                )
+                wvar = sum((vweight * (vx - wmean) ** 2) for vx, vweight in zip(x, weight)) / sumweight
                 return math.sqrt(wvar)
             else:
                 return nan
@@ -1978,9 +1872,7 @@ class Monitor:
         """
         return self.percentile(50, ex0=ex0, interpolation=interpolation)
 
-    def percentile(
-        self, q: float, ex0: bool = False, interpolation: str = "linear"
-    ) -> float:
+    def percentile(self, q: float, ex0: bool = False, interpolation: str = "linear") -> float:
         """
         q-th percentile of tallied values
 
@@ -2037,11 +1929,8 @@ class Monitor:
         """
         self._block_stats_only()
 
-        if interpolation not in (
-            ("linear", "lower", "higher", "midpoint")
-            if self._weight
-            else ("linear", "lower", "higher", "midpoint", "nearest")
-        ):
+        if interpolation not in (("linear", "lower", "higher", "midpoint") if self._weight else (
+        "linear", "lower", "higher", "midpoint", "nearest")):
             raise ValueError("incorrect interpolation method " + str(interpolation))
 
         q = max(0, min(q, 100))
@@ -2090,9 +1979,7 @@ class Monitor:
                     break
 
             if interpolation == "linear":
-                return interpolate(
-                    q, weight_cum[k], weight_cum[k + 1], x_sorted[k], x_sorted[k + 1]
-                )
+                return interpolate(q, weight_cum[k], weight_cum[k + 1], x_sorted[k], x_sorted[k + 1])
             if interpolation == "lower":
                 return x_sorted[k]
             if interpolation == "higher":
@@ -2105,9 +1992,7 @@ class Monitor:
                 else:
                     return x_sorted[k + 1]
 
-    def bin_number_of_entries(
-        self, lowerbound: float, upperbound: float, ex0: bool = False
-    ) -> int:
+    def bin_number_of_entries(self, lowerbound: float, upperbound: float, ex0: bool = False) -> int:
         """
         count of the number of tallied values in range (lowerbound,upperbound]
 
@@ -2188,13 +2073,7 @@ class Monitor:
 
     def sys_bin_weight(self, lowerbound, upperbound):
         x, weight = self._xweight()
-        return sum(
-            (
-                vweight
-                for vx, vweight in zip(x, weight)
-                if (vx > lowerbound) and (vx <= upperbound)
-            )
-        )
+        return sum((vweight for vx, vweight in zip(x, weight) if (vx > lowerbound) and (vx <= upperbound)))
 
     def value_number_of_entries(self, value: Any) -> int:
         """
@@ -2417,14 +2296,8 @@ class Monitor:
     def sys_weight_zero(self):
         return self.sys_weight() - self.sys_weight(ex0=True)
 
-    def print_statistics(
-        self,
-        show_header: bool = True,
-        show_legend: bool = True,
-        do_indent: bool = False,
-        as_str: bool = False,
-        file: TextIO = None,
-    ) -> str:
+    def print_statistics(self, show_header: bool = True, show_legend: bool = True, do_indent: bool = False,
+                         as_str: bool = False, file: TextIO = None) -> str:
         """
         print monitor statistics
 
@@ -2460,19 +2333,11 @@ class Monitor:
         indent = pad("", ll)
 
         if show_header:
-            result.append(
-                indent
-                + f"Statistics of {self.name()} at {fn(self.env._now - self.env._offset, 13, 3)}"
-            )
+            result.append(indent + f"Statistics of {self.name()} at {fn(self.env._now - self.env._offset, 13, 3)}")
 
         if show_legend:
-            result.append(
-                indent + "                        all    excl.zero         zero"
-            )
-            result.append(
-                pad("-" * (ll - 1) + " ", ll)
-                + "-------------- ------------ ------------ ------------"
-            )
+            result.append(indent + "                        all    excl.zero         zero")
+            result.append(pad("-" * (ll - 1) + " ", ll) + "-------------- ------------ ------------ ------------")
 
         if self._weight:
             result.append(
@@ -2483,30 +2348,19 @@ class Monitor:
                 f"{pad(self.name(), ll)}{pad('entries', 14)}{fn(self.number_of_entries(), 13, 3)}{fn(self.number_of_entries(ex0=True), 13, 3)}{fn(self.number_of_entries_zero(), 13, 3)}"
             )
 
-        result.append(
-            f"{indent}mean          {fn(self.mean(), 13, 3)}{fn(self.mean(ex0=True), 13, 3)}"
-        )
+        result.append(f"{indent}mean          {fn(self.mean(), 13, 3)}{fn(self.mean(ex0=True), 13, 3)}")
 
-        result.append(
-            f"{indent}std.deviation {fn(self.std(), 13, 3)}{fn(self.std(ex0=True), 13, 3)}"
-        )
+        result.append(f"{indent}std.deviation {fn(self.std(), 13, 3)}{fn(self.std(ex0=True), 13, 3)}")
         result.append("")
-        result.append(
-            f"{indent}minimum       {fn(self.minimum(), 13, 3)}{fn(self.minimum(ex0=True), 13, 3)}"
-        )
+        result.append(f"{indent}minimum       {fn(self.minimum(), 13, 3)}{fn(self.minimum(ex0=True), 13, 3)}")
         if not self._stats_only:
             result.append(
-                f"{indent}median        {fn(self.percentile(50), 13, 3)}{fn(self.percentile(50, ex0=True), 13, 3)}"
-            )
+                f"{indent}median        {fn(self.percentile(50), 13, 3)}{fn(self.percentile(50, ex0=True), 13, 3)}")
             result.append(
-                f"{indent}90% percentile{fn(self.percentile(90), 13, 3)}{fn(self.percentile(90, ex0=True), 13, 3)}"
-            )
+                f"{indent}90% percentile{fn(self.percentile(90), 13, 3)}{fn(self.percentile(90, ex0=True), 13, 3)}")
             result.append(
-                f"{indent}95% percentile{fn(self.percentile(95), 13, 3)}{fn(self.percentile(95, ex0=True), 13, 3)}"
-            )
-        result.append(
-            f"{indent}maximum       {fn(self.maximum(), 13, 3)}{fn(self.maximum(ex0=True), 13, 3)}"
-        )
+                f"{indent}95% percentile{fn(self.percentile(95), 13, 3)}{fn(self.percentile(95, ex0=True), 13, 3)}")
+        result.append(f"{indent}maximum       {fn(self.maximum(), 13, 3)}{fn(self.maximum(ex0=True), 13, 3)}")
         return return_or_print(result, as_str, file)
 
     def histogram_autoscale(self, ex0: bool = False) -> Tuple[float, float, int]:
@@ -2534,7 +2388,7 @@ class Monitor:
 
         done = False
         for i in range(10):
-            exp = 10**i
+            exp = 10 ** i
             for bin_width in (exp, exp * 2, exp * 5):
                 lowerbound = math.floor(xmin / bin_width) * bin_width
                 number_of_bins = int(math.ceil((xmax - lowerbound) / bin_width))
@@ -2546,15 +2400,15 @@ class Monitor:
         return bin_width, lowerbound, number_of_bins
 
     def print_histograms(
-        self,
-        number_of_bins: int = None,
-        lowerbound: float = None,
-        bin_width: float = None,
-        values: bool = False,
-        ex0: bool = False,
-        as_str: bool = False,
-        file: TextIO = None,
-        graph_scale: float = None,
+            self,
+            number_of_bins: int = None,
+            lowerbound: float = None,
+            bin_width: float = None,
+            values: bool = False,
+            ex0: bool = False,
+            as_str: bool = False,
+            file: TextIO = None,
+            graph_scale: float = None,
     ) -> str:
         """
         print monitor statistics and histogram
@@ -2611,30 +2465,22 @@ class Monitor:
 
         Exactly same functionality as Monitor.print_histogram()
         """
-        return self.print_histogram(
-            number_of_bins,
-            lowerbound,
-            bin_width,
-            values,
-            ex0,
-            as_str=as_str,
-            file=file,
-            graph_scale=graph_scale,
-        )
+        return self.print_histogram(number_of_bins, lowerbound, bin_width, values, ex0, as_str=as_str, file=file,
+                                    graph_scale=graph_scale)
 
     def print_histogram(
-        self,
-        number_of_bins: int = None,
-        lowerbound: float = None,
-        bin_width: float = None,
-        values: Union[bool, Iterable] = False,
-        ex0: bool = False,
-        as_str: bool = False,
-        file: TextIO = None,
-        graph_scale: float = None,
-        sort_on_weight: bool = False,
-        sort_on_duration: bool = False,
-        sort_on_value: bool = False,
+            self,
+            number_of_bins: int = None,
+            lowerbound: float = None,
+            bin_width: float = None,
+            values: Union[bool, Iterable] = False,
+            ex0: bool = False,
+            as_str: bool = False,
+            file: TextIO = None,
+            graph_scale: float = None,
+            sort_on_weight: bool = False,
+            sort_on_duration: bool = False,
+            sort_on_value: bool = False,
     ) -> str:
         """
         print monitor statistics and histogram
@@ -2712,13 +2558,9 @@ class Monitor:
         """
 
         if self._level and sort_on_weight:
-            raise ValueError(
-                "level monitors can't be sorted on weight. Use sort_on_duration instead"
-            )
+            raise ValueError("level monitors can't be sorted on weight. Use sort_on_duration instead")
         if not self._level and sort_on_duration:
-            raise ValueError(
-                "non level monitors can't be sorted on duration. Use sort_on_weight instead"
-            )
+            raise ValueError("non level monitors can't be sorted on duration. Use sort_on_weight instead")
         if sort_on_value and sort_on_weight:
             raise ValueError("sort_on_value can't be combined with sorted_on_value")
         if sort_on_value and sort_on_weight:
@@ -2751,14 +2593,10 @@ class Monitor:
                 result.append(f"{pad('entries', 13)}{fn(nentries, 13, 3)}")
             result.append("")
             if self._level:
-                result.append(
-                    f"value                {rpad(self.weight_legend, 13)}     %"
-                )
+                result.append(f"value                {rpad(self.weight_legend, 13)}     %")
             else:
                 if self._weight:
-                    result.append(
-                        f"value                {rpad(self.weight_legend, 13)}     % entries     %"
-                    )
+                    result.append(f"value                {rpad(self.weight_legend, 13)}     % entries     %")
                 else:
                     result.append("value               entries     %")
 
@@ -2770,25 +2608,14 @@ class Monitor:
                     unique_values.append(v)
 
                 if sort_on_weight or sort_on_duration or sort_on_value:
-                    values_label = [
-                        v
-                        for v in self.values(
-                            ex0=ex0,
-                            sort_on_weight=sort_on_weight,
-                            sort_on_duration=sort_on_duration,
-                        )
-                        if v in values
-                    ]
+                    values_label = [v for v in self.values(ex0=ex0, sort_on_weight=sort_on_weight,
+                                                           sort_on_duration=sort_on_duration) if v in values]
                     values_not_in_monitor = [v for v in values if v not in values_label]
                     values_label.extend(sorted(values_not_in_monitor))
                 else:
                     values_label = values
             else:
-                values_label = self.values(
-                    ex0=ex0,
-                    sort_on_weight=sort_on_weight,
-                    sort_on_duration=sort_on_duration,
-                )
+                values_label = self.values(ex0=ex0, sort_on_weight=sort_on_weight, sort_on_duration=sort_on_duration)
 
             values_condition = [[v] for v in values_label]
             rest_values = self.values(ex0=ex0)
@@ -2796,9 +2623,7 @@ class Monitor:
                 if v in rest_values:
                     rest_values.remove(v)
 
-            if (
-                rest_values
-            ):  # not possible via set subtraction as values may be not hashable
+            if rest_values:  # not possible via set subtraction as values may be not hashable
                 values_condition.append(rest_values)
                 values_label.append("<rest>")
 
@@ -2818,13 +2643,7 @@ class Monitor:
                 s = "*" * n
 
                 if self._level:
-                    result.append(
-                        pad(str(value_label), 20)
-                        + fn(count, 14, 3)
-                        + fn(perc * 100, 6, 1)
-                        + " "
-                        + s
-                    )
+                    result.append(pad(str(value_label), 20) + fn(count, 14, 3) + fn(perc * 100, 6, 1) + " " + s)
                 else:
                     if self._weight:
                         result.append(
@@ -2835,13 +2654,7 @@ class Monitor:
                             + fn(count_entries * 100 / nentries, 6, 1)
                         )
                     else:
-                        result.append(
-                            pad(str(value_label), 20)
-                            + rpad(str(count), 7)
-                            + fn(perc * 100, 6, 1)
-                            + " "
-                            + s
-                        )
+                        result.append(pad(str(value_label), 20) + rpad(str(count), 7) + fn(perc * 100, 6, 1) + " " + s)
         else:
             auto_scale = True
             if bin_width is None:
@@ -2859,17 +2672,11 @@ class Monitor:
 
             if auto_scale:
                 bin_width, lowerbound, number_of_bins = self.histogram_autoscale()
-            result.append(
-                self.print_statistics(
-                    show_header=False, show_legend=True, do_indent=False, as_str=True
-                )
-            )
+            result.append(self.print_statistics(show_header=False, show_legend=True, do_indent=False, as_str=True))
             if not self._stats_only and number_of_bins >= 0:
                 result.append("")
                 if self._weight:
-                    result.append(
-                        "           <= " + rpad(self.weight_legend, 13) + "     %  cum%"
-                    )
+                    result.append("           <= " + rpad(self.weight_legend, 13) + "     %  cum%")
                 else:
                     result.append("           <=       entries     %  cum%")
 
@@ -2896,21 +2703,15 @@ class Monitor:
                         n = int(perc * graph_scale)
                         ncum = int(cumperc * graph_scale) + 1
                         s = ("*" * n) + (" " * (graph_scale - n))
-                        s = s[: ncum - 1] + "|" + s[ncum + 1 :]
+                        s = s[: ncum - 1] + "|" + s[ncum + 1:]
 
                     result.append(
-                        f"{fn(ub, 13, 3)} {fn(count, 13, 3)}{fn(perc * 100, 6, 1)}{fn(cumperc * 100, 6, 1)} {s}"
-                    )
+                        f"{fn(ub, 13, 3)} {fn(count, 13, 3)}{fn(perc * 100, 6, 1)}{fn(cumperc * 100, 6, 1)} {s}")
         result.append("")
         return return_or_print(result, as_str=as_str, file=file)
 
-    def values(
-        self,
-        ex0: bool = False,
-        force_numeric: bool = False,
-        sort_on_weight: bool = False,
-        sort_on_duration: bool = False,
-    ) -> List:
+    def values(self, ex0: bool = False, force_numeric: bool = False, sort_on_weight: bool = False,
+               sort_on_duration: bool = False) -> List:
         """
         values
 
@@ -2947,14 +2748,10 @@ class Monitor:
 
         if self._level:
             if sort_on_weight:
-                raise ValueError(
-                    "level monitors can't be sorted on weight. Use sort_on_duration instead"
-                )
+                raise ValueError("level monitors can't be sorted on weight. Use sort_on_duration instead")
         else:
             if sort_on_duration:
-                raise ValueError(
-                    "non level monitors can't be sorted on duration. Use sort_on_weight instead"
-                )
+                raise ValueError("non level monitors can't be sorted on duration. Use sort_on_weight instead")
 
         def key(x):
             if sort_on_weight:
@@ -3152,9 +2949,7 @@ class Monitor:
         """
         return AnimateMonitor(monitor=self, *args, **kwargs)
 
-    def x(
-        self, ex0: bool = False, force_numeric: bool = True
-    ) -> Union[List, array.array]:
+    def x(self, ex0: bool = False, force_numeric: bool = True) -> Union[List, array.array]:
         """
         array/list of tallied values
 
@@ -3182,9 +2977,7 @@ class Monitor:
             raise TypeError("x not available for level monitors")
         return self._xweight(ex0=ex0, force_numeric=force_numeric)[0]
 
-    def xweight(
-        self, ex0: bool = False, force_numeric: bool = True
-    ) -> Union[List, array.array]:
+    def xweight(self, ex0: bool = False, force_numeric: bool = True) -> Union[List, array.array]:
         """
         array/list of tallied values
 
@@ -3240,13 +3033,7 @@ class Monitor:
             raise TypeError("xduration not available for non level monitors")
         return self._xweight(ex0, force_numeric)
 
-    def xt(
-        self,
-        ex0: bool = False,
-        exoff=False,
-        force_numeric: bool = True,
-        add_now: bool = True,
-    ) -> Tuple:
+    def xt(self, ex0: bool = False, exoff=False, force_numeric: bool = True, add_now: bool = True) -> Tuple:
         """
         tuple of array/list with x-values and array with timestamp
 
@@ -3320,13 +3107,7 @@ class Monitor:
 
         return xx, t
 
-    def tx(
-        self,
-        ex0: bool = False,
-        exoff: bool = False,
-        force_numeric: bool = False,
-        add_now: bool = True,
-    ) -> Tuple:
+    def tx(self, ex0: bool = False, exoff: bool = False, force_numeric: bool = False, add_now: bool = True) -> Tuple:
         """
         tuple of array with timestamps and array/list with x-values
 
@@ -3364,13 +3145,7 @@ class Monitor:
         """
         self._block_stats_only()
 
-        return tuple(
-            reversed(
-                self.xt(
-                    ex0=ex0, exoff=exoff, force_numeric=force_numeric, add_now=add_now
-                )
-            )
-        )
+        return tuple(reversed(self.xt(ex0=ex0, exoff=exoff, force_numeric=force_numeric, add_now=add_now)))
 
     def _xweight(self, ex0=False, force_numeric=True):
         t_extra = self.env._t if self.env._animate else self.env._now
@@ -3415,17 +3190,7 @@ class Monitor:
 
             if self._weight:
                 if ex0:
-                    xweight = (
-                        x0,
-                        array.array(
-                            "d",
-                            [
-                                vweight
-                                for vx, vweight in zip(x, self._weight)
-                                if vx != 0
-                            ],
-                        ),
-                    )
+                    xweight = (x0, array.array("d", [vweight for vx, vweight in zip(x, self._weight) if vx != 0]))
                 else:
                     xweight = (x, self._weight)
             else:
@@ -3438,13 +3203,8 @@ class Monitor:
         return xweight
 
     def as_dataframe(
-        self,
-        include_t: bool = True,
-        use_datetime0=False,
-        ex0: bool = False,
-        exoff=False,
-        force_numeric: bool = True,
-        add_now: bool = True,
+            self, include_t: bool = True, use_datetime0=False, ex0: bool = False, exoff=False,
+            force_numeric: bool = True, add_now: bool = True
     ) -> "dataframe":
         """
         makes a pandas dataframe with the x-values and optionally the t-values of the monitors
@@ -3477,9 +3237,7 @@ class Monitor:
             import pandas as pd
         except ImportError:
             raise ImportError("Monitor.as_dataframe requires pandas")
-        xs, ts = self.xt(
-            ex0=ex0, exoff=exoff, force_numeric=force_numeric, add_now=add_now
-        )
+        xs, ts = self.xt(ex0=ex0, exoff=exoff, force_numeric=force_numeric, add_now=add_now)
         if include_t:
             if use_datetime0:
                 df = pd.DataFrame({"t": [self.env.t_to_datetime(t) for t in ts]})
@@ -3492,12 +3250,12 @@ class Monitor:
         return df
 
     def as_resampled_dataframe(
-        self,
-        extra_monitors: Iterable = [],
-        delta_t: Union[float, datetime.timedelta] = 1,
-        min_t: Union[float, datetime.datetime] = None,
-        max_t: Union[float, datetime.datetime] = None,
-        use_datetime0=False,
+            self,
+            extra_monitors: Iterable = [],
+            delta_t: Union[float, datetime.timedelta] = 1,
+            min_t: Union[float, datetime.datetime] = None,
+            max_t: Union[float, datetime.datetime] = None,
+            use_datetime0=False,
     ) -> "dataframe":
         """
         makes a pandas dataframe with t, and x_values for the monitor(s)
@@ -3555,9 +3313,7 @@ class Monitor:
         else:
             if isinstance(delta_t, datetime.timedelta):
                 if not use_datetime0:
-                    raise TypeError(
-                        "delta_t can't be a datetime.timedelta if use_datetime0=False"
-                    )
+                    raise TypeError("delta_t can't be a datetime.timedelta if use_datetime0=False")
                 delta_t = self.env.timedelta_to_duration(delta_t)
 
         if min_t is None:
@@ -3565,9 +3321,7 @@ class Monitor:
         else:
             if isinstance(min_t, datetime.datetime):
                 if not use_datetime0:
-                    raise TypeError(
-                        "min_t can't be a datetime.datetime if use_datetime0=False"
-                    )
+                    raise TypeError("min_t can't be a datetime.datetime if use_datetime0=False")
 
                 min_t = self.env.datetime_to_t(min_t)
             min_t += self.env._offset
@@ -3577,20 +3331,11 @@ class Monitor:
         else:
             if isinstance(max_t, datetime.datetime):
                 if not use_datetime0:
-                    raise TypeError(
-                        "max_t can't be a datetime.datetime if use_datetime0=False"
-                    )
+                    raise TypeError("max_t can't be a datetime.datetime if use_datetime0=False")
                 max_t = self.env.datetime_to_t(max_t)
             max_t += self.env._offset
         if use_datetime0:
-            df = pd.DataFrame(
-                {
-                    "t": [
-                        self.env.t_to_datetime(t)
-                        for t in self.env.arange(min_t, max_t, delta_t)
-                    ]
-                }
-            )
+            df = pd.DataFrame({"t": [self.env.t_to_datetime(t) for t in self.env.arange(min_t, max_t, delta_t)]})
         else:
             df = pd.DataFrame({"t": self.env.arange(min_t, max_t, delta_t)})
 
@@ -3742,9 +3487,8 @@ class DynamicClass:
             if inspect.isfunction(c):
                 nargs = c.__code__.co_argcount
                 if c.__defaults__ is not None:
-                    c.__defaults__ = tuple(
-                        self if x == object else x for x in c.__defaults__
-                    )  # indicate that object refers to animation object itself
+                    c.__defaults__ = tuple(self if x == object else x for x in
+                                           c.__defaults__)  # indicate that object refers to animation object itself
                     nargs -= len(c.__defaults__)
 
                 if nargs == 0:
@@ -3773,9 +3517,8 @@ class DynamicClass:
             if inspect.isfunction(c):
                 nargs = c.__code__.co_argcount
                 if c.__defaults__ is not None:
-                    c.__defaults__ = tuple(
-                        self if x == object else x for x in c.__defaults__
-                    )  # indicate that object refers to animation object itself
+                    c.__defaults__ = tuple(self if x == object else x for x in
+                                           c.__defaults__)  # indicate that object refers to animation object itself
                     nargs -= len(c.__defaults__)
                 if nargs == 0:
                     return c()
@@ -3978,47 +3721,47 @@ class AnimateMonitor(DynamicClass):
     """
 
     def __init__(
-        self,
-        monitor: "Monitor",
-        linecolor: Union[ColorType, Callable] = "fg",
-        linewidth: Union[float, Callable] = None,
-        fillcolor: Union[Callable, ColorType] = "",
-        bordercolor: Union[ColorType, Callable] = "fg",
-        borderlinewidth: Union[float, Callable] = 1,
-        titlecolor: Union[ColorType, Callable] = "fg",
-        nowcolor: Union[ColorType, Callable] = "red",
-        titlefont: Union[str, Callable] = "",
-        titlefontsize: Union[float, Callable] = 15,
-        title: Union[str, Callable] = None,
-        x: Union[float, Callable] = 0,
-        y: Union[float, Callable] = 0,
-        offsetx: Union[float, Callable] = 0,
-        offsety: Union[float, Callable] = 0,
-        angle: Union[float, Callable] = 0,
-        vertical_offset: Union[float, Callable] = 0,
-        parent: "Component" = None,
-        vertical_scale: Union[float, Callable] = 5,
-        horizontal_scale: Union[float, Callable] = 1,
-        width: Union[float, Callable] = 200,
-        height: Union[float, Callable] = 75,
-        xy_anchor: Union[str, Callable] = "sw",
-        vertical_map: Callable = float,
-        labels: Union[Iterable, Dict] = (),
-        label_color: Union[ColorType, Callable] = "fg",
-        label_font: Union[str, Callable] = "",
-        label_fontsize: Union[float, Callable] = 15,
-        label_anchor: Union[str, Callable] = "e",
-        label_offsetx: Union[float, Callable] = 0,
-        label_offsety: Union[float, Callable] = 0,
-        label_linewidth: Union[float, Callable] = 1,
-        label_linecolor: ColorType = "fg",
-        as_points: bool = None,
-        over3d: bool = None,
-        layer: Union[float, Callable] = 0,
-        visible: Union[bool, Callable] = True,
-        keep: Union[bool, Callable] = True,
-        screen_coordinates: bool = True,
-        arg: Any = None,
+            self,
+            monitor: "Monitor",
+            linecolor: Union[ColorType, Callable] = "fg",
+            linewidth: Union[float, Callable] = None,
+            fillcolor: Union[Callable, ColorType] = "",
+            bordercolor: Union[ColorType, Callable] = "fg",
+            borderlinewidth: Union[float, Callable] = 1,
+            titlecolor: Union[ColorType, Callable] = "fg",
+            nowcolor: Union[ColorType, Callable] = "red",
+            titlefont: Union[str, Callable] = "",
+            titlefontsize: Union[float, Callable] = 15,
+            title: Union[str, Callable] = None,
+            x: Union[float, Callable] = 0,
+            y: Union[float, Callable] = 0,
+            offsetx: Union[float, Callable] = 0,
+            offsety: Union[float, Callable] = 0,
+            angle: Union[float, Callable] = 0,
+            vertical_offset: Union[float, Callable] = 0,
+            parent: "Component" = None,
+            vertical_scale: Union[float, Callable] = 5,
+            horizontal_scale: Union[float, Callable] = 1,
+            width: Union[float, Callable] = 200,
+            height: Union[float, Callable] = 75,
+            xy_anchor: Union[str, Callable] = "sw",
+            vertical_map: Callable = float,
+            labels: Union[Iterable, Dict] = (),
+            label_color: Union[ColorType, Callable] = "fg",
+            label_font: Union[str, Callable] = "",
+            label_fontsize: Union[float, Callable] = 15,
+            label_anchor: Union[str, Callable] = "e",
+            label_offsetx: Union[float, Callable] = 0,
+            label_offsety: Union[float, Callable] = 0,
+            label_linewidth: Union[float, Callable] = 1,
+            label_linecolor: ColorType = "fg",
+            as_points: bool = None,
+            over3d: bool = None,
+            layer: Union[float, Callable] = 0,
+            visible: Union[bool, Callable] = True,
+            keep: Union[bool, Callable] = True,
+            screen_coordinates: bool = True,
+            arg: Any = None,
     ):
         super().__init__()
         _checkismonitor(monitor)
@@ -4033,12 +3776,8 @@ class AnimateMonitor(DynamicClass):
         if over3d is None:
             over3d = default_over3d()
 
-        offsetx += monitor.env.xy_anchor_to_x(
-            xy_anchor, screen_coordinates=True, over3d=over3d
-        )
-        offsety += monitor.env.xy_anchor_to_y(
-            xy_anchor, screen_coordinates=True, over3d=over3d
-        )
+        offsetx += monitor.env.xy_anchor_to_x(xy_anchor, screen_coordinates=True, over3d=over3d)
+        offsety += monitor.env.xy_anchor_to_y(xy_anchor, screen_coordinates=True, over3d=over3d)
 
         self.linecolor = linecolor
         self.linewidth = linewidth
@@ -4104,8 +3843,7 @@ class AnimateMonitor(DynamicClass):
             linewidth=lambda t: self.borderlinewidth(t),
             linecolor="",
             screen_coordinates=self.screen_coordinates,
-            layer=lambda: self.layer_t
-            + 0.2,  # to make it appear behind label lines and plot line/points
+            layer=lambda: self.layer_t + 0.2,  # to make it appear behind label lines and plot line/points
             over3d=self.over3d,
             visible=lambda: self.visible_t,
         )
@@ -4130,9 +3868,7 @@ class AnimateMonitor(DynamicClass):
             x=lambda: self.x_t,
             y=lambda: self.y_t,
             offsetx=lambda: self.offsetx_t,
-            offsety=lambda t: self.offsety_t
-            + self.height_t
-            + self.titlefontsize(t) * 0.15,
+            offsety=lambda t: self.offsety_t + self.height_t + self.titlefontsize(t) * 0.15,
             angle=lambda: self.angle_t,
             text_anchor="sw",
             fontsize=lambda t: self.titlefontsize(t),
@@ -4197,10 +3933,7 @@ class AnimateMonitor(DynamicClass):
 
             except (ValueError, TypeError):
                 value = 0
-        return max(
-            0,
-            min(self.height_t, value * self.vertical_scale_t + self.vertical_offset_t),
-        )
+        return max(0, min(self.height_t, value * self.vertical_scale_t + self.vertical_offset_t))
 
     def line(self, t):
         result = []
@@ -4267,19 +4000,16 @@ class AnimateMonitor(DynamicClass):
                 text = value
 
             try:
-                label_y = (
-                    self.vertical_map(value) * self.vertical_scale_t
-                    + self.vertical_offset_t
-                )
+                label_y = self.vertical_map(value) * self.vertical_scale_t + self.vertical_offset_t
                 if 0 <= label_y <= self.height_t:
                     labels.append(text)
                     label_ys.append(label_y)
             except (ValueError, TypeError):
                 pass
 
-        for label, label_y, ao_label_text, ao_label_line in itertools.zip_longest(
-            labels, label_ys, self.ao_label_texts[:], self.ao_label_lines[:]
-        ):
+        for label, label_y, ao_label_text, ao_label_line in itertools.zip_longest(labels, label_ys,
+                                                                                  self.ao_label_texts[:],
+                                                                                  self.ao_label_lines[:]):
             if label is None:
                 ao_label_text = self.ao_label_texts.pop()
                 ao_label_line = self.ao_label_lines.pop()
@@ -4287,12 +4017,8 @@ class AnimateMonitor(DynamicClass):
                 ao_label_line.remove()
             else:
                 if ao_label_text is None:
-                    ao_label_text = AnimateText(
-                        screen_coordinates=self.screen_coordinates
-                    )
-                    ao_label_line = AnimateLine(
-                        screen_coordinates=self.screen_coordinates
-                    )
+                    ao_label_text = AnimateText(screen_coordinates=self.screen_coordinates)
+                    ao_label_line = AnimateLine(screen_coordinates=self.screen_coordinates)
                     self.ao_label_texts.append(ao_label_text)
                     self.ao_label_lines.append(ao_label_line)
                 ao_label_text.text = str(label)
@@ -4318,9 +4044,7 @@ class AnimateMonitor(DynamicClass):
                 ao_label_line.angle = self.angle_t
                 ao_label_line.linewidth = self.label_linewidth(t)
                 ao_label_line.linecolor = self.label_linecolor(t)
-                ao_label_line.layer = (
-                    self.layer_t + 0.2
-                )  # to make it appear behind the plot line/points
+                ao_label_line.layer = self.layer_t + 0.2  # to make it appear behind the plot line/points
                 ao_label_line.over3d = self.over3d
                 ao_label_line.visible = self.visible_t
                 ao_label_line.screen_coordinates = self.screen_coordinates
@@ -4382,27 +4106,16 @@ if Pythonista:
             env = g.animation_env
             if env is not None:
                 for uio in env.ui_objects:
-                    ux = uio.x + env.xy_anchor_to_x(
-                        uio.xy_anchor, screen_coordinates=True, retina_scale=True
-                    )
-                    uy = uio.y + env.xy_anchor_to_y(
-                        uio.xy_anchor, screen_coordinates=True, retina_scale=True
-                    )
+                    ux = uio.x + env.xy_anchor_to_x(uio.xy_anchor, screen_coordinates=True, retina_scale=True)
+                    uy = uio.y + env.xy_anchor_to_y(uio.xy_anchor, screen_coordinates=True, retina_scale=True)
                     if uio.type == "button":
-                        if touch.location in scene.Rect(
-                            ux - 2, uy - 2, uio.width + 2, uio.height + 2
-                        ):
+                        if touch.location in scene.Rect(ux - 2, uy - 2, uio.width + 2, uio.height + 2):
                             uio.action()
                             break  # new buttons might have been installed
                     if uio.type == "slider":
-                        if touch.location in scene.Rect(
-                            ux - 2, uy - 2, uio.width + 4, uio.height + 4
-                        ):
+                        if touch.location in scene.Rect(ux - 2, uy - 2, uio.width + 4, uio.height + 4):
                             xsel = touch.location[0] - ux
-                            uio._v = (
-                                uio.vmin
-                                + round(-0.5 + xsel / uio.xdelta) * uio.resolution
-                            )
+                            uio._v = uio.vmin + round(-0.5 + xsel / uio.xdelta) * uio.resolution
                             uio._v = max(min(uio._v, uio.vmax), uio.vmin)
                             if uio.action is not None:
                                 uio.action(str(uio._v))
@@ -4422,9 +4135,7 @@ if Pythonista:
                             env._t = env.animation_start_time
                         else:
                             env._t = env.animation_start_time + (
-                                (time.time() - env.animation_start_clocktime)
-                                * env._speed
-                            )
+                                        (time.time() - env.animation_start_clocktime) * env._speed)
                     while (env.peek() < env._t) and env.running and env._animate:
                         env.step()
 
@@ -4468,17 +4179,11 @@ if Pythonista:
                 for uio in env.ui_objects:
                     if not uio.installed:
                         uio.install()
-                    ux = uio.x + env.xy_anchor_to_x(
-                        uio.xy_anchor, screen_coordinates=True, retina_scale=True
-                    )
-                    uy = uio.y + env.xy_anchor_to_y(
-                        uio.xy_anchor, screen_coordinates=True, retina_scale=True
-                    )
+                    ux = uio.x + env.xy_anchor_to_x(uio.xy_anchor, screen_coordinates=True, retina_scale=True)
+                    uy = uio.y + env.xy_anchor_to_y(uio.xy_anchor, screen_coordinates=True, retina_scale=True)
 
                     if uio.type == "entry":
-                        raise NotImplementedError(
-                            "AnimateEntry not supported on Pythonista"
-                        )
+                        raise NotImplementedError("AnimateEntry not supported on Pythonista")
                     if uio.type == "button":
                         linewidth = uio.linewidth
                         scene.push_matrix()
@@ -4507,9 +4212,7 @@ if Pythonista:
                             v += uio.resolution
                         thisv = uio._v
                         for touch in touchvalues:
-                            if touch.location in scene.Rect(
-                                ux, uy, uio.width, uio.height
-                            ):
+                            if touch.location in scene.Rect(ux, uy, uio.width, uio.height):
                                 xsel = touch.location[0] - ux
                                 vsel = round(-0.5 + xsel / uio.xdelta) * uio.resolution
                                 thisv = vsel
@@ -4534,9 +4237,7 @@ if Pythonista:
                             scene.text(uio._label, uio.font, uio.fontsize, alignment=9)
                         scene.pop_matrix()
                         scene.translate(ux + uio.width, uy + uio.height + 2)
-                        scene.text(
-                            str(thisv) + " ", uio.font, uio.fontsize, alignment=7
-                        )
+                        scene.text(str(thisv) + " ", uio.font, uio.fontsize, alignment=7)
                         scene.tint(1, 1, 1, 1)
                         # required for proper loading of images later
                         scene.pop_matrix()
@@ -4558,9 +4259,7 @@ class Qmember:
     def insert_in_front_of(self, m2, c, q, priority):
         available_quantity = q.capacity._tally - q._length - 1
         if available_quantity < 0:
-            raise QueueFullError(
-                q.name() + " has reached capacity " + str(q.capacity._tally)
-            )
+            raise QueueFullError(q.name() + " has reached capacity " + str(q.capacity._tally))
         q.available_quantity.tally(available_quantity)
 
         m1 = m2.predecessor
@@ -4573,9 +4272,8 @@ class Qmember:
         self.queue = q
         self.enter_time = c.env._now
         q._length += 1
-        if not (
-            isinstance(q, Store) or q._isinternal
-        ):  # this is because internal and as store never need touch handling (new in 23.0.1)
+        if not (isinstance(q,
+                           Store) or q._isinternal):  # this is because internal and as store never need touch handling (new in 23.0.1)
             for iter in q._iter_touched:
                 q._iter_touched[iter] = True
         c._qmembers[q] = self
@@ -4597,13 +4295,8 @@ class Qmember:
                     requester._remove()
                     requester.status._value = scheduled
                     requester._reschedule(
-                        requester.env._now,
-                        0,
-                        False,
-                        f"from_store ({store.name()}) honor with {c.name()}",
-                        False,
-                        s0=requester.env.last_s0,
-                        return_value=c,
+                        requester.env._now, 0, False, f"from_store ({store.name()}) honor with {c.name()}", False,
+                        s0=requester.env.last_s0, return_value=c
                     )
                     break
 
@@ -4649,16 +4342,8 @@ class Queue:
         if omitted, default_env will be used
     """
 
-    def __init__(
-        self,
-        name: str = None,
-        monitor: Any = True,
-        fill: Iterable = None,
-        capacity: float = inf,
-        env: "Environment" = None,
-        *args,
-        **kwargs,
-    ) -> None:
+    def __init__(self, name: str = None, monitor: Any = True, fill: Iterable = None, capacity: float = inf,
+                 env: "Environment" = None, *args, **kwargs) -> None:
         self.env = _set_env(env)
 
         _set_name(name, self.env._nameserializeQueue, self)
@@ -4678,36 +4363,15 @@ class Queue:
         self._isinternal = False
         self.arrival_rate(reset=True)
         self.departure_rate(reset=True)
-        self.length = _SystemMonitor(
-            "Length of " + self.name(),
-            level=True,
-            initial_tally=0,
-            monitor=monitor,
-            type="uint32",
-            env=self.env,
-        )
-        self.length_of_stay = Monitor(
-            "Length of stay in " + self.name(),
-            monitor=monitor,
-            type="float",
-            env=self.env,
-        )
-        self.capacity = _CapacityMonitor(
-            "Capacity of " + self.name(),
-            level=True,
-            initial_tally=capacity,
-            monitor=monitor,
-            type="float",
-            env=env,
-        )
+        self.length = _SystemMonitor("Length of " + self.name(), level=True, initial_tally=0, monitor=monitor,
+                                     type="uint32", env=self.env)
+        self.length_of_stay = Monitor("Length of stay in " + self.name(), monitor=monitor, type="float", env=self.env)
+        self.capacity = _CapacityMonitor("Capacity of " + self.name(), level=True, initial_tally=capacity,
+                                         monitor=monitor, type="float", env=env)
         self.capacity.parent = self
         self.available_quantity = _SystemMonitor(
-            "Available quantity of " + self.name(),
-            level=True,
-            initial_tally=capacity,
-            monitor=monitor,
-            type="float",
-            env=env,
+            "Available quantity of " + self.name(), level=True, initial_tally=capacity, monitor=monitor, type="float",
+            env=env
         )
 
         if fill is not None:
@@ -5110,30 +4774,16 @@ class Queue:
         statistics (if as_str is True) : str
         """
         result = []
-        result.append(
-            f"Statistics of {self.name()} at {fn(self.env._now - self.env._offset, 13, 3)}"
-        )
-        result.append(
-            self.length.print_statistics(
-                show_header=False, show_legend=True, do_indent=True, as_str=True
-            )
-        )
+        result.append(f"Statistics of {self.name()} at {fn(self.env._now - self.env._offset, 13, 3)}")
+        result.append(self.length.print_statistics(show_header=False, show_legend=True, do_indent=True, as_str=True))
 
         result.append("")
         result.append(
-            self.length_of_stay.print_statistics(
-                show_header=False, show_legend=False, do_indent=True, as_str=True
-            )
-        )
+            self.length_of_stay.print_statistics(show_header=False, show_legend=False, do_indent=True, as_str=True))
         return return_or_print(result, as_str, file)
 
-    def print_histograms(
-        self,
-        exclude: Iterable = [],
-        as_str: bool = False,
-        file: bool = None,
-        graph_scale: float = None,
-    ) -> Any:
+    def print_histograms(self, exclude: Iterable = [], as_str: bool = False, file: bool = None,
+                         graph_scale: float = None) -> Any:
         """
         prints the histograms of the length and length_of_stay monitor of the queue
 
@@ -5312,9 +4962,7 @@ class Queue:
         component.enter_at_head(self)
         return self
 
-    def add_in_front_of(
-        self, component: "Component", poscomponent: "Component"
-    ) -> "Queue":
+    def add_in_front_of(self, component: "Component", poscomponent: "Component") -> "Queue":
         """
         adds a component to a queue, just in front of a component
 
@@ -5800,11 +5448,7 @@ class Queue:
                 "",
                 self.name()
                 + " extend from "
-                + (
-                    source.name()
-                    if isinstance(source, Queue)
-                    else "instance of " + str(type(source))
-                )
+                + (source.name() if isinstance(source, Queue) else "instance of " + str(type(source)))
                 + " ("
                 + str(count)
                 + " components)",
@@ -5813,10 +5457,7 @@ class Queue:
             if isinstance(source, Queue):
                 source.clear()
             else:
-                raise TypeError(
-                    "clear_source cannot be applied to instances of type"
-                    + str(type(source))
-                )
+                raise TypeError("clear_source cannot be applied to instances of type" + str(type(source)))
 
     def as_set(self):
         return {c for c in self}
@@ -5877,9 +5518,7 @@ class Queue:
 
         return q1
 
-    def intersection(
-        self, q: "Queue", name: str = None, monitor: bool = False
-    ) -> "Queue":
+    def intersection(self, q: "Queue", name: str = None, monitor: bool = False) -> "Queue":
         """
         returns the intersect of two queues
 
@@ -5925,9 +5564,7 @@ class Queue:
                 mx = mx.successor
         return q1
 
-    def difference(
-        self, q: "Queue", name: str = None, monitor: bool = False
-    ) -> "Queue":
+    def difference(self, q: "Queue", name: str = None, monitor: bool = False) -> "Queue":
         """
         returns the difference of two queues
 
@@ -5965,15 +5602,11 @@ class Queue:
             mx = self._head.successor
             while mx != self._tail:
                 if mx.component not in q_set:
-                    Qmember().insert_in_front_of(
-                        q1._tail, mx.component, q1, mx.priority
-                    )
+                    Qmember().insert_in_front_of(q1._tail, mx.component, q1, mx.priority)
                 mx = mx.successor
         return q1
 
-    def symmetric_difference(
-        self, q: "Queue", name: str = None, monitor: bool = False
-    ) -> "Queue":
+    def symmetric_difference(self, q: "Queue", name: str = None, monitor: bool = False) -> "Queue":
         """
         returns the symmetric difference of two queues
 
@@ -6021,9 +5654,7 @@ class Queue:
 
         return q1
 
-    def copy(
-        self, name: str = None, copy_capacity: bool = False, monitor: bool = False
-    ) -> "Queue":
+    def copy(self, name: str = None, copy_capacity: bool = False, monitor: bool = False) -> "Queue":
         """
         returns a copy of a queue
 
@@ -6116,37 +5747,17 @@ class Queue:
 
 
 class Store(Queue):
-    def __init__(
-        self,
-        name: str = None,
-        monitor: Any = True,
-        fill: Iterable = None,
-        capacity: float = inf,
-        env: "Environment" = None,
-        *args,
-        **kwargs,
-    ) -> None:
-        super().__init__(
-            name=name,
-            monitor=monitor,
-            fill=None,
-            capacity=capacity,
-            env=env,
-            *args,
-            **kwargs,
-        )
+    def __init__(self, name: str = None, monitor: Any = True, fill: Iterable = None, capacity: float = inf,
+                 env: "Environment" = None, *args, **kwargs) -> None:
+        super().__init__(name=name, monitor=monitor, fill=None, capacity=capacity, env=env, *args, **kwargs)
 
         with self.env.suppress_trace():
             self._to_store_requesters = Queue(f"{name}.to_store_requesters", env=env)
             self._to_store_requesters._isinternal = True
-            self._from_store_requesters = Queue(
-                f"{name}.from_store_requesters", env=env
-            )
+            self._from_store_requesters = Queue(f"{name}.from_store_requesters", env=env)
             self._from_store_requesters._isinternal = True
 
-            if (
-                fill is not None
-            ):  # this cannot be done by Queue.__init__ as the requesters are not defined at that time
+            if fill is not None:  # this cannot be done by Queue.__init__ as the requesters are not defined at that time
                 with self.env.suppress_trace():
                     for c in fill:
                         c.enter(self)
@@ -6204,15 +5815,8 @@ class Store(Queue):
                     c._from_store_store = self
                     c._remove()
                     c.status._value = scheduled
-                    c._reschedule(
-                        c.env._now,
-                        0,
-                        False,
-                        f"from_store ({self.name()}) honor with {item.name()}",
-                        False,
-                        s0=c.env.last_s0,
-                        return_value=item,
-                    )
+                    c._reschedule(c.env._now, 0, False, f"from_store ({self.name()}) honor with {item.name()}", False,
+                                  s0=c.env.last_s0, return_value=item)
 
     def _rescan_to(self):
         """
@@ -6227,14 +5831,7 @@ class Store(Queue):
                 c._to_stores = []
                 c._remove()
                 c.status._value = scheduled
-                c._reschedule(
-                    c.env._now,
-                    0,
-                    False,
-                    f"to_store ({self.name()}) honor ",
-                    False,
-                    s0=c.env.last_s0,
-                )
+                c._reschedule(c.env._now, 0, False, f"to_store ({self.name()}) honor ", False, s0=c.env.last_s0)
                 c._to_store_item = None
                 c._to_store_store = self
             else:
@@ -6279,14 +5876,8 @@ class Animate3dBase(DynamicClass):
     """
 
     def __init__(
-        self,
-        visible: bool = True,
-        keep: bool = True,
-        arg: Any = None,
-        layer: float = 0,
-        parent: "Component" = None,
-        env: "Environment" = None,
-        **kwargs,
+            self, visible: bool = True, keep: bool = True, arg: Any = None, layer: float = 0,
+            parent: "Component" = None, env: "Environment" = None, **kwargs
     ) -> None:
         super().__init__()
         self.env = _set_env(env)
@@ -6341,57 +5932,11 @@ class Animate3dBase(DynamicClass):
     def is_removed(self) -> bool:
         return self in self.env.an_objects3d
 
-    def is_point_in_frustum(self, t) -> bool:
-        """
-        Args:
-            world_point (np.array): point in world coordinate [x, y, z]
-        """
-        x = self.x(t)
-        y = self.y(t)
-        z = self.z(t)
-        x_ref = self.x_ref(t)
-        y_ref = self.y_ref(t)
-        z_ref = self.z_ref(t)
-        x_len = self.x_len(t)
-        y_len = self.y_len(t)
-        z_len = self.z_len(t)
-
-        x_c = (x + x_ref / 2 * x_len) + 0
-        y_c = (y + y_ref / 2 * y_len) + 0
-        z_c = (z + z_ref / 2 * z_len) + 0
-
-        global Enable_frustum_culling
-        if not Enable_frustum_culling:
-            return True
-
-        world_point = numpy.array([x_c, y_c, z_c, 1.0])  # [x, y, z] -> [x, y, z, 1]
-
-        clip_coords = numpy.dot(
-            Projection_dot_view_matrix, world_point
-        )
-
-        x_clip, y_clip, z_clip, w_clip = clip_coords
-
-        x_w = x_clip / w_clip
-        y_w = y_clip / w_clip
-        z_w = z_clip / w_clip
-        if -1 <= x_w <= 1 and -1 <= y_w <= 1 and -1 <= z_w <= 1:
-            return True
-        else:
-            return False
-
 
 class _Movement:
     # used by trajectories
-    def __init__(
-        self,
-        l,
-        vmax: float = None,
-        v0: float = None,
-        v1: float = None,
-        acc: float = None,
-        dec: float = None,
-    ) -> None:
+    def __init__(self, l, vmax: float = None, v0: float = None, v1: float = None, acc: float = None,
+                 dec: float = None) -> None:
         if vmax is None:
             vmax = 1
         if v0 is None:
@@ -6405,16 +5950,14 @@ class _Movement:
 
         acc2inv = 1 / (2 * acc)
         dec2inv = 1 / (2 * dec)
-        s_v0_vmax = (vmax**2 - v0**2) * acc2inv
-        s_vmax_v1 = (vmax**2 - v1**2) * dec2inv
+        s_v0_vmax = (vmax ** 2 - v0 ** 2) * acc2inv
+        s_vmax_v1 = (vmax ** 2 - v1 ** 2) * dec2inv
 
         if s_v0_vmax + s_vmax_v1 > l:
-            vmax = math.sqrt(
-                (l + (v0**2 * acc2inv) + (v1**2 * dec2inv)) / (acc2inv + dec2inv)
-            )
+            vmax = math.sqrt((l + (v0 ** 2 * acc2inv) + (v1 ** 2 * dec2inv)) / (acc2inv + dec2inv))
 
-        self.l_v0_vmax = (vmax**2 - v0**2) * acc2inv
-        self.l_vmax_v1 = (vmax**2 - v1**2) * dec2inv
+        self.l_v0_vmax = (vmax ** 2 - v0 ** 2) * acc2inv
+        self.l_vmax_v1 = (vmax ** 2 - v1 ** 2) * dec2inv
 
         self.l_vmax = l - self.l_v0_vmax - self.l_vmax_v1
         if self.l_v0_vmax < 0 or self.l_vmax_v1 < 0:
@@ -6436,14 +5979,14 @@ class _Movement:
         if self.acc == math.inf and self.dec == math.inf:
             return self.vmax * t
         if t < self.t_v0_vmax:
-            return (self.v0 * t) + self.acc * t**2 / 2
+            return (self.v0 * t) + self.acc * t ** 2 / 2
         t -= self.t_v0_vmax
         if t < self.t_vmax:
             return self.l_v0_vmax + t * self.vmax
         t -= self.t_vmax
         if self.dec == math.inf:
             return self.l_v0_vmax + self.l_vmax + (self.vmax * t)
-        return self.l_v0_vmax + self.l_vmax + (self.vmax * t) - self.dec * t**2 / 2
+        return self.l_v0_vmax + self.l_vmax + (self.vmax * t) - self.dec * t ** 2 / 2
 
 
 class _Trajectory:
@@ -6705,14 +6248,8 @@ class TrajectoryStandstill(_Trajectory):
         if omitted, default_env will be used
     """
 
-    def __init__(
-        self,
-        xy: Iterable,
-        duration: float,
-        orientation: Union[Callable, float] = 0,
-        t0: float = None,
-        env: "Environment" = None,
-    ):
+    def __init__(self, xy: Iterable, duration: float, orientation: Union[Callable, float] = 0, t0: float = None,
+                 env: "Environment" = None):
         env = g.default_env if env is None else env
         self._t0 = 0 if env is None else (env.now() if t0 is None else t0)
 
@@ -6922,18 +6459,18 @@ class TrajectoryPolygon(_Trajectory):
     """
 
     def __init__(
-        self,
-        polygon: Iterable,
-        t0: float = None,
-        vmax: float = None,
-        v0: float = None,
-        v1: float = None,
-        acc: float = None,
-        dec: float = None,
-        orientation: Union[Callable, float] = None,
-        spline: str = None,
-        res: float = 50,
-        env: "Environment" = None,
+            self,
+            polygon: Iterable,
+            t0: float = None,
+            vmax: float = None,
+            v0: float = None,
+            v1: float = None,
+            acc: float = None,
+            dec: float = None,
+            orientation: Union[Callable, float] = None,
+            spline: str = None,
+            res: float = 50,
+            env: "Environment" = None,
     ) -> None:
         def catmull_rom_polygon(polygon, res):
             def evaluate(x, v0, v1, v2, v3):
@@ -6959,22 +6496,16 @@ class TrajectoryPolygon(_Trajectory):
             _y[-1] = p_y[-1]
 
             for i in range(len(p_x) - 1):
-                _x[i * res : (i + 1) * res] = numpy.linspace(
-                    p_x[i], p_x[i + 1], res, endpoint=False
-                )
+                _x[i * res: (i + 1) * res] = numpy.linspace(p_x[i], p_x[i + 1], res, endpoint=False)
                 numpy.linspace(polygon[i * 2], polygon[i * 2 + 2], res, endpoint=False)
-                _y[i * res : (i + 1) * res] = numpy.array(
+                _y[i * res: (i + 1) * res] = numpy.array(
                     [
                         evaluate(
                             x,
                             p_y[0] - (p_y[1] - p_y[0]) if i == 0 else p_y[i - 1],
                             p_y[i],
                             p_y[i + 1],
-                            (
-                                p_y[i + 1] + (p_y[i + 1] - p_y[i])
-                                if i == len(p_x) - 2
-                                else p_y[i + 2]
-                            ),
+                            p_y[i + 1] + (p_y[i + 1] - p_y[i]) if i == len(p_x) - 2 else p_y[i + 2],
                         )
                         for x in numpy.linspace(0.0, 1.0, res, endpoint=False)
                     ]
@@ -7039,9 +6570,7 @@ class TrajectoryPolygon(_Trajectory):
         self._x = []
         self._y = []
         self._angle = []
-        for x, y, next_x, next_y in zip(
-            polygon[::2], polygon[1::2], polygon[2::2], polygon[3::2]
-        ):
+        for x, y, next_x, next_y in zip(polygon[::2], polygon[1::2], polygon[2::2], polygon[3::2]):
             dx = next_x - x
             dy = next_y - y
             if orientation is None:
@@ -7062,9 +6591,7 @@ class TrajectoryPolygon(_Trajectory):
         self.cum_length.append(cum_length)
 
         self._length = self.cum_length[-1]
-        self.movement = _Movement(
-            l=self._length, v0=v0, v1=v1, vmax=vmax, acc=acc, dec=dec
-        )
+        self.movement = _Movement(l=self._length, v0=v0, v1=v1, vmax=vmax, acc=acc, dec=dec)
         self._duration = self.movement.t
         self._t1 = self._t0 + self._duration
 
@@ -7102,9 +6629,7 @@ class TrajectoryPolygon(_Trajectory):
         evaluated x : float
         """
         length, i, j = self.indexes(t, _t0=_t0)
-        return interp(
-            length, [self.cum_length[i], self.cum_length[j]], [self._x[i], self._x[j]]
-        )
+        return interp(length, [self.cum_length[i], self.cum_length[j]], [self._x[i], self._x[j]])
 
     def y(self, t: float, _t0: float = None) -> float:
         """
@@ -7120,9 +6645,7 @@ class TrajectoryPolygon(_Trajectory):
         evaluated y : float
         """
         length, i, j = self.indexes(t, _t0=_t0)
-        return interp(
-            length, [self.cum_length[i], self.cum_length[j]], [self._y[i], self._y[j]]
-        )
+        return interp(length, [self.cum_length[i], self.cum_length[j]], [self._y[i], self._y[j]])
 
     def angle(self, t: float, _t0: float = None) -> float:
         """
@@ -7296,20 +6819,20 @@ class TrajectoryCircle(_Trajectory):
     """
 
     def __init__(
-        self,
-        radius: float,
-        x_center: float = 0,
-        y_center: float = 0,
-        angle0: float = 0,
-        angle1: float = 360,
-        t0: float = None,
-        vmax: float = None,
-        v0: float = None,
-        v1: float = None,
-        acc: float = None,
-        dec: float = None,
-        orientation: Union[Callable, float] = None,
-        env: "Environment" = None,
+            self,
+            radius: float,
+            x_center: float = 0,
+            y_center: float = 0,
+            angle0: float = 0,
+            angle1: float = 360,
+            t0: float = None,
+            vmax: float = None,
+            v0: float = None,
+            v1: float = None,
+            acc: float = None,
+            dec: float = None,
+            orientation: Union[Callable, float] = None,
+            env: "Environment" = None,
     ):
         env = g.default_env if env is None else env
         self._t0 = 0 if env is None else (env.now() if t0 is None else t0)
@@ -7320,9 +6843,7 @@ class TrajectoryCircle(_Trajectory):
         self.x_center = x_center
         self.y_center = y_center
         self._length = abs(math.radians(self.angle1 - self.angle0)) * self.radius
-        self.movement = _Movement(
-            l=self._length, v0=v0, v1=v1, vmax=vmax, acc=acc, dec=dec
-        )
+        self.movement = _Movement(l=self._length, v0=v0, v1=v1, vmax=vmax, acc=acc, dec=dec)
         self._duration = self.movement.t
         self._t1 = self._t0 + self._duration
         self.orientation = orientation
@@ -7345,8 +6866,7 @@ class TrajectoryCircle(_Trajectory):
         """
         length = self.length(t, _t0=_t0)
         return self.x_center + self.radius * math.cos(
-            math.radians(interp(length, (0, self._length), (self.angle0, self.angle1)))
-        )
+            math.radians(interp(length, (0, self._length), (self.angle0, self.angle1))))
 
     def y(self, t: float, _t0: float = None) -> float:
         """
@@ -7363,8 +6883,7 @@ class TrajectoryCircle(_Trajectory):
         """
         length = self.length(t, _t0=_t0)
         return self.y_center + self.radius * math.sin(
-            math.radians(interp(length, (0, self._length), (self.angle0, self.angle1)))
-        )
+            math.radians(interp(length, (0, self._length), (self.angle0, self.angle1))))
 
     def angle(self, t: float, _t0: float = None) -> float:
         """
@@ -7595,29 +7114,27 @@ class Component:
     """
 
     def __init__(
-        self,
-        name: str = None,
-        at: Union[float, Callable] = None,
-        delay: Union[float, Callable] = None,
-        priority: float = None,
-        urgent: bool = None,
-        process: str = None,
-        suppress_trace: bool = False,
-        suppress_pause_at_step: bool = False,
-        skip_standby: bool = False,
-        mode: str = "",
-        cap_now: bool = None,
-        env: "Environment" = None,
-        **kwargs,
+            self,
+            name: str = None,
+            at: Union[float, Callable] = None,
+            delay: Union[float, Callable] = None,
+            priority: float = None,
+            urgent: bool = None,
+            process: str = None,
+            suppress_trace: bool = False,
+            suppress_pause_at_step: bool = False,
+            skip_standby: bool = False,
+            mode: str = "",
+            cap_now: bool = None,
+            env: "Environment" = None,
+            **kwargs,
     ):
         self.env = _set_env(env)
 
         _set_name(name, self.env._nameserializeComponent, self)
         self._qmembers = {}
         self._process = None
-        self.status = _StatusMonitor(
-            name=self.name() + ".status", level=True, initial_tally=data, env=self.env
-        )
+        self.status = _StatusMonitor(name=self.name() + ".status", level=True, initial_tally=data, env=self.env)
 
         self._requests = collections.OrderedDict()
         self._claims = collections.OrderedDict()
@@ -7631,13 +7148,7 @@ class Component:
         self._creation_time = self.env._now
         self._suppress_trace = suppress_trace
         self._suppress_pause_at_step = suppress_pause_at_step
-        self.mode = _ModeMonitor(
-            parent=self,
-            name=self.name() + ".mode",
-            level=True,
-            initial_tally=mode,
-            env=self.env,
-        )
+        self.mode = _ModeMonitor(parent=self, name=self.name() + ".mode", level=True, initial_tally=mode, env=self.env)
 
         self._mode_time = self.env._now
         self._aos = {}
@@ -7670,13 +7181,9 @@ class Component:
                 raise TypeError("priority is not allowed for a data component")
             if self.env._trace:
                 if self._name == "main":
-                    self.env.print_trace(
-                        "", "", self.name() + " create", self._modetxt()
-                    )
+                    self.env.print_trace("", "", self.name() + " create", self._modetxt())
                 else:
-                    self.env.print_trace(
-                        "", "", self.name() + " create data component", self._modetxt()
-                    )
+                    self.env.print_trace("", "", self.name() + " create data component", self._modetxt())
         else:
             self.env.print_trace("", "", self.name() + " create", self._modetxt())
 
@@ -7735,12 +7242,8 @@ by adding at the end:
                 scheduled_time = at + self.env._offset + delay
             self.status._value = scheduled
             if self.env._yieldless:
-                self._glet = greenlet.greenlet(
-                    lambda: self._process(**kwargs_p), parent=self.env._glet
-                )
-            self._reschedule(
-                scheduled_time, priority, urgent, "activate", cap_now, extra=extra
-            )
+                self._glet = greenlet.greenlet(lambda: self._process(**kwargs_p), parent=self.env._glet)
+            self._reschedule(scheduled_time, priority, urgent, "activate", cap_now, extra=extra)
         self.setup(**kwargs)
 
     overridden_lineno = None
@@ -7775,13 +7278,8 @@ by adding at the end:
         """
         size_x = 50
         size_y = 50
-        ao0 = AnimateRectangle(
-            text=str(self.sequence_number()),
-            textcolor="bg",
-            spec=(-20, -20, 20, 20),
-            linewidth=0,
-            fillcolor="fg",
-        )
+        ao0 = AnimateRectangle(text=str(self.sequence_number()), textcolor="bg", spec=(-20, -20, 20, 20), linewidth=0,
+                               fillcolor="fg")
         return (size_x, size_y, ao0)
 
     def animation3d_objects(self, id: Any) -> Tuple:
@@ -7822,16 +7320,7 @@ by adding at the end:
         size_x = 10
         size_y = 10
         size_z = 10
-        ao0 = Animate3dBox(
-            x_len=8,
-            y_len=8,
-            z_len=8,
-            x_ref=0,
-            y_ref=0,
-            z_ref=1,
-            color="white",
-            shaded=True,
-        )
+        ao0 = Animate3dBox(x_len=8, y_len=8, z_len=8, x_ref=0, y_ref=0, z_ref=1, color="white", shaded=True)
         return (size_x, size_y, size_z, ao0)
 
     def _remove_from_aos(self, q):
@@ -7947,9 +7436,7 @@ by adding at the end:
                     "    "
                     + pad(q.name(), 20)
                     + " enter_time="
-                    + self.env.time_to_str(
-                        self._qmembers[q].enter_time - self.env._offset
-                    )
+                    + self.env.time_to_str(self._qmembers[q].enter_time - self.env._offset)
                     + " priority="
                     + str(self._qmembers[q].priority)
                 )
@@ -7957,16 +7444,12 @@ by adding at the end:
             result.append("  requesting resource(s):")
 
             for r in sorted(list(self._requests), key=lambda obj: obj.name().lower()):
-                result.append(
-                    "    " + pad(r.name(), 20) + " quantity=" + str(self._requests[r])
-                )
+                result.append("    " + pad(r.name(), 20) + " quantity=" + str(self._requests[r]))
         if len(self._claims) > 0:
             result.append("  claiming resource(s):")
 
             for r in sorted(list(self._claims), key=lambda obj: obj.name().lower()):
-                result.append(
-                    "    " + pad(r.name(), 20) + " quantity=" + str(self._claims[r])
-                )
+                result.append("    " + pad(r.name(), 20) + " quantity=" + str(self._claims[r]))
         if len(self._waits) > 0:
             if self._wait_all:
                 result.append("  waiting for all of state(s):")
@@ -8041,36 +7524,21 @@ by adding at the end:
             self._to_stores = []
             self._failed = True
 
-    def _reschedule(
-        self,
-        scheduled_time,
-        priority,
-        urgent,
-        caller,
-        cap_now,
-        extra="",
-        s0=None,
-        return_value=None,
-    ):
+    def _reschedule(self, scheduled_time, priority, urgent, caller, cap_now, extra="", s0=None, return_value=None):
         if scheduled_time < self.env._now:
             if cap_now is None:
                 cap_now = g._default_cap_now
             if cap_now:
                 scheduled_time = self.env._now
             else:
-                raise ValueError(
-                    f"scheduled time ({scheduled_time:0.3f}) before now ({self.env._now:0.3f})"
-                )
+                raise ValueError(f"scheduled time ({scheduled_time:0.3f}) before now ({self.env._now:0.3f})")
         self._scheduled_time = scheduled_time
         if self.env._trace:
             if extra == "*":
                 scheduled_time_str = "ends on no events left  "
                 extra = " "
             else:
-                scheduled_time_str = (
-                    "scheduled for "
-                    + self.env.time_to_str(scheduled_time - self.env._offset).strip()
-                )
+                scheduled_time_str = "scheduled for " + self.env.time_to_str(scheduled_time - self.env._offset).strip()
             if (scheduled_time == self.env._now) or (scheduled_time == inf):
                 delta = ""
             else:
@@ -8080,30 +7548,24 @@ by adding at the end:
                 "",
                 "",
                 self.name() + " " + caller + delta,
-                merge_blanks(
-                    scheduled_time_str
-                    + _prioritytxt(priority)
-                    + _urgenttxt(urgent)
-                    + lineno,
-                    self._modetxt(),
-                    extra,
-                ),
+                merge_blanks(scheduled_time_str + _prioritytxt(priority) + _urgenttxt(urgent) + lineno, self._modetxt(),
+                             extra),
                 s0=s0,
             )
         self._push(scheduled_time, priority, urgent, return_value)
 
     def activate(
-        self,
-        at: Union[float, Callable] = None,
-        delay: Union[Callable, float] = 0,
-        priority: float = 0,
-        urgent: bool = False,
-        process: str = None,
-        keep_request: bool = False,
-        keep_wait: bool = False,
-        mode: str = None,
-        cap_now: bool = None,
-        **kwargs,
+            self,
+            at: Union[float, Callable] = None,
+            delay: Union[Callable, float] = 0,
+            priority: float = 0,
+            urgent: bool = False,
+            process: str = None,
+            keep_request: bool = False,
+            keep_wait: bool = False,
+            mode: str = None,
+            cap_now: bool = None,
+            **kwargs,
     ) -> None:
         """
         activate component
@@ -8262,19 +7724,17 @@ by adding:
             scheduled_time = at + self.env._offset + delay
 
         self.status._value = scheduled
-        self._reschedule(
-            scheduled_time, priority, urgent, "activate", cap_now, extra=extra
-        )
+        self._reschedule(scheduled_time, priority, urgent, "activate", cap_now, extra=extra)
 
     def hold(
-        self,
-        duration: Union[float, Callable] = None,
-        till: Union[float, Callable] = None,
-        priority: float = 0,
-        urgent: bool = False,
-        mode: str = None,
-        interrupted: Union[bool, int] = False,
-        cap_now: bool = None,
+            self,
+            duration: Union[float, Callable] = None,
+            till: Union[float, Callable] = None,
+            priority: float = 0,
+            urgent: bool = False,
+            mode: str = None,
+            interrupted: Union[bool, int] = False,
+            cap_now: bool = None,
     ) -> None:
         """
         hold the component
@@ -8372,9 +7832,7 @@ by adding:
             if cap_now:
                 scheduled_time = self.env._now
             else:
-                raise ValueError(
-                    f"scheduled time ({scheduled_time:0.3f}) before now ({self.env._now:0.3f})"
-                )
+                raise ValueError(f"scheduled time ({scheduled_time:0.3f}) before now ({self.env._now:0.3f})")
 
         if interrupted:
             self._remaining_duration = scheduled_time - self.env._now
@@ -8385,29 +7843,18 @@ by adding:
                 caller = "hold-interrupt"
                 lineno = self.lineno_txt(add_at=True)
 
-                scheduled_time_str = (
-                    "scheduled for "
-                    + self.env.time_to_str(scheduled_time - self.env._offset).strip()
-                )
+                scheduled_time_str = "scheduled for " + self.env.time_to_str(scheduled_time - self.env._offset).strip()
                 if (scheduled_time == self.env._now) or (scheduled_time == inf):
                     delta = ""
                 else:
-                    delta = (
-                        f" +{self.env.duration_to_str(scheduled_time - self.env._now)}"
-                    )
+                    delta = f" +{self.env.duration_to_str(scheduled_time - self.env._now)}"
                 lineno = self.lineno_txt(add_at=True)
                 self.env.print_trace(
                     "",
                     "",
                     self.name() + " " + caller + delta,
-                    merge_blanks(
-                        scheduled_time_str
-                        + _prioritytxt(priority)
-                        + _urgenttxt(urgent)
-                        + lineno,
-                        self._modetxt(),
-                        "",
-                    ),
+                    merge_blanks(scheduled_time_str + _prioritytxt(priority) + _urgenttxt(urgent) + lineno,
+                                 self._modetxt(), ""),
                 )
 
             if self.env._yieldless:
@@ -8448,12 +7895,7 @@ by adding:
         self.set_mode(mode)
         if self.env._trace:
             lineno = self.lineno_txt(add_at=True)
-            self.env.print_trace(
-                "",
-                "",
-                self.name() + " passivate",
-                merge_blanks(lineno, self._modetxt()),
-            )
+            self.env.print_trace("", "", self.name() + " passivate", merge_blanks(lineno, self._modetxt()))
         self.status._value = passive
 
         if self.env._yieldless:
@@ -8477,11 +7919,11 @@ by adding:
 
         Note
         ----
-        The component has to be scheduled.
+        The component has to be scheduled or interrupted.
 
         Use resume() to resume
         """
-        if self.status.value != scheduled:
+        if self.status.value not in (scheduled, interrupted):
             raise ValueError(self.name() + " component not scheduled")
         self.set_mode(mode)
         if self.status.value == interrupted:
@@ -8496,20 +7938,9 @@ by adding:
             self.status._value = interrupted
             extra = ""
         lineno = self.lineno_txt(add_at=True)
-        self.env.print_trace(
-            "",
-            "",
-            self.name() + " interrupt" + extra,
-            merge_blanks(lineno, self._modetxt()),
-        )
+        self.env.print_trace("", "", self.name() + " interrupt" + extra, merge_blanks(lineno, self._modetxt()))
 
-    def resume(
-        self,
-        all: bool = False,
-        mode: str = None,
-        priority: float = 0,
-        urgent: bool = False,
-    ) -> None:
+    def resume(self, all: bool = False, mode: str = None, priority: float = 0, urgent: bool = False) -> None:
         """
         resumes an interrupted component
 
@@ -8559,38 +7990,17 @@ by adding:
             self.set_mode(mode)
             self._interrupt_level -= 1
             if self._interrupt_level and (not all):
-                self.env.print_trace(
-                    "",
-                    "",
-                    self.name()
-                    + " resume (interrupted."
-                    + str(self._interrupt_level)
-                    + ")",
-                    merge_blanks(self._modetxt()),
-                )
+                self.env.print_trace("", "", self.name() + " resume (interrupted." + str(self._interrupt_level) + ")",
+                                     merge_blanks(self._modetxt()))
             else:
                 self.status._value = self._interrupted_status
                 lineno = self.lineno_txt(add_at=True)
-                self.env.print_trace(
-                    "",
-                    "",
-                    self.name() + " resume (" + self.status() + ")",
-                    merge_blanks(lineno, self._modetxt()),
-                )
+                self.env.print_trace("", "", self.name() + " resume (" + self.status() + ")",
+                                     merge_blanks(lineno, self._modetxt()))
                 if self.status.value == scheduled:
-                    reason = "hold"
-                    self._reschedule(
-                        self.env._now + self._remaining_duration,
-                        priority,
-                        urgent,
-                        "hold",
-                        False,
-                    )
+                    self._reschedule(self.env._now + self._remaining_duration, priority, urgent, "hold", False)
                 else:
-                    raise Exception(
-                        self.name() + " unexpected interrupted_status",
-                        self.status.value(),
-                    )
+                    raise Exception(self.name() + " unexpected interrupted_status", self.status.value())
         else:
             raise ValueError(self.name() + " not interrupted")
 
@@ -8615,11 +8025,7 @@ by adding:
         """
         if self.status.value == data:
             if self.env._trace:
-                self.env.print_trace(
-                    "",
-                    "",
-                    "cancel (on data component) " + self.name() + " " + self._modetxt(),
-                )
+                self.env.print_trace("", "", "cancel (on data component) " + self.name() + " " + self._modetxt())
             return
         if self.status.value != current:
             self._checkisnotdata()
@@ -8631,9 +8037,7 @@ by adding:
         self._scheduled_time = inf
         self.set_mode(mode)
         if self.env._trace:
-            self.env.print_trace(
-                "", "", "cancel " + self.name() + " " + self._modetxt()
-            )
+            self.env.print_trace("", "", "cancel " + self.name() + " " + self._modetxt())
         self.status._value = data
         if self.env._yieldless:
             if self is self.env._current_component:
@@ -8678,25 +8082,23 @@ by adding:
                 self.env._buffered_trace = False
             else:
                 lineno = self.lineno_txt(add_at=True)
-                self.env.print_trace(
-                    "", "", caller, merge_blanks(lineno, self._modetxt())
-                )
+                self.env.print_trace("", "", caller, merge_blanks(lineno, self._modetxt()))
 
         if self.env._yieldless:
             if self is self.env._current_component:
                 self.env._glet.switch()
 
     def from_store(
-        self,
-        store: Union["Store", Iterable],
-        filter: Callable = lambda c: True,
-        fail_priority: float = 0,
-        urgent: bool = True,
-        fail_at: float = None,
-        fail_delay: float = None,
-        mode: str = None,
-        cap_now: bool = None,
-        key: callable = None,
+            self,
+            store: Union["Store", Iterable],
+            filter: Callable = lambda c: True,
+            fail_priority: float = 0,
+            urgent: bool = True,
+            fail_at: float = None,
+            fail_delay: float = None,
+            mode: str = None,
+            cap_now: bool = None,
+            key: callable = None,
     ) -> "Component":
         """
         get item from store(s)
@@ -8821,12 +8223,7 @@ by adding:
         self._failed = False
 
         if self.env._trace:
-            self.env.print_trace(
-                "",
-                "",
-                self.name(),
-                f"from_store ({', '.join(store._name for store in from_stores)})",
-            )
+            self.env.print_trace("", "", self.name(), f"from_store ({', '.join(store._name for store in from_stores)})")
 
         found_c = None
         found_key = None
@@ -8852,13 +8249,8 @@ by adding:
             self._remove()
             self.status._value = scheduled
             self._reschedule(
-                self.env._now,
-                0,
-                False,
-                f"from_store ({store.name()}) honor with {found_c.name()}",
-                False,
-                s0=self.env.last_s0,
-                return_value=found_c,
+                self.env._now, 0, False, f"from_store ({store.name()}) honor with {found_c.name()}", False,
+                s0=self.env.last_s0, return_value=found_c
             )
             return self._from_store_item
 
@@ -8869,23 +8261,21 @@ by adding:
         self._from_store_item = None
         self._from_store_filter = filter
 
-        self._reschedule(
-            scheduled_time, fail_priority, urgent, "request from_store", cap_now
-        )
+        self._reschedule(scheduled_time, fail_priority, urgent, "request from_store", cap_now)
         if self.env._yieldless:
             return self._from_store_item
 
     def to_store(
-        self,
-        store: Union["Store", Iterable],
-        item: "Component",
-        priority: float = 0,
-        fail_priority: float = 0,
-        urgent: bool = True,
-        fail_at: float = None,
-        fail_delay: float = None,
-        mode: str = None,
-        cap_now: bool = None,
+            self,
+            store: Union["Store", Iterable],
+            item: "Component",
+            priority: float = 0,
+            fail_priority: float = 0,
+            urgent: bool = True,
+            fail_at: float = None,
+            fail_delay: float = None,
+            mode: str = None,
+            cap_now: bool = None,
     ) -> "Component":
         """
         put item to store(s)
@@ -8997,12 +8387,8 @@ by adding:
         self._failed = False
 
         if self.env._trace:
-            self.env.print_trace(
-                "",
-                "",
-                self.name(),
-                f"{item._name} to_store ({', '.join(store._name for store in to_stores)})",
-            )
+            self.env.print_trace("", "", self.name(),
+                                 f"{item._name} to_store ({', '.join(store._name for store in to_stores)})")
         for store in to_stores:
             q = store
             if q.available_quantity() > 0:
@@ -9012,14 +8398,8 @@ by adding:
                 self._to_stores = []
                 self._remove()
                 self.status._value = scheduled
-                self._reschedule(
-                    self.env._now,
-                    0,
-                    False,
-                    f"to_store ({store.name()}) honor with {item.name()}",
-                    False,
-                    s0=self.env.last_s0,
-                )
+                self._reschedule(self.env._now, 0, False, f"to_store ({store.name()}) honor with {item.name()}", False,
+                                 s0=self.env.last_s0)
                 return
 
         for store in to_stores:
@@ -9030,9 +8410,7 @@ by adding:
         self._to_stores = to_stores
 
         if self._to_store_item:
-            self._reschedule(
-                scheduled_time, fail_priority, urgent, "request to_store", cap_now
-            )
+            self._reschedule(scheduled_time, fail_priority, urgent, "request to_store", cap_now)
 
     def filter(self, value: callable):
         """
@@ -9176,12 +8554,7 @@ by adding:
         called_from = kwargs.pop("called_from", "request")
         self.oneof_request = oneof
         if kwargs:
-            raise TypeError(
-                called_from
-                + "() got an unexpected keyword argument '"
-                + tuple(kwargs)[0]
-                + "'"
-            )
+            raise TypeError(called_from + "() got an unexpected keyword argument '" + tuple(kwargs)[0] + "'")
 
         if self.status.value != current:
             self._checkisnotdata()
@@ -9210,14 +8583,7 @@ by adding:
 
         if not args:
             honoredstr = "-"
-            self._reschedule(
-                self.env._now,
-                0,
-                False,
-                "request honor " + honoredstr,
-                False,
-                s0=self.env.last_s0,
-            )
+            self._reschedule(self.env._now, 0, False, "request honor " + honoredstr, False, s0=self.env.last_s0)
             return
         for arg in args:
             q = 1
@@ -9235,9 +8601,7 @@ by adding:
 
             if r._preemptive:
                 if len(args) > 1:
-                    raise ValueError(
-                        "preemptive resources do not support multiple resource requests"
-                    )
+                    raise ValueError("preemptive resources do not support multiple resource requests")
 
             if called_from == "put":
                 q = -q
@@ -9245,9 +8609,7 @@ by adding:
             if q < 0 and not r._anonymous:
                 raise ValueError("quantity " + str(q) + " <0")
             if r in self._requests:
-                self._requests[
-                    r
-                ] += q  # is same resource is specified several times, just add them up
+                self._requests[r] += q  # is same resource is specified several times, just add them up
             else:
                 self._requests[r] = q
             if called_from == "request":
@@ -9265,9 +8627,7 @@ by adding:
 
             self.enter_sorted(r._requesters, priority)
             if self.env._trace:
-                self.env.print_trace(
-                    "", "", self.name(), req_text + r.name() + addstring
-                )
+                self.env.print_trace("", "", self.name(), req_text + r.name() + addstring)
 
             if r._preemptive:
                 av = r.available_quantity()
@@ -9294,9 +8654,7 @@ by adding:
 
         if self._requests:
             self.status._value = requesting
-            self._reschedule(
-                scheduled_time, schedule_priority, urgent, "request", cap_now
-            )
+            self._reschedule(scheduled_time, schedule_priority, urgent, "request", cap_now)
 
     def isbumped(self, resource: "Resource" = None) -> bool:
         """
@@ -9355,10 +8713,7 @@ by adding:
             if r._honor_only_first and r._requesters[0] != self:
                 return []
             self_prio = self.priority(r._requesters)
-            if (
-                r._honor_only_highest_priority
-                and self_prio != r._requesters._head.successor.priority
-            ):
+            if r._honor_only_highest_priority and self_prio != r._requesters._head.successor.priority:
                 return []
             if self._requests[r] > 0:
                 if self._requests[r] > (r._capacity - r._claimed_quantity + 1e-8):
@@ -9373,10 +8728,7 @@ by adding:
             if r._honor_only_first and r._requesters[0] != self:
                 continue
             self_prio = self.priority(r._requesters)
-            if (
-                r._honor_only_highest_priority
-                and self_prio != r._requesters._head.successor.priority
-            ):
+            if r._honor_only_highest_priority and self_prio != r._requesters._head.successor.priority:
                 continue
 
             if self._requests[r] > 0:
@@ -9417,17 +8769,11 @@ by adding:
                             self.enter_sorted(r._claimers, this_prio)
                         prio_trace = " priority=" + str(this_prio)
                     r.claimed_quantity.tally(r._claimed_quantity)
-                    r.occupancy.tally(
-                        0 if r._capacity <= 0 else r._claimed_quantity / r._capacity
-                    )
+                    r.occupancy.tally(0 if r._capacity <= 0 else r._claimed_quantity / r._capacity)
                     r.available_quantity.tally(r._capacity - r._claimed_quantity)
                     if self.env._trace:
-                        self.env.print_trace(
-                            "",
-                            "",
-                            self.name(),
-                            f"claim {self._requests[r]} from {r.name()} {prio_trace}",
-                        )
+                        self.env.print_trace("", "", self.name(),
+                                             f"claim {self._requests[r]} from {r.name()} {prio_trace}")
                 self.leave(r._requesters)
                 if r._requesters._length == 0:
                     r._minq = inf
@@ -9436,14 +8782,7 @@ by adding:
             self._remove()
             honoredstr = r_honor[0].name() + (len(r_honor) > 1) * " ++"
             self.status._value = scheduled
-            self._reschedule(
-                self.env._now,
-                0,
-                False,
-                "request honor " + honoredstr,
-                False,
-                s0=self.env.last_s0,
-            )
+            self._reschedule(self.env._now, 0, False, "request honor " + honoredstr, False, s0=self.env.last_s0)
             for r in anonymous_resources:
                 r._tryrequest()
             return True
@@ -9470,27 +8809,11 @@ by adding:
         extra = " bumped by " + bumped_by.name() if bumped_by else ""
         if self.env._trace:
             if bumped_by:
-                self.env.print_trace(
-                    "",
-                    "",
-                    self.name(),
-                    "bumped from "
-                    + r.name()
-                    + " by "
-                    + bumped_by.name()
-                    + " (release "
-                    + str(q)
-                    + ")",
-                    s0=s0,
-                )
+                self.env.print_trace("", "", self.name(),
+                                     "bumped from " + r.name() + " by " + bumped_by.name() + " (release " + str(
+                                         q) + ")", s0=s0)
             else:
-                self.env.print_trace(
-                    "",
-                    "",
-                    self.name(),
-                    "release " + str(q) + " from " + r.name() + extra,
-                    s0=s0,
-                )
+                self.env.print_trace("", "", self.name(), "release " + str(q) + " from " + r.name() + extra, s0=s0)
         if not bumped_by:
             r._tryrequest()
 
@@ -9548,9 +8871,7 @@ by adding:
                 else:
                     raise TypeError("incorrect specifier" + arg)
                 if r._anonymous:
-                    raise ValueError(
-                        "not possible to release anonymous resources " + r.name()
-                    )
+                    raise ValueError("not possible to release anonymous resources " + r.name())
                 self._release(r, q)
         else:
             for r in list(self._claims):
@@ -9706,9 +9027,7 @@ by adding:
         cap_now = kwargs.pop("cap_now", None)
 
         if kwargs:
-            raise TypeError(
-                "wait() got an unexpected keyword argument '" + tuple(kwargs)[0] + "'"
-            )
+            raise TypeError("wait() got an unexpected keyword argument '" + tuple(kwargs)[0] + "'")
 
         if self.status.value != current:
             self._checkisnotdata()
@@ -9794,7 +9113,7 @@ by adding:
                         honored = False
                         break
                 elif valuetype == 1:
-                    if eval(value.replace("$", "state._value")):
+                    if not eval(value.replace("$", "state._value")):
                         honored = False
                         break
                 elif valuetype == 2:
@@ -9825,9 +9144,7 @@ by adding:
             self._waits = []
             self._remove()
             self.status._value = scheduled
-            self._reschedule(
-                self.env._now, 0, False, "wait honor", False, s0=self.env.last_s0
-            )
+            self._reschedule(self.env._now, 0, False, "wait honor", False, s0=self.env.last_s0)
 
         return honored
 
@@ -10281,9 +9598,7 @@ by adding:
         The component is placed just before the first component with a priority > given priority
         """
         self._checknotinqueue(q)
-        if (
-            q._length >= 1 and priority < q._head.successor.priority
-        ):  # direct enter component that's smaller than the rest
+        if q._length >= 1 and priority < q._head.successor.priority:  # direct enter component that's smaller than the rest
             m2 = q._head.successor
         else:
             m2 = q._tail
@@ -10336,22 +9651,14 @@ by adding:
                 if len(store._to_store_requesters) > 0:
                     requester = store._to_store_requesters[0]
                     with self.env.suppress_trace():
-                        requester._to_store_item.enter_sorted(
-                            q, requester._to_store_priority
-                        )
+                        requester._to_store_item.enter_sorted(q, requester._to_store_priority)
                     for store0 in requester._to_stores:
                         requester.leave(store0._to_store_requesters)
                     requester._to_stores = []
                     requester._remove()
                     requester.status._value = scheduled
-                    requester._reschedule(
-                        requester.env._now,
-                        0,
-                        False,
-                        f"to_store ({store.name()}) honor ",
-                        False,
-                        s0=requester.env.last_s0,
-                    )
+                    requester._reschedule(requester.env._now, 0, False, f"to_store ({store.name()}) honor ", False,
+                                          s0=requester.env.last_s0)
                     requester._to_store_item = None
                     requester._to_store_store = store
         return self
@@ -10482,9 +9789,7 @@ by adding:
                 return priority
         return None
 
-    def remaining_duration(
-        self, value: float = None, priority: float = 0, urgent: bool = False
-    ) -> float:
+    def remaining_duration(self, value: float = None, priority: float = 0, urgent: bool = False) -> float:
         """
         Parameters
         ----------
@@ -10543,27 +9848,12 @@ by adding:
             if self.status.value in (passive, interrupted):
                 self._remaining_duration = value
             elif self.status.value == current:
-                raise ValueError(
-                    "setting remaining_duration not allowed for current component ("
-                    + self.name()
-                    + ")"
-                )
+                raise ValueError("setting remaining_duration not allowed for current component (" + self.name() + ")")
             elif self.status.value == standby:
-                raise ValueError(
-                    "setting remaining_duration not allowed for standby component ("
-                    + self.name()
-                    + ")"
-                )
+                raise ValueError("setting remaining_duration not allowed for standby component (" + self.name() + ")")
             else:
                 self._remove()
-                self._reschedule(
-                    value + self.env._now,
-                    priority,
-                    urgent,
-                    "set remaining_duration",
-                    False,
-                    extra="",
-                )
+                self._reschedule(value + self.env._now, priority, urgent, "set remaining_duration", False, extra="")
 
         if self.status.value in (passive, interrupted):
             return self._remaining_duration
@@ -10667,17 +9957,10 @@ by adding:
                         frame_last = frame
                         frame = frame.f_back
                         i -= 1
-                    if (
-                        inspect.getframeinfo(frame).filename == __file__
-                    ):  # one up if we landed in salabim.py
+                    if inspect.getframeinfo(frame).filename == __file__:  # one up if we landed in salabim.py
                         frame = frame_last
                     lineno = inspect.getframeinfo(frame).lineno
-                s0 = (
-                    self.env.filename_lineno_to_str(
-                        self._process.__code__.co_filename, lineno
-                    )
-                    + "+"
-                )
+                s0 = self.env.filename_lineno_to_str(self._process.__code__.co_filename, lineno) + "+"
 
             return un_na(f"{'@' if add_at else ''}{s0}")
 
@@ -10694,20 +9977,13 @@ by adding:
                 else:
                     try:
                         gs = inspect.getsourcelines(self._process)
-                        s0 = (
-                            self.env.filename_lineno_to_str(
-                                self._process.__code__.co_filename, gs[1]
-                            )
-                            + " "
-                        )
+                        s0 = self.env.filename_lineno_to_str(self._process.__code__.co_filename, gs[1]) + " "
                     except OSError:
                         s0 = "n/a"
 
                     return un_na(f"{'@' if add_at else ''}{s0}")
 
-            return un_na(
-                f"{'@' if add_at else ''}{self.env._frame_to_lineno(frame)}{plus}"
-            )
+            return un_na(f"{'@' if add_at else ''}{self.env._frame_to_lineno(frame)}{plus}")
 
     def line_number(self) -> str:
         """
@@ -10883,21 +10159,21 @@ class Event(Component):
     """
 
     def __init__(
-        self,
-        action: Callable,
-        action_string="action",
-        name: str = None,
-        at: Union[float, Callable] = None,
-        delay: Union[float, Callable] = None,
-        priority: float = None,
-        urgent: bool = None,
-        suppress_trace: bool = False,
-        suppress_pause_at_step: bool = False,
-        skip_standby: bool = False,
-        mode: str = "",
-        cap_now: bool = None,
-        env: "Environment" = None,
-        **kwargs,
+            self,
+            action: Callable,
+            action_string="action",
+            name: str = None,
+            at: Union[float, Callable] = None,
+            delay: Union[float, Callable] = None,
+            priority: float = None,
+            urgent: bool = None,
+            suppress_trace: bool = False,
+            suppress_pause_at_step: bool = False,
+            skip_standby: bool = False,
+            mode: str = "",
+            cap_now: bool = None,
+            env: "Environment" = None,
+            **kwargs,
     ):
         self._action = action
         self._action_string = action_string
@@ -11083,21 +10359,21 @@ class Environment:
     """
 
     def __init__(
-        self,
-        trace: bool = False,
-        random_seed: Hashable = None,
-        set_numpy_random_seed: bool = True,
-        time_unit: str = "n/a",
-        datetime0: Union[bool, datetime.datetime, str] = False,
-        name: str = None,
-        print_trace_header: bool = True,
-        isdefault_env: bool = True,
-        retina: bool = False,
-        do_reset: bool = None,
-        blind_animation: bool = False,
-        yieldless: bool = None,
-        *args,
-        **kwargs,
+            self,
+            trace: bool = False,
+            random_seed: Hashable = None,
+            set_numpy_random_seed: bool = True,
+            time_unit: str = "n/a",
+            datetime0: Union[bool, datetime.datetime, str] = False,
+            name: str = None,
+            print_trace_header: bool = True,
+            isdefault_env: bool = True,
+            retina: bool = False,
+            do_reset: bool = None,
+            blind_animation: bool = False,
+            yieldless: bool = None,
+            *args,
+            **kwargs,
     ):
         if name is None:
             if isdefault_env:
@@ -11170,9 +10446,7 @@ class Environment:
         self._speed = 1.0
         self._animate = False
         self._animate3d = False
-        if (
-            "_AnimateIntro" in globals()
-        ):  # in case of minimized, _AnimateIntro and _AnimateExtro are not available
+        if "_AnimateIntro" in globals():  # in case of minimized, _AnimateIntro and _AnimateExtro are not available
             self.view = _AnimateIntro(env=self)
             _AnimateExtro(env=self)
         self._gl_initialized = False
@@ -11199,9 +10473,7 @@ class Environment:
 
         if self._blind_animation:
             with self.suppress_trace():
-                self._blind_video_maker = _BlindVideoMaker(
-                    process="", suppress_trace=True
-                )
+                self._blind_video_maker = _BlindVideoMaker(process="", suppress_trace=True)
         if PyDroid:
             if g.tkinter_loaded == "?":
                 g.tkinter_loaded = "tkinter" in sys.modules
@@ -11258,10 +10530,7 @@ class Environment:
 
         self.an_clocktext()
 
-        ap_parameters = [
-            parameter
-            for parameter in inspect.signature(self.animation_parameters).parameters
-        ]
+        ap_parameters = [parameter for parameter in inspect.signature(self.animation_parameters).parameters]
         ap_kwargs = {}
         for k, v in list(kwargs.items()):
             if k in ap_parameters:
@@ -11337,11 +10606,7 @@ class Environment:
         ...
 
     def animation_pre_tick_sys(self, t: float) -> None:
-        for (
-            ao
-        ) in (
-            self.sys_objects.copy()
-        ):  # copy required as ao's may be removed due to keep
+        for ao in self.sys_objects.copy():  # copy required as ao's may be removed due to keep
             ao.update(t)
 
     def animation3d_init(self):
@@ -11391,9 +10656,7 @@ class Environment:
         if key in self._opengl_key_press_special_bind:
             self._opengl_key_press_special_bind[key]()
 
-    def camera_move(
-        self, spec: str = "", lag: float = 1, offset: float = 0, enabled: bool = True
-    ):
+    def camera_move(self, spec: str = "", lag: float = 1, offset: float = 0, enabled: bool = True):
         """
         Moves the camera according to the given spec, which is normally a collection of camera_print
         outputs.
@@ -11430,11 +10693,8 @@ class Environment:
                 build_times[prop].append(offset)
 
             for prop in props:
-                setattr(
-                    self.view,
-                    prop,
-                    lambda arg, t, prop=prop: interp(t, times[prop], values[prop]),
-                )  # default argument prop is evaluated at start!
+                setattr(self.view, prop, lambda arg, t, prop=prop: interp(t, times[prop], values[
+                    prop]))  # default argument prop is evaluated at start!
 
             for line in spec.split("\n"):
                 line = line.strip()
@@ -11465,14 +10725,7 @@ class Environment:
                         times[prop].append(pending_time)
 
                     values[prop].append(
-                        interpolate(
-                            time,
-                            times[prop][-1],
-                            pending_time,
-                            values[prop][-1],
-                            pending_value,
-                        )
-                    )
+                        interpolate(time, times[prop][-1], pending_time, values[prop][-1], pending_value))
                     times[prop].append(time)
                     pending_value = value
                     pending_time = time + lag
@@ -11487,30 +10740,17 @@ class Environment:
         adjusted_y = self.view.y_eye(t) - self.view.y_center(t)
         cos_rad = math.cos(math.radians(delta_angle))
         sin_rad = math.sin(math.radians(delta_angle))
-        self.view.x_eye = (
-            self.view.x_center(t) + cos_rad * adjusted_x + sin_rad * adjusted_y
-        )
-        self.view.y_eye = (
-            self.view.y_center(t) - sin_rad * adjusted_x + cos_rad * adjusted_y
-        )
+        self.view.x_eye = self.view.x_center(t) + cos_rad * adjusted_x + sin_rad * adjusted_y
+        self.view.y_eye = self.view.y_center(t) - sin_rad * adjusted_x + cos_rad * adjusted_y
 
         if self._camera_auto_print:
             self.camera_print(props="x_eye y_eye")
 
     def camera_zoom(self, event=None, factor_xy=None, factor_z=None):
         t = self.t()
-        self.view.x_eye = (
-            self.view.x_center(t)
-            - (self.view.x_center(t) - self.view.x_eye(t)) * factor_xy
-        )
-        self.view.y_eye = (
-            self.view.y_center(t)
-            - (self.view.y_center(t) - self.view.y_eye(t)) * factor_xy
-        )
-        self.view.z_eye = (
-            self.view.z_center(t)
-            - (self.view.z_center(t) - self.view.z_eye(t)) * factor_z
-        )
+        self.view.x_eye = self.view.x_center(t) - (self.view.x_center(t) - self.view.x_eye(t)) * factor_xy
+        self.view.y_eye = self.view.y_center(t) - (self.view.y_center(t) - self.view.y_eye(t)) * factor_xy
+        self.view.z_eye = self.view.z_center(t) - (self.view.z_center(t) - self.view.z_eye(t)) * factor_z
         if self._camera_auto_print:
             self.camera_print(props="x_eye y_eye z_eye")
 
@@ -11564,12 +10804,8 @@ class Environment:
         adjusted_y = self.view.y_center(t) - self.view.y_eye(t)
         cos_rad = math.cos(math.radians(delta_angle))
         sin_rad = math.sin(math.radians(delta_angle))
-        self.view.x_center = (
-            self.view.x_eye(t) + cos_rad * adjusted_x + sin_rad * adjusted_y
-        )
-        self.view.y_center = (
-            self.view.y_eye(t) - sin_rad * adjusted_x + cos_rad * adjusted_y
-        )
+        self.view.x_center = self.view.x_eye(t) + cos_rad * adjusted_x + sin_rad * adjusted_y
+        self.view.y_center = self.view.y_eye(t) - sin_rad * adjusted_x + cos_rad * adjusted_y
         if self._camera_auto_print:
             self.camera_print(props="x_eye y_eye")
 
@@ -11580,16 +10816,9 @@ class Environment:
         s = "view("
         items = []
         for prop in props.split():
-            items.append(f"{getattr(self.view,prop)(t):.4f}")
-        print(
-            "view("
-            + (
-                ",".join(
-                    f"{prop}={getattr(self.view,prop)(t):.4f}" for prop in props.split()
-                )
-            )
-            + f")  # t={t:.4f}"
-        )
+            items.append(f"{getattr(self.view, prop)(t):.4f}")
+        print("view(" + (
+            ",".join(f"{prop}={getattr(self.view, prop)(t):.4f}" for prop in props.split())) + f")  # t={t:.4f}")
 
     def _bind(self, tkinter_event, func):
         self.root.bind(tkinter_event, func)
@@ -11644,53 +10873,24 @@ class Environment:
         self._bind("<Left>", functools.partial(self.camera_rotate, delta_angle=-1))
         self._bind("<Right>", functools.partial(self.camera_rotate, delta_angle=+1))
 
-        self._bind(
-            "<Up>", functools.partial(self.camera_zoom, factor_xy=0.9, factor_z=0.9)
-        )
-        self._bind(
-            "<Down>",
-            functools.partial(self.camera_zoom, factor_xy=1 / 0.9, factor_z=1 / 0.9),
-        )
+        self._bind("<Up>", functools.partial(self.camera_zoom, factor_xy=0.9, factor_z=0.9))
+        self._bind("<Down>", functools.partial(self.camera_zoom, factor_xy=1 / 0.9, factor_z=1 / 0.9))
 
         self._bind("z", functools.partial(self.camera_zoom, factor_xy=1, factor_z=0.9))
-        self._bind(
-            "Z", functools.partial(self.camera_zoom, factor_xy=1, factor_z=1 / 0.9)
-        )
+        self._bind("Z", functools.partial(self.camera_zoom, factor_xy=1, factor_z=1 / 0.9))
 
-        self._bind(
-            "<Shift-Up>", functools.partial(self.camera_zoom, factor_xy=0.9, factor_z=1)
-        )
-        self._bind(
-            "<Shift-Down>",
-            functools.partial(self.camera_zoom, factor_xy=1 / 0.9, factor_z=1),
-        )
+        self._bind("<Shift-Up>", functools.partial(self.camera_zoom, factor_xy=0.9, factor_z=1))
+        self._bind("<Shift-Down>", functools.partial(self.camera_zoom, factor_xy=1 / 0.9, factor_z=1))
 
-        self._bind(
-            "<Alt-Left>", functools.partial(self.camera_xy_eye, x_dis=-10, y_dis=0)
-        )
-        self._bind(
-            "<Alt-Right>", functools.partial(self.camera_xy_eye, x_dis=10, y_dis=0)
-        )
-        self._bind(
-            "<Alt-Down>", functools.partial(self.camera_xy_eye, x_dis=0, y_dis=-10)
-        )
+        self._bind("<Alt-Left>", functools.partial(self.camera_xy_eye, x_dis=-10, y_dis=0))
+        self._bind("<Alt-Right>", functools.partial(self.camera_xy_eye, x_dis=10, y_dis=0))
+        self._bind("<Alt-Down>", functools.partial(self.camera_xy_eye, x_dis=0, y_dis=-10))
         self._bind("<Alt-Up>", functools.partial(self.camera_xy_eye, x_dis=0, y_dis=10))
 
-        self._bind(
-            "<Control-Left>",
-            functools.partial(self.camera_xy_center, x_dis=-10, y_dis=0),
-        )
-        self._bind(
-            "<Control-Right>",
-            functools.partial(self.camera_xy_center, x_dis=10, y_dis=0),
-        )
-        self._bind(
-            "<Control-Down>",
-            functools.partial(self.camera_xy_center, x_dis=0, y_dis=-10),
-        )
-        self._bind(
-            "<Control-Up>", functools.partial(self.camera_xy_center, x_dis=0, y_dis=10)
-        )
+        self._bind("<Control-Left>", functools.partial(self.camera_xy_center, x_dis=-10, y_dis=0))
+        self._bind("<Control-Right>", functools.partial(self.camera_xy_center, x_dis=10, y_dis=0))
+        self._bind("<Control-Down>", functools.partial(self.camera_xy_center, x_dis=0, y_dis=-10))
+        self._bind("<Control-Up>", functools.partial(self.camera_xy_center, x_dis=0, y_dis=10))
 
         self._bind("o", functools.partial(self.camera_field_of_view, factor=0.9))
         self._bind("O", functools.partial(self.camera_field_of_view, factor=1 / 0.9))
@@ -11719,17 +10919,9 @@ class Environment:
         if over3d is None:
             over3d = default_over3d()
         top = self.height3d() - 40 if over3d else self.height() - 90
-        for i, prop in enumerate(
-            "x_eye y_eye z_eye x_center y_center z_center field_of_view_y".split()
-        ):
-            ao = AnimateRectangle(
-                spec=(0, 0, 75, 35),
-                fillcolor="30%gray",
-                x=5 + i * 80,
-                y=top,
-                screen_coordinates=True,
-                over3d=over3d,
-            )
+        for i, prop in enumerate("x_eye y_eye z_eye x_center y_center z_center field_of_view_y".split()):
+            ao = AnimateRectangle(spec=(0, 0, 75, 35), fillcolor="30%gray", x=5 + i * 80, y=top,
+                                  screen_coordinates=True, over3d=over3d)
             ao = AnimateText(
                 text=lambda arg, t: f"{arg.label}",
                 x=5 + i * 80 + 70,
@@ -11743,7 +10935,7 @@ class Environment:
             ao.label = "fovy" if prop == "field_of_view_y" else prop
 
             ao = AnimateText(
-                text=lambda arg, t: f"{getattr(self.view,arg.prop)(t):11.3f}",
+                text=lambda arg, t: f"{getattr(self.view, arg.prop)(t):11.3f}",
                 x=5 + i * 80 + 70,
                 y=top,
                 font="calibri",
@@ -11844,20 +11036,9 @@ class Environment:
                 c = self._main
                 if self.end_on_empty_eventlist:
                     t = self.env._now
-                    self.print_trace(
-                        "", "", "run ended", "no events left", s0=un_na(c.lineno_txt())
-                    )
+                    self.print_trace("", "", "run ended", "no events left", s0=un_na(c.lineno_txt()))
                 else:
                     t = inf
-            # added
-            global SUMMARY_CNT
-            global SUMMARY_INTERVAL
-            global tr
-            if SUMMARY_CNT * SUMMARY_INTERVAL < t:
-                SUMMARY_CNT += 1
-                s = tr.create_summary()
-                summary.print_(s)
-            # added
             c._on_event_list = False
             self.env._now = t
 
@@ -11867,19 +11048,11 @@ class Environment:
             c._scheduled_time = inf
             if self._trace:
                 if c.overridden_lineno:
-                    self.print_trace(
-                        self.time_to_str(self._now - self._offset),
-                        c.name(),
-                        "current",
-                        s0=un_na(c.overridden_lineno),
-                    )
+                    self.print_trace(self.time_to_str(self._now - self._offset), c.name(), "current",
+                                     s0=un_na(c.overridden_lineno))
                 else:
-                    self.print_trace(
-                        self.time_to_str(self._now - self._offset),
-                        c.name(),
-                        "current",
-                        s0=un_na(c.lineno_txt()),
-                    )
+                    self.print_trace(self.time_to_str(self._now - self._offset), c.name(), "current",
+                                     s0=un_na(c.lineno_txt()))
             if c == self._main:
                 self.running = False
                 return
@@ -11900,9 +11073,7 @@ class Environment:
                         try:
                             c._process.send(return_value)
                         except TypeError as e:
-                            if "just-started" in str(
-                                e
-                            ):  # only do this for just started generators
+                            if "just-started" in str(e):  # only do this for just started generators
                                 c._process.send(None)
                             else:
                                 raise e
@@ -11926,13 +11097,8 @@ class Environment:
                     gi_code = c._process.gi_code
                     try:
                         gs = inspect.getsourcelines(gi_code)
-                        s0 = un_na(
-                            c.overridden_lineno
-                            or self.filename_lineno_to_str(
-                                gi_code.co_filename, len(gs[0]) + gs[1] - 1
-                            )
-                            + "+"
-                        )
+                        s0 = un_na(c.overridden_lineno or self.filename_lineno_to_str(gi_code.co_filename,
+                                                                                      len(gs[0]) + gs[1] - 1) + "+")
                     except OSError:
                         s0 = "n/a"
                 else:
@@ -11941,13 +11107,8 @@ class Environment:
                 if self._trace and not self._suppress_trace_linenumbers:
                     try:
                         gs = inspect.getsourcelines(c._process)
-                        s0 = un_na(
-                            c.overridden_lineno
-                            or self.filename_lineno_to_str(
-                                c._process.__code__.co_filename, len(gs[0]) + gs[1] - 1
-                            )
-                            + "+"
-                        )
+                        s0 = un_na(c.overridden_lineno or self.filename_lineno_to_str(c._process.__code__.co_filename,
+                                                                                      len(gs[0]) + gs[1] - 1) + "+")
                     except OSError:
                         s0 = "n/a"
                 else:
@@ -11968,55 +11129,47 @@ class Environment:
     def _print_event_list(self, s: str = "") -> None:
         print("eventlist ", s)
         for t, priority, sequence, comp, return_value in self._event_list:
-            print(
-                "    ",
-                self.time_to_str(t),
-                comp.name(),
-                "priority",
-                priority,
-                "return_value",
-                return_value,
-            )
+            print("    ", self.time_to_str(t), comp.name(), "priority", priority, "return_value", return_value)
 
     def on_closing(self):
         self.an_quit()
 
     def animation_parameters(
-        self,
-        animate: Union[bool, str] = None,
-        synced: bool = None,
-        speed: float = None,
-        width: int = None,
-        height: int = None,
-        title: str = None,
-        show_menu_buttons: bool = None,
-        x0: float = None,
-        y0: float = None,
-        x1: float = None,
-        background_color: ColorType = None,
-        foreground_color: ColorType = None,
-        background3d_color: ColorType = None,
-        fps: float = None,
-        modelname: str = None,
-        use_toplevel: bool = None,
-        show_fps: bool = None,
-        show_time: bool = None,
-        maximum_number_of_bitmaps: int = None,
-        video: Any = None,
-        video_repeat: int = None,
-        video_pingpong: bool = None,
-        audio: str = None,
-        audio_speed: float = None,
-        animate_debug: bool = None,
-        animate3d: bool = None,
-        width3d: int = None,
-        height3d: int = None,
-        video_width: Union[int, str] = None,
-        video_height: Union[int, str] = None,
-        video_mode: str = None,
-        position: Any = None,
-        position3d: Any = None,
-        visible: bool = None,
+            self,
+            animate: Union[bool, str] = None,
+            synced: bool = None,
+            speed: float = None,
+            width: int = None,
+            height: int = None,
+            title: str = None,
+            show_menu_buttons: bool = None,
+            x0: float = None,
+            y0: float = None,
+            x1: float = None,
+            background_color: ColorType = None,
+            foreground_color: ColorType = None,
+            background3d_color: ColorType = None,
+            fps: float = None,
+            modelname: str = None,
+            use_toplevel: bool = None,
+            show_fps: bool = None,
+            show_time: bool = None,
+            maximum_number_of_bitmaps: int = None,
+            video: Any = None,
+            video_repeat: int = None,
+            video_pingpong: bool = None,
+            audio: str = None,
+            audio_speed: float = None,
+            animate_debug: bool = None,
+            animate3d: bool = None,
+            width3d: int = None,
+            height3d: int = None,
+            video_width: Union[int, str] = None,
+            video_height: Union[int, str] = None,
+            video_mode: str = None,
+            position: Any = None,
+            position3d: Any = None,
+            visible: bool = None,
     ):
         """
         set animation parameters
@@ -12251,13 +11404,13 @@ class Environment:
 
         if width is not None:
             if self._width != width:
-                self._width = width
+                self._width = int(width)
                 frame_changed = True
                 width_changed = True
 
         if height is not None:
             if self._height != height:
-                self._height = height
+                self._height = int(height)
                 frame_changed = True
                 height_changed = True
 
@@ -12289,9 +11442,7 @@ class Environment:
 
         if video_height is not None:
             if self._video:
-                raise ValueError(
-                    "video_height may not be changed while recording video"
-                )
+                raise ValueError("video_height may not be changed while recording video")
             self._video_height = video_height
 
         if video_mode is not None:
@@ -12311,9 +11462,7 @@ class Environment:
 
         if fps is not None:
             if self._video:
-                raise ValueError(
-                    "video_repeat may not be changed while recording video"
-                )
+                raise ValueError("video_repeat may not be changed while recording video")
             self._fps = fps
 
         if x0 is not None:
@@ -12369,9 +11518,7 @@ class Environment:
                 self.set_start_animation()
 
         if audio is not None:
-            if (self._audio is None and audio != "") or (
-                self.audio is not None and self._audio.filename != audio
-            ):
+            if (self._audio is None and audio != "") or (self.audio is not None and self._audio.filename != audio):
                 if self._audio is not None:
                     if Pythonista:
                         self._audio.player.pause()
@@ -12409,9 +11556,7 @@ class Environment:
 
                     self._audio.filename = audio_filename
 
-                    if (
-                        self._video_out is not None
-                    ):  # if video ist started here as well, the audio_segment is created later
+                    if self._video_out is not None:  # if video ist started here as well, the audio_segment is created later
                         self._audio.t0 = self.frame_number / self._fps
                         self.audio_segments.append(self._audio)
                     self.set_start_animation()
@@ -12447,16 +11592,12 @@ class Environment:
 
         if video_repeat is not None:
             if self._video:
-                raise ValueError(
-                    "video_repeat may not be changed while recording video"
-                )
+                raise ValueError("video_repeat may not be changed while recording video")
             self._video_repeat = video_repeat
 
         if video_pingpong is not None:
             if self._video:
-                raise ValueError(
-                    "video_pingpong may not be changed while recording video"
-                )
+                raise ValueError("video_pingpong may not be changed while recording video")
             self._video_pingpong = video_pingpong
 
         if video is not None:
@@ -12468,8 +11609,7 @@ class Environment:
                 if video:
                     if self._video_mode == "screen" and ImageGrab is None:
                         raise ValueError(
-                            "video_mode='screen' not supported on this platform (ImageGrab does not exist)"
-                        )
+                            "video_mode='screen' not supported on this platform (ImageGrab does not exist)")
                     if self._video_width == "auto":
                         if self._video_mode == "3d":
                             self._video_width_real = self._width3d
@@ -12501,35 +11641,21 @@ class Environment:
                     if extension in (".gif", ".webp") and not ("*" in video_path.stem):
                         self._video_out = extension[1:]  # get rid of the leading .
                         self._images = []
-                        self._real_fps = 100 / int(
-                            100 / self._fps
-                        )  # duration is always in 10 ms increments
+                        self._real_fps = 100 / int(100 / self._fps)  # duration is always in 10 ms increments
                     elif extension == ".png" and not ("*" in video_path.stem):
                         self._video_out = "png"
                         self._images = []
-                    elif extension.lower() in (
-                        ".jpg",
-                        ".png",
-                        ".bmp",
-                        ".ico",
-                        ".tiff",
-                        ".gif",
-                        ".webp",
-                    ):
+                    elif extension.lower() in (".jpg", ".png", ".bmp", ".ico", ".tiff", ".gif", ".webp"):
                         if "*" in video_path.stem:
                             if video.count("*") > 1:
                                 raise ValueError("more than one * found in " + video)
                             if "?" in video:
                                 raise ValueError("? found in " + video)
                             self.video_name_format = video.replace("*", "{:06d}")
-                            for file in video_path.parent.glob(
-                                video_path.name.replace("*", "??????")
-                            ):
+                            for file in video_path.parent.glob(video_path.name.replace("*", "??????")):
                                 file.unlink()
                         else:
-                            raise ValueError(
-                                "incorrect video name (should contain a *) " + video
-                            )
+                            raise ValueError("incorrect video name (should contain a *) " + video)
 
                         self._video_out = "snapshots"
 
@@ -12540,22 +11666,14 @@ class Environment:
                         else:
                             codec = "MJPG" if extension.lower() == ".avi" else "mp4v"
                         if PyDroid and extension.lower() != ".avi":
-                            raise ValueError(
-                                "PyDroid can only produce .avi videos, not " + extension
-                            )
+                            raise ValueError("PyDroid can only produce .avi videos, not " + extension)
                         can_video(try_only=False)
                         fourcc = cv2.VideoWriter_fourcc(*codec)
                         if video_path.is_file():
                             video_path.unlink()
-                        self._video_name_temp = tempfile.NamedTemporaryFile(
-                            suffix=extension, delete=False
-                        ).name
-                        self._video_out = cv2.VideoWriter(
-                            self._video_name_temp,
-                            fourcc,
-                            self._fps,
-                            (self._video_width_real, self._video_height_real),
-                        )
+                        self._video_name_temp = tempfile.NamedTemporaryFile(suffix=extension, delete=False).name
+                        self._video_out = cv2.VideoWriter(self._video_name_temp, fourcc, self._fps,
+                                                          (self._video_width_real, self._video_height_real))
                         self.frame_number = 0
                         self.audio_segments = []
                         if self._audio is not None:
@@ -12574,9 +11692,7 @@ class Environment:
             if g.animation_env is not None:
                 g.animation_env._animate = self._animate
                 if not Pythonista:
-                    if (
-                        g.animation_env.root is not None
-                    ):  # for blind animation to work properly
+                    if g.animation_env.root is not None:  # for blind animation to work properly
                         if self._ui:
                             self.root.withdraw()
                         else:
@@ -12589,13 +11705,9 @@ class Environment:
                     if self._video != "":
                         with self.suppress_trace():
                             if self.env._yieldless:
-                                self._blind_video_maker.activate(
-                                    process="process_yieldless"
-                                )
+                                self._blind_video_maker.activate(process="process_yieldless")
                             else:
-                                self._blind_video_maker.activate(
-                                    process="process_yielded"
-                                )
+                                self._blind_video_maker.activate(process="process_yielded")
                 else:
                     self._blind_video_maker.cancel()
             else:
@@ -12610,9 +11722,7 @@ class Environment:
                     if Pythonista:
                         if g.animation_scene is None:
                             g.animation_scene = AnimationScene(env=self)
-                            scene.run(
-                                g.animation_scene, frame_interval=1, show_fps=False
-                            )
+                            scene.run(g.animation_scene, frame_interval=1, show_fps=False)
 
                     else:
                         if self.use_toplevel:
@@ -12629,22 +11739,12 @@ class Environment:
 
                         self.root.bind("-", lambda self: g.animation_env.an_half())
                         self.root.bind("+", lambda self: g.animation_env.an_double())
-                        self.root.bind(
-                            "<space>", lambda self: g.animation_env.an_menu_go()
-                        )
-                        self.root.bind(
-                            "s", lambda self: g.animation_env.an_single_step()
-                        )
-                        self.root.bind(
-                            "<Control-c>", lambda self: g.animation_env.an_quit()
-                        )
+                        self.root.bind("<space>", lambda self: g.animation_env.an_menu_go())
+                        self.root.bind("s", lambda self: g.animation_env.an_single_step())
+                        self.root.bind("<Control-c>", lambda self: g.animation_env.an_quit())
 
-                        g.canvas = tkinter.Canvas(
-                            self.root, width=self._width, height=self._height
-                        )
-                        g.canvas.configure(
-                            background=self.colorspec_to_hex("bg", False)
-                        )
+                        g.canvas = tkinter.Canvas(self.root, width=self._width, height=self._height)
+                        g.canvas.configure(background=self.colorspec_to_hex("bg", False))
                         g.canvas.pack()
                         g.canvas_objects = []
                         g.canvas_object_overflow_image = None
@@ -12670,13 +11770,9 @@ class Environment:
                 if self._images:
                     if self._video_pingpong:
                         self._images.extend(self._images[::-1])
-                    if (
-                        self._video_repeat == 1
-                    ):  # in case of repeat == 1, loop should not be specified (otherwise, it might show twice)
+                    if self._video_repeat == 1:  # in case of repeat == 1, loop should not be specified (otherwise, it might show twice)
                         if PythonInExcel or AnacondaCode:
-                            with b64_file_handler(
-                                self._video_name, mode="b", result=_pie_result
-                            ) as f:
+                            with b64_file_handler(self._video_name, mode="b", result=_pie_result) as f:
                                 self._images[0].save(
                                     f,
                                     disposal=2,
@@ -12687,19 +11783,23 @@ class Environment:
                                     format="GIF",
                                 )
                         else:
-                            self._images[0].save(
-                                self._video_name,
-                                disposal=2,
-                                save_all=True,
-                                append_images=self._images[1:],
-                                duration=round(1000 / self._real_fps),
-                                optimize=False,
-                            )
+                            for _ in range(2):  # normally runs only once
+                                try:
+                                    self._images[0].save(
+                                        self._video_name,
+                                        disposal=2,
+                                        save_all=True,
+                                        append_images=self._images[1:],
+                                        duration=round(1000 / self._real_fps),
+                                        optimize=False,
+                                    )
+                                    break
+                                except ValueError:  # prevent bug in Python 3.13
+                                    self._images = [image.convert("RGB") for image in self._images]
+
                     else:
                         if PythonInExcel or AnacondaCode:
-                            with b64_file_handler(
-                                self._video_name, mode="b", result=_pie_result
-                            ) as f:
+                            with b64_file_handler(self._video_name, mode="b", result=_pie_result) as f:
                                 self._images[0].save(
                                     f,
                                     disposal=2,
@@ -12711,15 +11811,20 @@ class Environment:
                                     format="GIF",
                                 )
                         else:
-                            self._images[0].save(
-                                self._video_name,
-                                disposal=2,
-                                save_all=True,
-                                append_images=self._images[1:],
-                                loop=self._video_repeat,
-                                duration=round(1000 / self._real_fps),
-                                optimize=False,
-                            )
+                            for _ in range(2):  # normally runs only once
+                                try:
+
+                                    self._images[0].save(
+                                        self._video_name,
+                                        disposal=2,
+                                        save_all=True,
+                                        append_images=self._images[1:],
+                                        loop=self._video_repeat,
+                                        duration=round(1000 / self._real_fps),
+                                        optimize=False,
+                                    )
+                                except ValueError:  # prevent bug in Python 3.13
+                                    self._images = [image.convert("RGB") for image in self._images]
 
                     del self._images
             elif self._video_out == "png":
@@ -12729,11 +11834,7 @@ class Environment:
                 for image in self._images:
                     with io.BytesIO() as png_file:
                         image.save(png_file, "PNG", optimize=True)
-                        this_apng.append(
-                            _APNG.PNG.from_bytes(png_file.getvalue()),
-                            delay=1,
-                            delay_den=int(self.fps()),
-                        )
+                        this_apng.append(_APNG.PNG.from_bytes(png_file.getvalue()), delay=1, delay_den=int(self.fps()))
                 this_apng.save(self._video_name)
                 del self._images
 
@@ -12766,26 +11867,13 @@ class Environment:
         elif video_mode == "screen":
             image = ImageGrab.grab()
         else:
-            an_objects = sorted(
-                self.an_objects, key=lambda obj: (-obj.layer(self._t), obj.sequence)
-            )
-            image = Image.new(
-                "RGBA", (self._width, self._height), self.colorspec_to_tuple("bg")
-            )
+            an_objects = sorted(self.an_objects, key=lambda obj: (-obj.layer(self._t), obj.sequence))
+            image = Image.new("RGBA", (self._width, self._height), self.colorspec_to_tuple("bg"))
             for ao in an_objects:
                 ao.make_pil_image(self.t())
-                if ao._image_visible and (
-                    include_topleft or not ao.getattr("in_topleft", False)
-                ):
-                    image.paste(
-                        ao._image,
-                        (
-                            int(ao._image_x),
-                            int(self._height - ao._image_y - ao._image.size[1]),
-                        ),
-                        ao._image,
-                    )
-
+                if ao._image_visible and (include_topleft or not ao.getattr("in_topleft", False)):
+                    image.paste(ao._image, (int(ao._image_x), int(self._height - ao._image_y - ao._image.size[1])),
+                                ao._image.convert("RGBA"))
         return image.convert(mode)
 
     def insert_frame(self, image: Any, number_of_frames: int = 1) -> None:
@@ -12800,6 +11888,7 @@ class Environment:
         nuumber_of_frames: int
             Number of 1/30 second long frames to be inserted
         """
+
         if self._video_out is None:
             raise ValueError("video not set")
         if isinstance(image, (Path, str)):
@@ -12850,10 +11939,7 @@ class Environment:
                         + " .start = "
                         + str(audio_segment.start)
                     )
-                end = min(
-                    audio_segment.duration,
-                    audio_segment.t1 - audio_segment.t0 + audio_segment.start,
-                )
+                end = min(audio_segment.duration, audio_segment.t1 - audio_segment.t0 + audio_segment.start)
                 if end > audio_segment.start:
                     if audio_segment.t0 - last_t > 0:
                         command = (
@@ -12883,18 +11969,11 @@ class Environment:
                     last_t = audio_segment.t1
 
             if seq > 0:
-                temp_filename = (
-                    tempdir + "\\temp" + os.path.splitext(self._video_name)[1]
-                )
+                temp_filename = tempdir + "\\temp" + os.path.splitext(self._video_name)[1]
                 shutil.copyfile(self._video_name_temp, temp_filename)
 
                 with open(tempdir + "\\temp.txt", "w") as f:
-                    f.write(
-                        "\n".join(
-                            "file '" + tempdir + "\\temp" + str(i) + ".mp3'"
-                            for i in range(seq)
-                        )
-                    )
+                    f.write("\n".join("file '" + tempdir + "\\temp" + str(i) + ".mp3'" for i in range(seq)))
                 if hasattr(self, "debug_ffmpeg"):
                     print("contents of temp.txt file")
                     with open(tempdir + "\\temp.txt", "r") as f:
@@ -12925,9 +12004,7 @@ class Environment:
         try:
             subprocess.call(command, shell=False)
         except FileNotFoundError:
-            raise FileNotFoundError(
-                "ffmpeg could not be loaded (refer to install procedure)."
-            )
+            raise FileNotFoundError("ffmpeg could not be loaded (refer to install procedure).")
 
     def uninstall_uios(self):
         for uio in self.ui_objects:
@@ -13771,6 +12848,31 @@ class Environment:
             self.animation_parameters(synced=value, animate=None)
         return self._synced
 
+    def minimized(self, value: bool = None) -> bool:
+        """
+        minimized
+
+        Parameters
+        ----------
+        value : bool
+            if True, minimize the curent animation window
+
+            if False, (re)show the current animation window
+
+            if None (default): no action
+
+        Returns
+        -------
+        current state of the animation window : bool
+            True if current animation windows is minimized, False otherwise
+        """
+        if value is not None:
+            if value:
+                self.root.withdraw()
+            else:
+                self.root.deiconify()
+        return not bool(self.root.winfo_viewable())
+
     def speed(self, value: float = None) -> float:
         """
         speed
@@ -13859,17 +12961,11 @@ class Environment:
         self._offset = self._now - new_now
 
         if self._trace:
-            self.print_trace(
-                "",
-                "",
-                f"now reset to {new_now:0.3f}",
-                f"(all times are reduced by {(self._offset - offset_before):0.3f})",
-            )
+            self.print_trace("", "", f"now reset to {new_now:0.3f}",
+                             f"(all times are reduced by {(self._offset - offset_before):0.3f})")
 
         if self._datetime0:
-            self._datetime0 += datetime.timedelta(
-                seconds=self.to_seconds(self._offset - offset_before)
-            )
+            self._datetime0 += datetime.timedelta(seconds=self.to_seconds(self._offset - offset_before))
             self.print_trace("", "", "", f"(t=0 ==> to {self.time_to_str(0)})")
 
     def trace(self, value: Union[bool, "filehandle"] = None) -> bool:
@@ -14010,8 +13106,7 @@ class Environment:
                         self._paused = True
                         if "-ANIMATE-" in self._ui_keys:
                             self.env._ui_window["-ANIMATE-"].update(
-                                False
-                            )  # this is required as the self.animate() also sets the value
+                                False)  # this is required as the self.animate() also sets the value
 
         return self._paused
 
@@ -14023,14 +13118,8 @@ class Environment:
         """
         return self._current_component
 
-    def run(
-        self,
-        duration: float = None,
-        till: float = None,
-        priority: Any = inf,
-        urgent: bool = False,
-        cap_now: bool = None,
-    ):
+    def run(self, duration: float = None, till: float = None, priority: Any = inf, urgent: bool = False,
+            cap_now: bool = None):
         """
         start execution of the simulation
 
@@ -14103,9 +13192,7 @@ class Environment:
                 raise ValueError("both duration and till specified")
         if self._yieldless:
             self._main.status._value = scheduled
-            self._main._reschedule(
-                scheduled_time, priority, urgent, "run", cap_now, extra=extra
-            )
+            self._main._reschedule(scheduled_time, priority, urgent, "run", cap_now, extra=extra)
             self.running = False
             self.env._glet.switch()  # for proper handling of no events left run (?)
             self.running = True
@@ -14113,9 +13200,7 @@ class Environment:
         else:
             self._main.frame = _get_caller_frame()
             self._main.status._value = scheduled
-            self._main._reschedule(
-                scheduled_time, priority, urgent, "run", cap_now, extra=extra
-            )
+            self._main._reschedule(scheduled_time, priority, urgent, "run", cap_now, extra=extra)
             self.running = True
 
         while self.running:
@@ -14174,8 +13259,7 @@ class Environment:
                         self._t = self.animation_start_time
                     else:
                         self._t = self.animation_start_time + (
-                            (time.time() - self.animation_start_clocktime) * self._speed
-                        )
+                                    (time.time() - self.animation_start_clocktime) * self._speed)
 
                 while self.peek() < self._t:
                     self.step()
@@ -14204,9 +13288,7 @@ class Environment:
             self.animation_pre_tick(t)
             self.animation_pre_tick_sys(t)
 
-            an_objects = sorted(
-                self.an_objects, key=lambda obj: (-obj.layer(self._t), obj.sequence)
-            )
+            an_objects = sorted(self.an_objects, key=lambda obj: (-obj.layer(self._t), obj.sequence))
 
             canvas_objects_iter = iter(g.canvas_objects[:])
             co = next(canvas_objects_iter, None)
@@ -14217,26 +13299,14 @@ class Environment:
                     if co is None:
                         if len(g.canvas_objects) >= self._maximum_number_of_bitmaps:
                             if overflow_image is None:
-                                overflow_image = Image.new(
-                                    "RGBA", (self._width, self._height), (0, 0, 0, 0)
-                                )
-                            overflow_image.paste(
-                                ao._image,
-                                (
-                                    int(ao._image_x),
-                                    int(self._height - ao._image_y - ao._image.size[1]),
-                                ),
-                                ao._image,
-                            )
+                                overflow_image = Image.new("RGBA", (int(self._width), int(self._height)), (0, 0, 0, 0))
+                            overflow_image.paste(ao._image, (
+                            int(ao._image_x), int(self._height - ao._image_y - ao._image.size[1])), ao._image)
                             ao.canvas_object = None
                         else:
                             ao.im = ImageTk.PhotoImage(ao._image)
-                            co1 = g.canvas.create_image(
-                                ao._image_x,
-                                self._height - ao._image_y,
-                                image=ao.im,
-                                anchor=tkinter.SW,
-                            )
+                            co1 = g.canvas.create_image(ao._image_x, self._height - ao._image_y, image=ao.im,
+                                                        anchor=tkinter.SW)
                             g.canvas_objects.append(co1)
                             ao.canvas_object = co1
 
@@ -14246,22 +13316,14 @@ class Environment:
                                 ao.im = ImageTk.PhotoImage(ao._image)
                                 g.canvas.itemconfig(ao.canvas_object, image=ao.im)
 
-                            if (ao._image_x != ao._image_x_prev) or (
-                                ao._image_y != ao._image_y_prev
-                            ):
-                                g.canvas.coords(
-                                    ao.canvas_object,
-                                    (ao._image_x, self._height - ao._image_y),
-                                )
+                            if (ao._image_x != ao._image_x_prev) or (ao._image_y != ao._image_y_prev):
+                                g.canvas.coords(ao.canvas_object, (ao._image_x, self._height - ao._image_y))
 
                         else:
                             ao.im = ImageTk.PhotoImage(ao._image)
                             ao.canvas_object = co
                             g.canvas.itemconfig(ao.canvas_object, image=ao.im)
-                            g.canvas.coords(
-                                ao.canvas_object,
-                                (ao._image_x, self._height - ao._image_y),
-                            )
+                            g.canvas.coords(ao.canvas_object, (ao._image_x, self._height - ao._image_y))
 
                     co = next(canvas_objects_iter, None)
                 else:
@@ -14275,18 +13337,13 @@ class Environment:
             else:
                 im = ImageTk.PhotoImage(overflow_image)
                 if g.canvas_object_overflow_image is None:
-                    g.canvas_object_overflow_image = g.canvas.create_image(
-                        0, self._height, image=im, anchor=tkinter.SW
-                    )
+                    g.canvas_object_overflow_image = g.canvas.create_image(0, self._height, image=im, anchor=tkinter.SW)
                 else:
                     g.canvas.itemconfig(g.canvas_object_overflow_image, image=im)
 
             if self._animate3d:
                 self._exclude_from_animation = "*"  # makes that both video and non video over2d animation objects are shown
-                an_objects3d = sorted(
-                    self.an_objects3d,
-                    key=lambda obj: (obj.layer(self._t), obj.sequence),
-                )
+                an_objects3d = sorted(self.an_objects3d, key=lambda obj: (obj.layer(self._t), obj.sequence))
                 for an in an_objects3d:
                     if an.keep(t):
                         if an.visible(t):
@@ -14357,9 +13414,7 @@ class Environment:
         can_animate(try_only=False)
 
         if video_mode == "screen" and ImageGrab is None:
-            raise ValueError(
-                "video_mode='screen' not supported on this platform (ImageGrab does not exist)"
-            )
+            raise ValueError("video_mode='screen' not supported on this platform (ImageGrab does not exist)")
 
         filename_path = Path(filename)
         extension = filename_path.suffix.lower()
@@ -14379,10 +13434,8 @@ class Environment:
 
     def modelname_width(self):
         if Environment.cached_modelname_width[0] != self._modelname:
-            Environment.cached_modelname_width = [
-                self._modelname,
-                self.env.getwidth(self._modelname + " : a ", font="", fontsize=18),
-            ]
+            Environment.cached_modelname_width = [self._modelname,
+                                                  self.env.getwidth(self._modelname + " : a ", font="", fontsize=18)]
         return Environment.cached_modelname_width[1]
 
     def an_modelname(self) -> None:
@@ -14442,17 +13495,8 @@ class Environment:
             fillcolor = "blue"
             color = "white"
 
-        uio = AnimateButton(
-            x=38,
-            y=-21,
-            text="Menu",
-            width=50,
-            action=self.env.an_menu,
-            env=self,
-            fillcolor=fillcolor,
-            color=color,
-            xy_anchor="nw",
-        )
+        uio = AnimateButton(x=38, y=-21, text="Menu", width=50, action=self.env.an_menu, env=self, fillcolor=fillcolor,
+                            color=color, xy_anchor="nw")
 
         uio.in_topleft = True
 
@@ -14469,50 +13513,20 @@ class Environment:
         else:
             fillcolor = "green"
             color = "white"
-        uio = AnimateButton(
-            x=38,
-            y=-21,
-            text="Go",
-            width=50,
-            action=self.env.an_go,
-            env=self,
-            fillcolor=fillcolor,
-            color=color,
-            xy_anchor="nw",
-        )
+        uio = AnimateButton(x=38, y=-21, text="Go", width=50, action=self.env.an_go, env=self, fillcolor=fillcolor,
+                            color=color, xy_anchor="nw")
         uio.in_topleft = True
 
-        uio = AnimateButton(
-            x=38 + 1 * 60,
-            y=-21,
-            text="Step",
-            width=50,
-            action=self.env.an_step,
-            env=self,
-            xy_anchor="nw",
-        )
+        uio = AnimateButton(x=38 + 1 * 60, y=-21, text="Step", width=50, action=self.env.an_step, env=self,
+                            xy_anchor="nw")
         uio.in_topleft = True
 
-        uio = AnimateButton(
-            x=38 + 3 * 60,
-            y=-21,
-            text="Synced",
-            width=50,
-            action=self.env.an_synced_on,
-            env=self,
-            xy_anchor="nw",
-        )
+        uio = AnimateButton(x=38 + 3 * 60, y=-21, text="Synced", width=50, action=self.env.an_synced_on, env=self,
+                            xy_anchor="nw")
         uio.in_topleft = True
 
-        uio = AnimateButton(
-            x=38 + 4 * 60,
-            y=-21,
-            text="Trace",
-            width=50,
-            action=self.env.an_trace,
-            env=self,
-            xy_anchor="nw",
-        )
+        uio = AnimateButton(x=38 + 4 * 60, y=-21, text="Trace", width=50, action=self.env.an_trace, env=self,
+                            xy_anchor="nw")
         uio.in_topleft = True
 
         if self.colorspec_to_tuple("bg")[:-1] == self.colorspec_to_tuple("red")[:-1]:
@@ -14522,41 +13536,16 @@ class Environment:
             fillcolor = "red"
             color = "white"
 
-        uio = AnimateButton(
-            x=38 + 5 * 60,
-            y=-21,
-            text="Stop",
-            width=50,
-            action=self.env.an_quit,
-            env=self,
-            fillcolor=fillcolor,
-            color=color,
-            xy_anchor="nw",
-        )
+        uio = AnimateButton(x=38 + 5 * 60, y=-21, text="Stop", width=50, action=self.env.an_quit, env=self,
+                            fillcolor=fillcolor, color=color, xy_anchor="nw")
         uio.in_topleft = True
 
-        ao = AnimateText(
-            x=38 + 3 * 60,
-            y=-35,
-            text=self.syncedtext,
-            text_anchor="N",
-            fontsize=15,
-            font="",
-            screen_coordinates=True,
-            xy_anchor="nw",
-        )
+        ao = AnimateText(x=38 + 3 * 60, y=-35, text=self.syncedtext, text_anchor="N", fontsize=15, font="",
+                         screen_coordinates=True, xy_anchor="nw")
         ao.in_topleft = True
 
-        ao = AnimateText(
-            x=38 + 4 * 60,
-            y=-35,
-            text=self.tracetext,
-            text_anchor="N",
-            fontsize=15,
-            font="",
-            screen_coordinates=True,
-            xy_anchor="nw",
-        )
+        ao = AnimateText(x=38 + 4 * 60, y=-35, text=self.tracetext, text_anchor="N", fontsize=15, font="",
+                         screen_coordinates=True, xy_anchor="nw")
         ao.in_topleft = True
 
     def an_synced_buttons(self) -> None:
@@ -14573,61 +13562,24 @@ class Environment:
             fillcolor = "green"
             color = "white"
 
-        uio = AnimateButton(
-            x=38,
-            y=-21,
-            text="Go",
-            width=50,
-            action=self.env.an_go,
-            env=self,
-            fillcolor=fillcolor,
-            color=color,
-            xy_anchor="nw",
-        )
+        uio = AnimateButton(x=38, y=-21, text="Go", width=50, action=self.env.an_go, env=self, fillcolor=fillcolor,
+                            color=color, xy_anchor="nw")
         uio.in_topleft = True
 
-        uio = AnimateButton(
-            x=38 + 1 * 60,
-            y=-21,
-            text="/2",
-            width=50,
-            action=self.env.an_half,
-            env=self,
-            xy_anchor="nw",
-        )
+        uio = AnimateButton(x=38 + 1 * 60, y=-21, text="/2", width=50, action=self.env.an_half, env=self,
+                            xy_anchor="nw")
         uio.in_topleft = True
 
-        uio = AnimateButton(
-            x=38 + 2 * 60,
-            y=-21,
-            text="*2",
-            width=50,
-            action=self.env.an_double,
-            env=self,
-            xy_anchor="nw",
-        )
+        uio = AnimateButton(x=38 + 2 * 60, y=-21, text="*2", width=50, action=self.env.an_double, env=self,
+                            xy_anchor="nw")
         uio.in_topleft = True
 
-        uio = AnimateButton(
-            x=38 + 3 * 60,
-            y=-21,
-            text="Synced",
-            width=50,
-            action=self.env.an_synced_off,
-            env=self,
-            xy_anchor="nw",
-        )
+        uio = AnimateButton(x=38 + 3 * 60, y=-21, text="Synced", width=50, action=self.env.an_synced_off, env=self,
+                            xy_anchor="nw")
         uio.in_topleft = True
 
-        uio = AnimateButton(
-            x=38 + 4 * 60,
-            y=-21,
-            text="Trace",
-            width=50,
-            action=self.env.an_trace,
-            env=self,
-            xy_anchor="nw",
-        )
+        uio = AnimateButton(x=38 + 4 * 60, y=-21, text="Trace", width=50, action=self.env.an_trace, env=self,
+                            xy_anchor="nw")
         uio.in_topleft = True
 
         if self.colorspec_to_tuple("bg") == self.colorspec_to_tuple("red"):
@@ -14636,54 +13588,22 @@ class Environment:
         else:
             fillcolor = "red"
             color = "white"
-        uio = AnimateButton(
-            x=38 + 5 * 60,
-            y=-21,
-            text="Stop",
-            width=50,
-            action=self.env.an_quit,
-            env=self,
-            fillcolor=fillcolor,
-            color=color,
-            xy_anchor="nw",
-        )
+        uio = AnimateButton(x=38 + 5 * 60, y=-21, text="Stop", width=50, action=self.env.an_quit, env=self,
+                            fillcolor=fillcolor, color=color, xy_anchor="nw")
         uio.in_topleft = True
 
         ao = AnimateText(
-            x=38 + 1.5 * 60,
-            y=-35,
-            text=self.speedtext,
-            textcolor="fg",
-            text_anchor="N",
-            fontsize=15,
-            font="",
-            screen_coordinates=True,
-            xy_anchor="nw",
+            x=38 + 1.5 * 60, y=-35, text=self.speedtext, textcolor="fg", text_anchor="N", fontsize=15, font="",
+            screen_coordinates=True, xy_anchor="nw"
         )
         ao.in_topleft = True
 
-        ao = AnimateText(
-            x=38 + 3 * 60,
-            y=-35,
-            text=self.syncedtext,
-            text_anchor="N",
-            fontsize=15,
-            font="",
-            screen_coordinates=True,
-            xy_anchor="nw",
-        )
+        ao = AnimateText(x=38 + 3 * 60, y=-35, text=self.syncedtext, text_anchor="N", fontsize=15, font="",
+                         screen_coordinates=True, xy_anchor="nw")
         ao.in_topleft = True
 
-        ao = AnimateText(
-            x=38 + 4 * 60,
-            y=-35,
-            text=self.tracetext,
-            text_anchor="N",
-            fontsize=15,
-            font="",
-            screen_coordinates=True,
-            xy_anchor="nw",
-        )
+        ao = AnimateText(x=38 + 4 * 60, y=-35, text=self.tracetext, text_anchor="N", fontsize=15, font="",
+                         screen_coordinates=True, xy_anchor="nw")
         ao.in_topleft = True
 
     def remove_topleft_buttons(self):
@@ -14745,9 +13665,7 @@ class Environment:
 
     def quit(self):
         if g.animation_env is not None:
-            g.animation_env.animation_parameters(
-                animate=False, video=""
-            )  # stop animation
+            g.animation_env.animation_parameters(animate=False, video="")  # stop animation
         if Pythonista:
             if g.animation_scene is not None:
                 g.animation_scene.view.close()
@@ -14795,9 +13713,7 @@ class Environment:
         s = ""
         if self._synced and (not self._paused) and self._show_fps:
             if len(self.frametimes) >= 2:
-                fps = (len(self.frametimes) - 1) / (
-                    self.frametimes[-1] - self.frametimes[0]
-                )
+                fps = (len(self.frametimes) - 1) / (self.frametimes[-1] - self.frametimes[0])
             else:
                 fps = 0
             s += f"fps={fps:.1f}"
@@ -14845,9 +13761,7 @@ class Environment:
                             if start_time < self._audio.duration:
                                 self._audio.play(start=start_time)
 
-    def xy_anchor_to_x(
-        self, xy_anchor, screen_coordinates, over3d=False, retina_scale=False
-    ):
+    def xy_anchor_to_x(self, xy_anchor, screen_coordinates, over3d=False, retina_scale=False):
         scale = self.retina if (retina_scale and self.retina > 1) else 1
         if over3d:
             width = self._width3d
@@ -14873,9 +13787,7 @@ class Environment:
 
         raise ValueError("incorrect xy_anchor", xy_anchor)
 
-    def xy_anchor_to_y(
-        self, xy_anchor, screen_coordinates, over3d=False, retina_scale=False
-    ):
+    def xy_anchor_to_y(self, xy_anchor, screen_coordinates, over3d=False, retina_scale=False):
         scale = self.retina if (retina_scale and self.retina > 1) else 1
         if over3d:
             height = self._height3d
@@ -14903,9 +13815,7 @@ class Environment:
         raise ValueError("incorrect xy_anchor", xy_anchor)
 
     def salabim_logo(self):
-        if (
-            "salabim_logo_200" in globals()
-        ):  # test for availabiitly, because of minimized version
+        if "salabim_logo_200" in globals():  # test for availabiitly, because of minimized version
             return salabim_logo_200()
         else:
             return Image.new("RGBA", (1, 1), (0, 0, 0, 0))
@@ -14954,19 +13864,10 @@ class Environment:
         else:
             if (colorspec != "") and (colorspec[0]) == "#":
                 if len(colorspec) == 7:
-                    return (
-                        int(colorspec[1:3], 16),
-                        int(colorspec[3:5], 16),
-                        int(colorspec[5:7], 16),
-                        255,
-                    )
+                    return (int(colorspec[1:3], 16), int(colorspec[3:5], 16), int(colorspec[5:7], 16), 255)
                 elif len(colorspec) == 9:
                     return (
-                        int(colorspec[1:3], 16),
-                        int(colorspec[3:5], 16),
-                        int(colorspec[5:7], 16),
-                        int(colorspec[7:9], 16),
-                    )
+                    int(colorspec[1:3], 16), int(colorspec[3:5], 16), int(colorspec[5:7], 16), int(colorspec[7:9], 16))
             else:
                 s = colorspec.split("#")
                 if len(s) == 2:
@@ -15069,10 +13970,7 @@ class Environment:
 
     def colorspec_to_gl_color_alpha(self, colorspec):
         color_tuple = self.colorspec_to_tuple(colorspec)
-        return (
-            (color_tuple[0] / 255, color_tuple[1] / 255, color_tuple[2] / 255),
-            color_tuple[3],
-        )
+        return ((color_tuple[0] / 255, color_tuple[1] / 255, color_tuple[2] / 255), color_tuple[3])
 
     def pythonistacolor(self, colorspec):
         c = self.colorspec_to_tuple(colorspec)
@@ -15562,20 +14460,9 @@ class Environment:
         note that the header is only printed if trace=True
         """
         len_s1 = len(self.time_to_str(0))
-        self.print_trace(
-            (len_s1 - 4) * " " + "time",
-            "current component",
-            "action",
-            "information",
-            "" if (PythonInExcel or AnacondaCode) else "line#",
-        )
-        self.print_trace(
-            len_s1 * "-",
-            20 * "-",
-            35 * "-",
-            48 * "-",
-            "" if (PythonInExcel or AnacondaCode) else 6 * "-",
-        )
+        self.print_trace((len_s1 - 4) * " " + "time", "current component", "action", "information",
+                         "" if (PythonInExcel or AnacondaCode) else "line#")
+        self.print_trace(len_s1 * "-", 20 * "-", 35 * "-", 48 * "-", "" if (PythonInExcel or AnacondaCode) else 6 * "-")
         for ref in range(len(self._source_files)):
             for fullfilename, iref in self._source_files.items():
                 if ref == iref:
@@ -15619,15 +14506,8 @@ class Environment:
             self._print_legend(ref)
         return rpad(pre + str(lineno), 5)
 
-    def print_trace(
-        self,
-        s1: str = "",
-        s2: str = "",
-        s3: str = "",
-        s4: str = "",
-        s0: str = None,
-        _optional: bool = False,
-    ):
+    def print_trace(self, s1: str = "", s2: str = "", s3: str = "", s4: str = "", s0: str = None,
+                    _optional: bool = False):
         """
         prints a trace line
 
@@ -15662,10 +14542,7 @@ class Environment:
         """
         len_s1 = len(self.time_to_str(0))
         if self._trace:
-            if not (
-                hasattr(self, "_current_component")
-                and self._current_component._suppress_trace
-            ):
+            if not (hasattr(self, "_current_component") and self._current_component._suppress_trace):
                 if s0 is None:
                     if self._suppress_trace_linenumbers:
                         s0 = ""
@@ -15679,16 +14556,8 @@ class Environment:
 
                         s0 = un_na(self._frame_to_lineno(_get_caller_frame()))
                 self.last_s0 = s0
-                line = (
-                    pad(s0, 7)
-                    + pad(s1, len_s1)
-                    + " "
-                    + pad(s2, 20)
-                    + " "
-                    + pad(s3, max(len(s3), 36))
-                    + " "
-                    + s4.strip()
-                )
+                line = pad(s0, 7) + pad(s1, len_s1) + " " + pad(s2, 20) + " " + pad(s3,
+                                                                                    max(len(s3), 36)) + " " + s4.strip()
                 if _optional:
                     self._buffered_trace = line
                 else:
@@ -15870,9 +14739,7 @@ class Environment:
                     elif isinstance(datetime0, str):
                         self._datetime0 = self.dateutil_parse(datetime0)
                     else:
-                        raise ValueError(
-                            f"datetime0 should be datetime.datetime, str or True, not {type(datetime0)}"
-                        )
+                        raise ValueError(f"datetime0 should be datetime.datetime, str or True, not {type(datetime0)}")
                 if self._time_unit is None:
                     self._time_unit = _time_unit_lookup("seconds")
                     self._time_unit_name = "seconds"
@@ -15880,9 +14747,7 @@ class Environment:
                 self._datetime0 = False
         return self._datetime0
 
-    def spec_to_time(
-        self, spec: Union[int, float, str, datetime.datetime, callable]
-    ) -> float:
+    def spec_to_time(self, spec: Union[int, float, str, datetime.datetime, callable]) -> float:
         """
         Converts a generic spec to a proper float time
 
@@ -15915,9 +14780,7 @@ class Environment:
         else:
             raise ValueError(f"{spec} is not a proper time specification")
 
-    def spec_to_duration(
-        self, spec: Union[int, float, str, datetime.datetime, callable]
-    ) -> float:
+    def spec_to_duration(self, spec: Union[int, float, str, datetime.datetime, callable]) -> float:
         """
         Converts a generic spec to a proper float duration
 
@@ -15977,9 +14840,7 @@ class Environment:
         try:
             import dateutil.parser
         except ImportError:
-            raise ImportError(
-                "in order to parse a date/time string, install dateutil with pip install python-dateutil"
-            )
+            raise ImportError("in order to parse a date/time string, install dateutil with pip install python-dateutil")
         try:
             return dateutil.parser.parse(spec, dayfirst=False, yearfirst=True)
         except:
@@ -15995,10 +14856,8 @@ class Environment:
             try:
                 import winsound
 
-                winsound.Playaudio(
-                    os.environ["WINDIR"] + r"\media\Windows Ding.wav",
-                    winsound.SND_FILENAME | winsound.SND_ASYNC,
-                )
+                winsound.Playaudio(os.environ["WINDIR"] + r"\media\Windows Ding.wav",
+                                   winsound.SND_FILENAME | winsound.SND_ASYNC)
             except Exception:
                 pass
 
@@ -16023,13 +14882,13 @@ class Environment:
             self._ui = False
 
     def start_ui(
-        self,
-        window_size: Tuple = (None, None),
-        window_position: Tuple = (None, None),
-        elements: List = None,
-        user_handle_event: Callable = None,
-        default_elements: bool = True,
-        actions: List = None,
+            self,
+            window_size: Tuple = (None, None),
+            window_position: Tuple = (None, None),
+            elements: List = None,
+            user_handle_event: Callable = None,
+            default_elements: bool = True,
+            actions: List = None,
     ):
         """
         start the PySimpleGUI UI
@@ -16063,9 +14922,7 @@ class Environment:
         try:
             import PySimpleGUI as sg
         except ImportError:
-            raise ImportError(
-                "PySimpleGUI required for ui. Install with pip install PySimpleGUI"
-            )
+            raise ImportError("PySimpleGUI required for ui. Install with pip install PySimpleGUI")
         self.remove_topleft_buttons()
 
         self.animation_parameters(use_toplevel=True)
@@ -16081,73 +14938,23 @@ class Environment:
         if default_elements:
             frame0 = [
                 [sg.Text("", key="-TIME-", metadata=[1, 2], size=200)],
-                [
-                    sg.Button("Pause", key="-PAUSE-GO-", metadata=[1, 2]),
-                    sg.Button(
-                        "Stop",
-                        key="-STOP-",
-                        button_color=("white", "firebrick3"),
-                        metadata=[1, 2],
-                    ),
-                ],
-                [
-                    sg.Checkbox(
-                        "Pause at each step",
-                        False,
-                        key="-PAUSE-AT-EACH-STEP-",
-                        enable_events=True,
-                        metadata=[1, 2],
-                    )
-                ],
-                [
-                    sg.Text(
-                        f"Pause at{self.get_time_unit(template='(t)')}",
-                        key="-PAUSE-AT-TEXT-",
-                        size=17,
-                    ),
-                    sg.Input("", key="-PAUSE-AT-", size=(10, 20)),
-                ],
-                [
-                    sg.Text(
-                        f"Pause each{self.get_time_unit(template='(d)')}",
-                        key="-PAUSE-EACH-TEXT-",
-                        size=17,
-                    ),
-                    sg.Input("", key="-PAUSE-EACH-", size=(10, 20)),
-                ],
+                [sg.Button("Pause", key="-PAUSE-GO-", metadata=[1, 2]),
+                 sg.Button("Stop", key="-STOP-", button_color=("white", "firebrick3"), metadata=[1, 2])],
+                [sg.Checkbox("Pause at each step", False, key="-PAUSE-AT-EACH-STEP-", enable_events=True,
+                             metadata=[1, 2])],
+                [sg.Text(f"Pause at{self.get_time_unit(template='(t)')}", key="-PAUSE-AT-TEXT-", size=17),
+                 sg.Input("", key="-PAUSE-AT-", size=(10, 20))],
+                [sg.Text(f"Pause each{self.get_time_unit(template='(d)')}", key="-PAUSE-EACH-TEXT-", size=17),
+                 sg.Input("", key="-PAUSE-EACH-", size=(10, 20))],
                 [
                     sg.Text("Speed", key="-SPEED-TEXT-", metadata=[1]),
                     sg.Button("/2", key="-SPEED/2-", metadata=[1]),
                     sg.Button("*2", key="-SPEED*2-", metadata=[1]),
                     sg.Input("", key="-SPEED-", size=(7, 10)),
                 ],
-                [
-                    sg.Checkbox(
-                        "Trace",
-                        self.trace(),
-                        key="-TRACE-",
-                        metadata=[1, 2],
-                        enable_events=True,
-                    )
-                ],
-                [
-                    sg.Checkbox(
-                        "Synced",
-                        self.synced(),
-                        key="-SYNCED-",
-                        metadata=[1],
-                        enable_events=True,
-                    )
-                ],
-                [
-                    sg.Checkbox(
-                        "Animate",
-                        True,
-                        key="-ANIMATE-",
-                        metadata=[1, 2],
-                        enable_events=True,
-                    )
-                ],
+                [sg.Checkbox("Trace", self.trace(), key="-TRACE-", metadata=[1, 2], enable_events=True)],
+                [sg.Checkbox("Synced", self.synced(), key="-SYNCED-", metadata=[1], enable_events=True)],
+                [sg.Checkbox("Animate", True, key="-ANIMATE-", metadata=[1, 2], enable_events=True)],
             ]
         else:
             frame0 = []
@@ -16179,13 +14986,7 @@ class Environment:
 
         self._last_animate = "?"
         self._last_paused = "?"
-        self._ui_window = sg.Window(
-            "",
-            no_titlebar=True,
-            layout=layout,
-            size=window_size,
-            location=window_position,
-        )
+        self._ui_window = sg.Window("", no_titlebar=True, layout=layout, size=window_size, location=window_position)
         self._ui_window.finalize()
         self._ui_keys = {key.key for key in self._ui_window.element_list()}
 
@@ -16238,15 +15039,9 @@ class Environment:
                         field.update(visible=True)
                     else:
                         if self._animate:
-                            field.update(
-                                visible=field.metadata is not None
-                                and 1 in field.metadata
-                            )
+                            field.update(visible=field.metadata is not None and 1 in field.metadata)
                         else:
-                            field.update(
-                                visible=field.metadata is not None
-                                and 2 in field.metadata
-                            )
+                            field.update(visible=field.metadata is not None and 2 in field.metadata)
             self._last_animate = self._animate
             self._last_paused = self._paused
             self.set_pause_go_button()
@@ -16262,13 +15057,9 @@ class Environment:
 
         if "-TIME-" in self._ui_keys:
             t = self.pauser.scheduled_time()
-            s = [
-                f"t={self.time_to_str(self.t()).lstrip()}{self.get_time_unit(template='t')}"
-            ]
+            s = [f"t={self.time_to_str(self.t()).lstrip()}{self.get_time_unit(template='t')}"]
             if t != inf and not self._paused:
-                s.append(
-                    f" | Pause at {self.time_to_str(t).lstrip()}{self.get_time_unit(template='t')}"
-                )
+                s.append(f" | Pause at {self.time_to_str(t).lstrip()}{self.get_time_unit(template='t')}")
             if self.animate():
                 s.append(f" | Speed={self.speed():.3f}")
 
@@ -16278,9 +15069,8 @@ class Environment:
             return
 
         if event == "-STOP-":
-            ch = sg.popup_yes_no(
-                f"{chr(160):>50}", title="Stop?"
-            )  # chr(160) is a non breaking blank, equivalent to "\0xA0")
+            ch = sg.popup_yes_no(f"{chr(160):>50}",
+                                 title="Stop?")  # chr(160) is a non breaking blank, equivalent to "\0xA0")
             if ch == "Yes":
                 sys.exit()
 
@@ -16316,9 +15106,7 @@ class Environment:
                         try:
                             pause_each = self.spec_to_duration(pause_each_str)
                             t = (self.t() // pause_each + 1) * pause_each
-                            if t < self.t() or math.isclose(
-                                t, self.t()
-                            ):  # avoid rounding error
+                            if t < self.t() or math.isclose(t, self.t()):  # avoid rounding error
                                 t = t + pause_each
 
                             self.pause_at = min(self.pause_at, t)
@@ -16336,9 +15124,7 @@ class Environment:
                             if self.pauser.scheduled_time() != self.pause_at:
                                 self.pauser.activate(at=self.pause_at)
                         else:
-                            sg.popup(
-                                f"Pause at should be > {self.time_to_str(self.t()).lstrip()}"
-                            )
+                            sg.popup(f"Pause at should be > {self.time_to_str(self.t()).lstrip()}")
             else:
                 self.paused(True)
                 self._ui_window[event].Update("Pause")
@@ -16381,9 +15167,7 @@ class Environment:
                 else:
                     _AnimateOff(urgent=True)
 
-        self.user_handle_event(
-            env=self, window=self._ui_window, event=event, values=values
-        )
+        self.user_handle_event(env=self, window=self._ui_window, event=event, values=values)
 
 
 class _Pauser(Component):
@@ -16397,14 +15181,11 @@ class _Pauser(Component):
         self.env.paused(True)
         self.env.set_pause_go_button()
         if "-PAUSE-AT-" in self.env._ui_keys:
-            if values["-PAUSE-AT-"] != "" and self.env._now >= self.env.spec_to_time(
-                values["-PAUSE-AT-"]
-            ):
+            if values["-PAUSE-AT-"] != "" and self.env._now >= self.env.spec_to_time(values["-PAUSE-AT-"]):
                 self.env._ui_window["-PAUSE-AT-"].Update("")
         if "-ANIMATE-" in self.env._ui_keys:
             self.env._ui_window["-ANIMATE-"].update(
-                animate
-            )  # this is required as the self.animate() also sets the value
+                animate)  # this is required as the self.animate() also sets the value
 
 
 class _AnimateOff(Component):
@@ -16418,9 +15199,7 @@ class _AnimateOff(Component):
 
 
 class Animate2dBase(DynamicClass):
-    def __init__(
-        self, type, locals_, argument_default, attached_to=None, attach_text=True
-    ):
+    def __init__(self, type, locals_, argument_default, attached_to=None, attach_text=True):
         super().__init__()
         self.type = type
         env = locals_["env"]
@@ -16443,11 +15222,7 @@ class Animate2dBase(DynamicClass):
         self.attached_to = attached_to
         if attached_to:
             for name in attached_to._dynamics:
-                setattr(
-                    self,
-                    name,
-                    lambda arg, t, name=name: getattr(self.attached_to, name)(t),
-                )
+                setattr(self, name, lambda arg, t, name=name: getattr(self.attached_to, name)(t))
                 self.register_dynamic_attributes(name)
 
         else:
@@ -16466,22 +15241,13 @@ class Animate2dBase(DynamicClass):
         self.canvas_object = None
 
         if self.env._animate_debug:
-            self.caller = self.env._frame_to_lineno(
-                _get_caller_frame(), add_filename=True
-            )
+            self.caller = self.env._frame_to_lineno(_get_caller_frame(), add_filename=True)
         else:
-            self.caller = (
-                "?. use env.animate_debug(True) to get the originating Animate location"
-            )
+            self.caller = "?. use env.animate_debug(True) to get the originating Animate location"
 
         if attach_text:
-            self.depending_object = Animate2dBase(
-                type="text",
-                locals_=locals_,
-                argument_default={},
-                attached_to=self,
-                attach_text=False,
-            )
+            self.depending_object = Animate2dBase(type="text", locals_=locals_, argument_default={}, attached_to=self,
+                                                  attach_text=False)
         else:
             self.depending_object = None
         if not self.attached_to:
@@ -16529,9 +15295,7 @@ class Animate2dBase(DynamicClass):
                 visible = False
 
             if visible:
-                if (
-                    self.type == "text"
-                ):  # checked so early as to avoid evaluation of x, y, angle, ...
+                if self.type == "text":  # checked so early as to avoid evaluation of x, y, angle, ...
                     text = self.text(t)
                     if (text is None) or (text.strip() == ""):
                         self._image_visible = False
@@ -16546,16 +15310,10 @@ class Animate2dBase(DynamicClass):
                 y = self.y(t)
                 xy_anchor = self.xy_anchor(t)
                 if xy_anchor:
-                    x += self.env.xy_anchor_to_x(
-                        xy_anchor,
-                        screen_coordinates=self.screen_coordinates,
-                        over3d=self.over3d,
-                    )
-                    y += self.env.xy_anchor_to_y(
-                        xy_anchor,
-                        screen_coordinates=self.screen_coordinates,
-                        over3d=self.over3d,
-                    )
+                    x += self.env.xy_anchor_to_x(xy_anchor, screen_coordinates=self.screen_coordinates,
+                                                 over3d=self.over3d)
+                    y += self.env.xy_anchor_to_y(xy_anchor, screen_coordinates=self.screen_coordinates,
+                                                 over3d=self.over3d)
 
                 offsetx = self.offsetx(t)
                 offsety = self.offsety(t)
@@ -16588,38 +15346,18 @@ class Animate2dBase(DynamicClass):
                         as_points = self.as_points(t)
                         rectangle = tuple(de_none(self.spec(t)))
                         self._image_ident = (
-                            tuple(rectangle),
-                            linewidth,
-                            linecolor,
-                            fillcolor,
-                            as_points,
-                            angle,
-                            self.screen_coordinates,
-                        )
+                        tuple(rectangle), linewidth, linecolor, fillcolor, as_points, angle, self.screen_coordinates)
                     elif self.type == "line":
                         as_points = self.as_points(t)
                         line = tuple(de_none(self.spec(t)))
                         fillcolor = (0, 0, 0, 0)
                         self._image_ident = (
-                            tuple(line),
-                            linewidth,
-                            linecolor,
-                            as_points,
-                            angle,
-                            self.screen_coordinates,
-                        )
+                        tuple(line), linewidth, linecolor, as_points, angle, self.screen_coordinates)
                     elif self.type == "polygon":
                         as_points = self.as_points(t)
                         polygon = tuple(de_none(self.spec(t)))
                         self._image_ident = (
-                            tuple(polygon),
-                            linewidth,
-                            linecolor,
-                            fillcolor,
-                            as_points,
-                            angle,
-                            self.screen_coordinates,
-                        )
+                        tuple(polygon), linewidth, linecolor, fillcolor, as_points, angle, self.screen_coordinates)
                     elif self.type == "circle":
                         as_points = False
                         radius0 = self.radius(t)
@@ -16653,25 +15391,12 @@ class Animate2dBase(DynamicClass):
                             else:
                                 r = 0
                             if r == 0:
-                                p = [
-                                    px[0],
-                                    py[0],
-                                    px[1],
-                                    py[0],
-                                    px[1],
-                                    py[1],
-                                    px[0],
-                                    py[1],
-                                    px[0],
-                                    py[0],
-                                ]
+                                p = [px[0], py[0], px[1], py[0], px[1], py[1], px[0], py[1], px[0], py[0]]
                             else:
                                 if not self.screen_coordinates:
                                     r *= self.env._scale
 
-                                r = min(
-                                    r, abs(px[0] - px[1]) / 2, abs(py[0] - py[1]) / 2
-                                )  # make sure the arc fits
+                                r = min(r, abs(px[0] - px[1]) / 2, abs(py[0] - py[1]) / 2)  # make sure the arc fits
 
                                 if self.screen_coordinates:
                                     nsteps = int(math.sqrt(r) * 6)
@@ -16682,42 +15407,10 @@ class Animate2dBase(DynamicClass):
                                 p = []
 
                                 for x0, y0, x1, y1, x2, y2, arc_angle0 in [
-                                    [
-                                        px[0] + r,
-                                        py[0],
-                                        px[1] - r,
-                                        py[0],
-                                        px[1] - r,
-                                        py[0] + r,
-                                        -90,
-                                    ],
-                                    [
-                                        px[1],
-                                        py[0] + r,
-                                        px[1],
-                                        py[1] - r,
-                                        px[1] - r,
-                                        py[1] - r,
-                                        0,
-                                    ],
-                                    [
-                                        px[1] - r,
-                                        py[1],
-                                        px[0] + r,
-                                        py[1],
-                                        px[0] + r,
-                                        py[1] - r,
-                                        90,
-                                    ],
-                                    [
-                                        px[0],
-                                        py[1] - r,
-                                        px[0],
-                                        py[0] + r,
-                                        px[0] + r,
-                                        py[0] + r,
-                                        180,
-                                    ],
+                                    [px[0] + r, py[0], px[1] - r, py[0], px[1] - r, py[0] + r, -90],
+                                    [px[1], py[0] + r, px[1], py[1] - r, px[1] - r, py[1] - r, 0],
+                                    [px[1] - r, py[1], px[0] + r, py[1], px[0] + r, py[1] - r, 90],
+                                    [px[0], py[1] - r, px[0], py[0] + r, px[0] + r, py[0] + r, 180],
                                 ]:
                                     p.append(x0)
                                     p.append(y0)
@@ -16756,15 +15449,7 @@ class Animate2dBase(DynamicClass):
                             if self.screen_coordinates:
                                 nsteps = int(math.sqrt(max(radius0, radius1)) * 6)
                             else:
-                                nsteps = int(
-                                    math.sqrt(
-                                        max(
-                                            radius0 * self.env._scale,
-                                            radius1 * self.env._scale,
-                                        )
-                                    )
-                                    * 6
-                                )
+                                nsteps = int(math.sqrt(max(radius0 * self.env._scale, radius1 * self.env._scale)) * 6)
                             tarc_angle = 360 / nsteps
                             p = [0, 0]
 
@@ -16829,56 +15514,28 @@ class Animate2dBase(DynamicClass):
                         rscaled = tuple(rscaled)  # to make it hashable
 
                         if as_points:
-                            self._image = Image.new(
-                                "RGBA",
-                                (
-                                    int(maxrx - minrx + 2 * linewidth),
-                                    int(maxry - minry + 2 * linewidth),
-                                ),
-                                (0, 0, 0, 0),
-                            )
-                            point_image = Image.new(
-                                "RGBA", (int(linewidth), int(linewidth)), linecolor
-                            )
+                            self._image = Image.new("RGBA", (
+                            int(maxrx - minrx + 2 * linewidth), int(maxry - minry + 2 * linewidth)), (0, 0, 0, 0))
+                            point_image = Image.new("RGBA", (int(linewidth), int(linewidth)), linecolor)
 
                             for i in range(0, len(r), 2):
                                 rx = rscaled[i]
                                 ry = rscaled[i + 1]
-                                self._image.paste(
-                                    point_image,
-                                    (
-                                        int(rx - 0.5 * linewidth),
-                                        int(ry - 0.5 * linewidth),
-                                    ),
-                                    point_image,
-                                )
+                                self._image.paste(point_image, (int(rx - 0.5 * linewidth), int(ry - 0.5 * linewidth)),
+                                                  point_image)
 
                         else:
-                            self._image = Image.new(
-                                "RGBA",
-                                (
-                                    int(maxrx - minrx + 2 * linewidth),
-                                    int(maxry - minry + 2 * linewidth),
-                                ),
-                                (0, 0, 0, 0),
-                            )
+                            self._image = Image.new("RGBA", (
+                            int(maxrx - minrx + 2 * linewidth), int(maxry - minry + 2 * linewidth)), (0, 0, 0, 0))
                             draw = ImageDraw.Draw(self._image)
                             if fillcolor[3] != 0:
                                 draw.polygon(rscaled, fill=fillcolor)
                             if (round(linewidth) > 0) and (linecolor[3] != 0):
                                 if self.type == "circle" and not draw_arc:
-                                    draw.line(
-                                        rscaled[2:-2],
-                                        fill=linecolor,
-                                        width=int(linewidth),
-                                    )
+                                    draw.line(rscaled[2:-2], fill=linecolor, width=int(linewidth))
                                     # get rid of the first and last point (=center)
                                 else:
-                                    draw.line(
-                                        rscaled,
-                                        fill=linecolor,
-                                        width=int(round(linewidth)),
-                                    )
+                                    draw.line(rscaled, fill=linecolor, width=int(round(linewidth)))
                             del draw
                         self.minrx = minrx
                         self.minry = minry
@@ -16900,25 +15557,27 @@ class Animate2dBase(DynamicClass):
                         self.env._dimx = self.maxpx - self.minpx
                         self.env._dimy = self.maxpy - self.minpy
 
-                    self._image_x = (
-                        qx + self.minrx - linewidth + (offsetx * cosa - offsety * sina)
-                    )
-                    self._image_y = (
-                        qy + self.minry - linewidth + (offsetx * sina + offsety * cosa)
-                    )
+                    self._image_x = qx + self.minrx - linewidth + (offsetx * cosa - offsety * sina)
+                    self._image_y = qy + self.minry - linewidth + (offsetx * sina + offsety * cosa)
 
                 elif self.type == "image":
                     spec = self.image(t)
                     image_container = ImageContainer(spec)
                     width = self.width(t)
-                    if width is None:
-                        width = image_container.images[0].size[0]
+                    height = self.height(t)
 
-                    height = (
-                        width
-                        * image_container.images[0].size[1]
-                        / image_container.images[0].size[0]
-                    )
+                    if width is None:
+                        if height is None:
+                            width = image_container.images[0].size[0]
+                            height = image_container.images[0].size[1]
+                        else:
+                            width = height * image_container.images[0].size[0] / image_container.images[0].size[1]
+                    else:
+                        if height is None:
+                            height = width * image_container.images[0].size[1] / image_container.images[0].size[0]
+                        else:
+                            ...
+
                     if not self.screen_coordinates:
                         width *= self.env._scale
                         height *= self.env._scale
@@ -16937,7 +15596,6 @@ class Animate2dBase(DynamicClass):
                         offsety = offsety * self.env._scale
 
                     alpha = int(self.alpha(t))
-
                     image, id = image_container.get_image(
                         (t - self.animation_start(t)) * self.animation_speed(t),
                         repeat=self.animation_repeat(t),
@@ -16945,16 +15603,8 @@ class Animate2dBase(DynamicClass):
                         t_from=self.animation_from(t),
                         t_to=self.animation_to(t),
                     )
-                    self._image_ident = (
-                        spec,
-                        id,
-                        width,
-                        height,
-                        angle,
-                        alpha,
-                        flip_horizontal,
-                        flip_vertical,
-                    )
+
+                    self._image_ident = (spec, id, width, height, angle, alpha, flip_horizontal, flip_vertical)
 
                     if self._image_ident != self._image_ident_prev:
                         if flip_horizontal:
@@ -16978,12 +15628,7 @@ class Animate2dBase(DynamicClass):
                                 for x in range(self.imwidth):
                                     for y in range(self.imheight):
                                         c = pix[x, y]
-                                        pix[x, y] = (
-                                            c[0],
-                                            c[1],
-                                            c[2],
-                                            int(c[3] * alpha / 255),
-                                        )
+                                        pix[x, y] = (c[0], c[1], c[2], int(c[3] * alpha / 255))
                         self._image = im1.rotate(angle, expand=1)
                     anchor_to_dis = {
                         "ne": (-0.5, -0.5),
@@ -17046,14 +15691,8 @@ class Animate2dBase(DynamicClass):
                             "sw": (-0.5, -0.5),
                         }
                         dis = anchor_to_dis[text_anchor.lower()]
-                        offsetx += (
-                            text_offsetx + dis[0] * self.env._dimx - dis[0] * 4
-                        )  # 2 extra at east or west
-                        offsety += (
-                            text_offsety
-                            + dis[1] * self.env._dimy
-                            - (2 if dis[1] > 0 else 0)
-                        )  # 2 extra at north
+                        offsetx += text_offsetx + dis[0] * self.env._dimx - dis[0] * 4  # 2 extra at east or west
+                        offsety += text_offsety + dis[1] * self.env._dimy - (2 if dis[1] > 0 else 0)  # 2 extra at north
                     else:
                         if self.screen_coordinates:
                             qx = x
@@ -17063,14 +15702,7 @@ class Animate2dBase(DynamicClass):
                             qy = (y - self.env._y0) * self.env._scale
                     max_lines = self.max_lines(t)
 
-                    self._image_ident = (
-                        text,
-                        fontname,
-                        fontsize,
-                        angle,
-                        textcolor,
-                        max_lines,
-                    )
+                    self._image_ident = (text, fontname, fontsize, angle, textcolor, max_lines)
                     if self._image_ident != self._image_ident_prev:
                         font, heightA = getfont(fontname, fontsize)
 
@@ -17084,9 +15716,7 @@ class Animate2dBase(DynamicClass):
                         else:
                             lines = lines[:max_lines]
 
-                        widths = [
-                            (font.getbbox(line)[2] if line else 0) for line in lines
-                        ]
+                        widths = [(font.getbbox(line)[2] if line else 0) for line in lines]
                         if widths:
                             totwidth = max(widths)
                         else:
@@ -17095,22 +15725,13 @@ class Animate2dBase(DynamicClass):
                         number_of_lines = len(lines)
                         lineheight = font.getbbox("Ap")[3]
                         totheight = number_of_lines * lineheight
-                        im = Image.new(
-                            "RGBA",
-                            (int(totwidth + 0.1 * fontsize), int(totheight)),
-                            (0, 0, 0, 0),
-                        )
+                        im = Image.new("RGBA", (int(totwidth + 0.1 * fontsize), int(totheight)), (0, 0, 0, 0))
                         imwidth, imheight = im.size
                         draw = ImageDraw.Draw(im)
                         pos = 0
                         for line, width in zip(lines, widths):
                             if line:
-                                draw.text(
-                                    xy=(0.1 * fontsize, pos),
-                                    text=line,
-                                    font=font,
-                                    fill=textcolor,
-                                )
+                                draw.text(xy=(0.1 * fontsize, pos), text=line, font=font, fill=textcolor)
 
                             pos += lineheight
                         # this code is to correct a bug in the rendering of text,
@@ -17127,12 +15748,7 @@ class Animate2dBase(DynamicClass):
                                 pix = im.load()
                                 for y in range(imheight):
                                     for x in range(imwidth):
-                                        pix[x, y] = (
-                                            textcolor[0],
-                                            textcolor[1],
-                                            textcolor[2],
-                                            pix[x, y][3],
-                                        )
+                                        pix[x, y] = (textcolor[0], textcolor[1], textcolor[2], pix[x, y][3])
 
                         # end of code to correct bug
 
@@ -17165,9 +15781,7 @@ class Animate2dBase(DynamicClass):
                     self._image_x = qx + ex - imrwidth / 2
                     self._image_y = qy + ey - imrheight / 2
                 else:
-                    raise ValueError(
-                        "Internal error: animate type" + self.type + "not recognized."
-                    )
+                    raise ValueError("Internal error: animate type" + self.type + "not recognized.")
                 if self.over3d:
                     width = self.env._width3d
                     height = self.env._height3d
@@ -17176,10 +15790,10 @@ class Animate2dBase(DynamicClass):
                     height = self.env._height
 
                 self._image_visible = (
-                    (self._image_x <= width)
-                    and (self._image_y <= height)
-                    and (self._image_x + self._image.size[0] >= 0)
-                    and (self._image_y + self._image.size[1] >= 0)
+                        (self._image_x <= width)
+                        and (self._image_y <= height)
+                        and (self._image_x + self._image.size[0] >= 0)
+                        and (self._image_y + self._image.size[1] >= 0)
                 )
             else:
                 self._image_visible = False
@@ -17188,20 +15802,12 @@ class Animate2dBase(DynamicClass):
             self.env.running = False
             traceback.print_exc()
             raise type(e)(
-                str(e)
-                + " [from "
-                + self.type
-                + " animation object created in line "
-                + self.caller
-                + "]"
-            ) from e
+                str(e) + " [from " + self.type + " animation object created in line " + self.caller + "]") from e
 
 
 class AnimateClassic(Animate2dBase):
     def __init__(self, master, locals_):
-        super().__init__(
-            locals_=locals_, type=master.type, argument_default={}, attach_text=False
-        )
+        super().__init__(locals_=locals_, type=master.type, argument_default={}, attach_text=False)
         self.master = master
 
     def text(self, t):
@@ -17278,6 +15884,9 @@ class AnimateClassic(Animate2dBase):
 
     def width(self, t):
         return self.master.width(t)
+
+    def height(self, t):
+        return self.master.height(t)
 
     def anchor(self, t):
         return self.master.anchor(t)
@@ -17506,6 +16115,11 @@ class Animate:
 
        if omitted or None, no scaling
 
+    height0 : float
+       width of the image to be displayed at time t0
+
+       if omitted or None, no scaling
+
     t1 : float
         time of end of the animation (default inf)
 
@@ -17573,6 +16187,9 @@ class Animate:
 
     width1 : float
        width of the image to be displayed at time t1 (default: width0)
+
+    height1 : float
+       width of the image to be displayed at time t1 (default: height0)
 
     over3d : bool
         if True, this object will be rendered to the OpenGL window
@@ -17642,70 +16259,73 @@ class Animate:
     font                                                                      -
     fontsize0,fontsize1                                                       -
     width0,width1                     -
+    height0,height1                   -
     ======================  ========= ========= ========= ========= ========= =========
     """
 
     def __init__(
-        self,
-        parent: "Component" = None,
-        layer: float = 0,
-        keep: bool = True,
-        visible: bool = True,
-        screen_coordinates: bool = None,
-        t0: float = None,
-        x0: float = 0,
-        y0: float = 0,
-        offsetx0: float = 0,
-        offsety0: float = 0,
-        circle0: Union[float, Iterable] = None,
-        line0: Iterable[float] = None,
-        polygon0: Iterable[float] = None,
-        rectangle0: Iterable[float] = None,
-        points0: Iterable[float] = None,
-        image: Any = None,
-        text: str = None,
-        font: Union[str, Iterable[str]] = "",
-        anchor: str = "c",
-        as_points: bool = False,
-        max_lines: int = 0,
-        text_anchor: str = None,
-        linewidth0: float = None,
-        fillcolor0: ColorType = None,
-        linecolor0: ColorType = "fg",
-        textcolor0: ColorType = "fg",
-        angle0: float = 0,
-        alpha0: float = 255,
-        fontsize0: float = 20,
-        width0: float = None,
-        t1: float = None,
-        x1: float = None,
-        y1: float = None,
-        offsetx1: float = None,
-        offsety1: float = None,
-        circle1: Union[float, Iterable[float]] = None,
-        line1: Iterable[float] = None,
-        polygon1: Iterable[float] = None,
-        rectangle1: Iterable[float] = None,
-        points1: Iterable[float] = None,
-        linewidth1: float = None,
-        fillcolor1: ColorType = None,
-        linecolor1: ColorType = None,
-        textcolor1: ColorType = None,
-        angle1: float = None,
-        alpha1: float = None,
-        fontsize1: float = None,
-        width1: float = None,
-        xy_anchor: str = "",
-        over3d: bool = None,
-        flip_horizontal: bool = False,
-        flip_vertical: bool = False,
-        animation_start: float = None,
-        animation_speed: float = 1,
-        animation_repeat: bool = False,
-        animation_pingpong: bool = False,
-        animation_from: float = 0,
-        animation_to: float = inf,
-        env: "Environment" = None,
+            self,
+            parent: "Component" = None,
+            layer: float = 0,
+            keep: bool = True,
+            visible: bool = True,
+            screen_coordinates: bool = None,
+            t0: float = None,
+            x0: float = 0,
+            y0: float = 0,
+            offsetx0: float = 0,
+            offsety0: float = 0,
+            circle0: Union[float, Iterable] = None,
+            line0: Iterable[float] = None,
+            polygon0: Iterable[float] = None,
+            rectangle0: Iterable[float] = None,
+            points0: Iterable[float] = None,
+            image: Any = None,
+            text: str = None,
+            font: Union[str, Iterable[str]] = "",
+            anchor: str = "c",
+            as_points: bool = False,
+            max_lines: int = 0,
+            text_anchor: str = None,
+            linewidth0: float = None,
+            fillcolor0: ColorType = None,
+            linecolor0: ColorType = "fg",
+            textcolor0: ColorType = "fg",
+            angle0: float = 0,
+            alpha0: float = 255,
+            fontsize0: float = 20,
+            width0: float = None,
+            height0: float = None,
+            t1: float = None,
+            x1: float = None,
+            y1: float = None,
+            offsetx1: float = None,
+            offsety1: float = None,
+            circle1: Union[float, Iterable[float]] = None,
+            line1: Iterable[float] = None,
+            polygon1: Iterable[float] = None,
+            rectangle1: Iterable[float] = None,
+            points1: Iterable[float] = None,
+            linewidth1: float = None,
+            fillcolor1: ColorType = None,
+            linecolor1: ColorType = None,
+            textcolor1: ColorType = None,
+            angle1: float = None,
+            alpha1: float = None,
+            fontsize1: float = None,
+            width1: float = None,
+            height1: float = None,
+            xy_anchor: str = "",
+            over3d: bool = None,
+            flip_horizontal: bool = False,
+            flip_vertical: bool = False,
+            animation_start: float = None,
+            animation_speed: float = 1,
+            animation_repeat: bool = False,
+            animation_pingpong: bool = False,
+            animation_from: float = 0,
+            animation_to: float = inf,
+            env: "Environment" = None,
     ):
         self.env = _set_env(env)
 
@@ -17716,9 +16336,7 @@ class Animate:
         self.canvas_object = None
         self.over3d = _default_over3d if over3d is None else over3d
         self.screen_coordinates = screen_coordinates
-        self.type = self.settype(
-            circle0, line0, polygon0, rectangle0, points0, image, text
-        )
+        self.type = self.settype(circle0, line0, polygon0, rectangle0, points0, image, text)
         if self.type == "":
             raise ValueError("no object specified")
         type1 = self.settype(circle1, line1, polygon1, rectangle1, points1, None, None)
@@ -17743,10 +16361,12 @@ class Animate:
         self.text0 = text
 
         if image is None:
-            self.width0 = 0  # just to be able to interpolate
+            self.width0 = 0  # just to be able to interpolat
+            self.height0 = 0
         else:
             self.image0 = image
             self.width0 = width0  # None means original size
+            self.height0 = height0
 
         self.as_points0 = as_points
         self.font0 = font
@@ -17808,16 +16428,12 @@ class Animate:
         self.alpha1 = self.alpha0 if alpha1 is None else alpha1
         self.fontsize1 = self.fontsize0 if fontsize1 is None else fontsize1
         self.width1 = self.width0 if width1 is None else width1
-
+        self.height1 = self.height0 if height1 is None else height1
         self.t1 = inf if t1 is None else t1
         if self.env._animate_debug:
-            self.caller = self.env._frame_to_lineno(
-                _get_caller_frame(), add_filename=True
-            )
+            self.caller = self.env._frame_to_lineno(_get_caller_frame(), add_filename=True)
         else:
-            self.caller = (
-                "?. use env.animate_debug(True) to get the originating Animate location"
-            )
+            self.caller = "?. use env.animate_debug(True) to get the originating Animate location"
         """
         if over3d:
             self.env.an_objects_over3d.append(self)
@@ -17842,63 +16458,65 @@ class Animate:
         self.animation_object = AnimateClassic(master=self, locals_=locals())
 
     def update(
-        self,
-        layer=None,
-        keep=None,
-        visible=None,
-        t0=None,
-        x0=None,
-        y0=None,
-        offsetx0=None,
-        offsety0=None,
-        circle0=None,
-        line0=None,
-        polygon0=None,
-        rectangle0=None,
-        points0=None,
-        image=None,
-        text=None,
-        font=None,
-        anchor=None,
-        xy_anchor0=None,
-        max_lines=None,
-        text_anchor=None,
-        linewidth0=None,
-        fillcolor0=None,
-        linecolor0=None,
-        textcolor0=None,
-        angle0=None,
-        alpha0=None,
-        fontsize0=None,
-        width0=None,
-        xy_anchor1=None,
-        as_points=None,
-        t1=None,
-        x1=None,
-        y1=None,
-        offsetx1=None,
-        offsety1=None,
-        circle1=None,
-        line1=None,
-        polygon1=None,
-        rectangle1=None,
-        points1=None,
-        linewidth1=None,
-        fillcolor1=None,
-        linecolor1=None,
-        textcolor1=None,
-        angle1=None,
-        alpha1=None,
-        fontsize1=None,
-        width1=None,
-        flip_horizontal=None,
-        flip_vertical=None,
-        animation_start=None,
-        animation_speed=None,
-        animation_repeat=None,
-        animation_pingpong=None,
-        animation_from=None,
-        animation_to=None,
+            self,
+            layer=None,
+            keep=None,
+            visible=None,
+            t0=None,
+            x0=None,
+            y0=None,
+            offsetx0=None,
+            offsety0=None,
+            circle0=None,
+            line0=None,
+            polygon0=None,
+            rectangle0=None,
+            points0=None,
+            image=None,
+            text=None,
+            font=None,
+            anchor=None,
+            xy_anchor0=None,
+            max_lines=None,
+            text_anchor=None,
+            linewidth0=None,
+            fillcolor0=None,
+            linecolor0=None,
+            textcolor0=None,
+            angle0=None,
+            alpha0=None,
+            fontsize0=None,
+            width0=None,
+            height0=None,
+            xy_anchor1=None,
+            as_points=None,
+            t1=None,
+            x1=None,
+            y1=None,
+            offsetx1=None,
+            offsety1=None,
+            circle1=None,
+            line1=None,
+            polygon1=None,
+            rectangle1=None,
+            points1=None,
+            linewidth1=None,
+            fillcolor1=None,
+            linecolor1=None,
+            textcolor1=None,
+            angle1=None,
+            alpha1=None,
+            fontsize1=None,
+            width1=None,
+            height1=None,
+            flip_horizontal=None,
+            flip_vertical=None,
+            animation_start=None,
+            animation_speed=None,
+            animation_repeat=None,
+            animation_pingpong=None,
+            animation_from=None,
+            animation_to=None,
     ):
         """
         updates an animation object
@@ -18043,6 +16661,11 @@ class Animate:
 
             if None, the original width of the image will be used
 
+        height0 : float
+            height of the image to be displayed at time t0 (default see below)
+
+            if None, the original height of the image will be used
+
         t1 : float
             time of end of the animation (default: inf)
 
@@ -18109,6 +16732,8 @@ class Animate:
         width1 : float
            width of the image to be displayed at time t1 (default: width0)
 
+        height1 : float
+           height of the image to be displayed at time t1 (default: height0)
 
         Note
         ----
@@ -18134,9 +16759,7 @@ class Animate:
         self.circle0 = self.circle() if circle0 is None else circle0
         self.line0 = self.line() if line0 is None else de_none(line0)
         self.polygon0 = self.polygon() if polygon0 is None else de_none(polygon0)
-        self.rectangle0 = (
-            self.rectangle() if rectangle0 is None else de_none(rectangle0)
-        )
+        self.rectangle0 = self.rectangle() if rectangle0 is None else de_none(rectangle0)
         self.points0 = self.points() if points0 is None else de_none(points0)
         if as_points is not None:
             self.as_points0 = as_points
@@ -18146,6 +16769,8 @@ class Animate:
             self.max_lines0 = max_lines
 
         self.width0 = self.width() if width0 is None else width0
+        self.height0 = self.height() if height0 is None else height0
+
         if image is not None:
             self.image0 = image
 
@@ -18192,6 +16817,7 @@ class Animate:
         self.alpha1 = self.alpha0 if alpha1 is None else alpha1
         self.fontsize1 = self.fontsize0 if fontsize1 is None else fontsize1
         self.width1 = self.width0 if width1 is None else width1
+        self.height1 = self.height0 if height1 is None else height1
         self.xy_anchor1 = self.xy_anchor0 if xy_anchor1 is None else xy_anchor1
 
         self.t1 = inf if t1 is None else t1
@@ -18243,9 +16869,7 @@ class Animate:
         x : float
             default behaviour: linear interpolation between self.x0 and self.x1
         """
-        return interpolate(
-            (self.env._now if t is None else t), self.t0, self.t1, self.x0, self.x1
-        )
+        return interpolate((self.env._now if t is None else t), self.t0, self.t1, self.x0, self.x1)
 
     def y(self, t=None):
         """
@@ -18261,9 +16885,7 @@ class Animate:
         y : float
             default behaviour: linear interpolation between self.y0 and self.y1
         """
-        return interpolate(
-            (self.env._now if t is None else t), self.t0, self.t1, self.y0, self.y1
-        )
+        return interpolate((self.env._now if t is None else t), self.t0, self.t1, self.y0, self.y1)
 
     def offsetx(self, t=None):
         """
@@ -18279,13 +16901,7 @@ class Animate:
         offsetx : float
             default behaviour: linear interpolation between self.offsetx0 and self.offsetx1
         """
-        return interpolate(
-            (self.env._now if t is None else t),
-            self.t0,
-            self.t1,
-            self.offsetx0,
-            self.offsetx1,
-        )
+        return interpolate((self.env._now if t is None else t), self.t0, self.t1, self.offsetx0, self.offsetx1)
 
     def offsety(self, t=None):
         """
@@ -18301,13 +16917,7 @@ class Animate:
         offsety : float
             default behaviour: linear interpolation between self.offsety0 and self.offsety1
         """
-        return interpolate(
-            (self.env._now if t is None else t),
-            self.t0,
-            self.t1,
-            self.offsety0,
-            self.offsety1,
-        )
+        return interpolate((self.env._now if t is None else t), self.t0, self.t1, self.offsety0, self.offsety1)
 
     def angle(self, t=None):
         """
@@ -18323,13 +16933,7 @@ class Animate:
         angle : float
             default behaviour: linear interpolation between self.angle0 and self.angle1
         """
-        return interpolate(
-            (self.env._now if t is None else t),
-            self.t0,
-            self.t1,
-            self.angle0,
-            self.angle1,
-        )
+        return interpolate((self.env._now if t is None else t), self.t0, self.t1, self.angle0, self.angle1)
 
     def alpha(self, t=None):
         """
@@ -18345,13 +16949,7 @@ class Animate:
         alpha : float
             default behaviour: linear interpolation between self.alpha0 and self.alpha1
         """
-        return interpolate(
-            (self.env._now if t is None else t),
-            self.t0,
-            self.t1,
-            self.alpha0,
-            self.alpha1,
-        )
+        return interpolate((self.env._now if t is None else t), self.t0, self.t1, self.alpha0, self.alpha1)
 
     def linewidth(self, t=None):
         """
@@ -18367,13 +16965,7 @@ class Animate:
         linewidth : float
             default behaviour: linear interpolation between self.linewidth0 and self.linewidth1
         """
-        return interpolate(
-            (self.env._now if t is None else t),
-            self.t0,
-            self.t1,
-            self.linewidth0,
-            self.linewidth1,
-        )
+        return interpolate((self.env._now if t is None else t), self.t0, self.t1, self.linewidth0, self.linewidth1)
 
     def linecolor(self, t=None):
         """
@@ -18389,13 +16981,8 @@ class Animate:
         linecolor : colorspec
             default behaviour: linear interpolation between self.linecolor0 and self.linecolor1
         """
-        return self.env.colorinterpolate(
-            (self.env._now if t is None else t),
-            self.t0,
-            self.t1,
-            self.linecolor0,
-            self.linecolor1,
-        )
+        return self.env.colorinterpolate((self.env._now if t is None else t), self.t0, self.t1, self.linecolor0,
+                                         self.linecolor1)
 
     def fillcolor(self, t=None):
         """
@@ -18411,13 +16998,8 @@ class Animate:
         fillcolor : colorspec
             default behaviour: linear interpolation between self.fillcolor0 and self.fillcolor1
         """
-        return self.env.colorinterpolate(
-            (self.env._now if t is None else t),
-            self.t0,
-            self.t1,
-            self.fillcolor0,
-            self.fillcolor1,
-        )
+        return self.env.colorinterpolate((self.env._now if t is None else t), self.t0, self.t1, self.fillcolor0,
+                                         self.fillcolor1)
 
     def circle(self, t=None):
         """
@@ -18443,13 +17025,7 @@ class Animate:
 
             default behaviour: linear interpolation between self.circle0 and self.circle1
         """
-        return interpolate(
-            (self.env._now if t is None else t),
-            self.t0,
-            self.t1,
-            self.circle0,
-            self.circle1,
-        )
+        return interpolate((self.env._now if t is None else t), self.t0, self.t1, self.circle0, self.circle1)
 
     def textcolor(self, t=None):
         """
@@ -18465,13 +17041,8 @@ class Animate:
         textcolor : colorspec
             default behaviour: linear interpolation between self.textcolor0 and self.textcolor1
         """
-        return self.env.colorinterpolate(
-            (self.env._now if t is None else t),
-            self.t0,
-            self.t1,
-            self.textcolor0,
-            self.textcolor1,
-        )
+        return self.env.colorinterpolate((self.env._now if t is None else t), self.t0, self.t1, self.textcolor0,
+                                         self.textcolor1)
 
     def line(self, t=None):
         """
@@ -18489,13 +17060,7 @@ class Animate:
 
             default behaviour: linear interpolation between self.line0 and self.line1
         """
-        return interpolate(
-            (self.env._now if t is None else t),
-            self.t0,
-            self.t1,
-            self.line0,
-            self.line1,
-        )
+        return interpolate((self.env._now if t is None else t), self.t0, self.t1, self.line0, self.line1)
 
     def polygon(self, t=None):
         """
@@ -18513,13 +17078,7 @@ class Animate:
 
             default behaviour: linear interpolation between self.polygon0 and self.polygon1
         """
-        return interpolate(
-            (self.env._now if t is None else t),
-            self.t0,
-            self.t1,
-            self.polygon0,
-            self.polygon1,
-        )
+        return interpolate((self.env._now if t is None else t), self.t0, self.t1, self.polygon0, self.polygon1)
 
     def rectangle(self, t=None):
         """
@@ -18537,13 +17096,7 @@ class Animate:
 
             default behaviour: linear interpolation between self.rectangle0 and self.rectangle1
         """
-        return interpolate(
-            (self.env._now if t is None else t),
-            self.t0,
-            self.t1,
-            self.rectangle0,
-            self.rectangle1,
-        )
+        return interpolate((self.env._now if t is None else t), self.t0, self.t1, self.rectangle0, self.rectangle1)
 
     def points(self, t=None):
         """
@@ -18561,17 +17114,11 @@ class Animate:
 
             default behaviour: linear interpolation between self.points0 and self.points1
         """
-        return interpolate(
-            (self.env._now if t is None else t),
-            self.t0,
-            self.t1,
-            self.points0,
-            self.points1,
-        )
+        return interpolate((self.env._now if t is None else t), self.t0, self.t1, self.points0, self.points1)
 
     def width(self, t=None):
         """
-        width position of an animated image object. May be overridden.
+        width of an animated image object. May be overridden.
 
         Parameters
         ----------
@@ -18594,9 +17141,34 @@ class Animate:
         if width1 is None:
             width1 = ImageContainer(self.image1).images[0].size[0]
 
-        return interpolate(
-            (self.env._now if t is None else t), self.t0, self.t1, width0, width1
-        )
+        return interpolate((self.env._now if t is None else t), self.t0, self.t1, width0, width1)
+
+    def height(self, t=None):
+        """
+        height of an animated image object. May be overridden.
+
+        Parameters
+        ----------
+        t : float
+            current time
+
+        Returns
+        -------
+        height : float
+            default behaviour: linear interpolation between self.height0 and self.height1
+
+            if None, the original height of the image will be used
+        """
+        height0 = self.height0
+        height1 = self.height1
+        if height0 is None and height1 is None:
+            return None
+        if height0 is None:
+            height0 = ImageContainer(self.image0).images[0].size[0]
+        if height1 is None:
+            height1 = ImageContainer(self.image1).images[0].size[0]
+
+        return interpolate((self.env._now if t is None else t), self.t0, self.t1, height0, height1)
 
     def fontsize(self, t=None):
         """
@@ -18612,13 +17184,7 @@ class Animate:
         fontsize : float
             default behaviour: linear interpolation between self.fontsize0 and self.fontsize1
         """
-        return interpolate(
-            (self.env._now if t is None else t),
-            self.t0,
-            self.t1,
-            self.fontsize0,
-            self.fontsize1,
-        )
+        return interpolate((self.env._now if t is None else t), self.t0, self.t1, self.fontsize0, self.fontsize1)
 
     def as_points(self, t=None):
         """
@@ -18917,16 +17483,16 @@ class AnimateEntry:
     """
 
     def __init__(
-        self,
-        x: float = 0,
-        y: float = 0,
-        number_of_chars: int = 20,
-        value: str = "",
-        fillcolor: ColorType = "fg",
-        color: ColorType = "bg",
-        action: Callable = None,
-        env: "Environment" = None,
-        xy_anchor: str = "sw",
+            self,
+            x: float = 0,
+            y: float = 0,
+            number_of_chars: int = 20,
+            value: str = "",
+            fillcolor: ColorType = "fg",
+            color: ColorType = "bg",
+            action: Callable = None,
+            env: "Environment" = None,
+            xy_anchor: str = "sw",
     ):
         self.env = _set_env(env)
 
@@ -18955,9 +17521,7 @@ class AnimateEntry:
             relief=tkinter.FLAT,
         )
         self.entry.bind("<Return>", self.on_enter)
-        self.entry_window = g.canvas.create_window(
-            x, self.env._height - y, anchor=tkinter.SW, window=self.entry
-        )
+        self.entry_window = g.canvas.create_window(x, self.env._height - y, anchor=tkinter.SW, window=self.entry)
         self.entry.insert(0, self.value)
         self.installed = True
 
@@ -19063,18 +17627,18 @@ class AnimateButton:
     """
 
     def __init__(
-        self,
-        x: float = 0,
-        y: float = 0,
-        width: int = 80,
-        fillcolor: ColorType = "fg",
-        color: ColorType = "bg",
-        text: str = "",
-        font: str = "",
-        fontsize: int = 15,
-        action: Callable = None,
-        env: "Environment" = None,
-        xy_anchor: str = "sw",
+            self,
+            x: float = 0,
+            y: float = 0,
+            width: int = 80,
+            fillcolor: ColorType = "fg",
+            color: ColorType = "bg",
+            text: str = "",
+            font: str = "",
+            fontsize: int = 15,
+            action: Callable = None,
+            env: "Environment" = None,
+            xy_anchor: str = "sw",
     ):
         self.env = _set_env(env)
 
@@ -19111,15 +17675,9 @@ class AnimateButton:
 
     def install(self):
         if not Pythonista:
-            x = self.x + self.env.xy_anchor_to_x(
-                self.xy_anchor, screen_coordinates=True
-            )
-            y = self.y + self.env.xy_anchor_to_y(
-                self.xy_anchor, screen_coordinates=True
-            )
-            if (
-                Chromebook
-            ):  # the Chromebook settings are not accurate for anything else than the menu buttons
+            x = self.x + self.env.xy_anchor_to_x(self.xy_anchor, screen_coordinates=True)
+            y = self.y + self.env.xy_anchor_to_y(self.xy_anchor, screen_coordinates=True)
+            if Chromebook:  # the Chromebook settings are not accurate for anything else than the menu buttons
                 my_font = tkinter.font.Font(size=int(self.fontsize * 0.45))
                 my_width = int(0.6 * self.width / self.fontsize)
                 y = y + 8
@@ -19127,12 +17685,7 @@ class AnimateButton:
                 my_font = tkinter.font.Font(size=int(self.fontsize * 0.7))
                 my_width = int(1.85 * self.width / self.fontsize)
 
-            self.button = tkinter.Button(
-                self.env.root,
-                text=self.lasttext,
-                command=self.action,
-                anchor=tkinter.CENTER,
-            )
+            self.button = tkinter.Button(self.env.root, text=self.lasttext, command=self.action, anchor=tkinter.CENTER)
             self.button.configure(
                 font=my_font,
                 width=my_width,
@@ -19140,12 +17693,8 @@ class AnimateButton:
                 background=self.env.colorspec_to_hex(self.fillcolor, False),
                 relief=tkinter.FLAT,
             )
-            self.button_window = g.canvas.create_window(
-                x + self.width,
-                self.env._height - y - self.height,
-                anchor=tkinter.NE,
-                window=self.button,
-            )
+            self.button_window = g.canvas.create_window(x + self.width, self.env._height - y - self.height,
+                                                        anchor=tkinter.NE, window=self.button)
         self.installed = True
 
     def remove(self):
@@ -19251,28 +17800,28 @@ class AnimateSlider:
     """
 
     def __init__(
-        self,
-        x: float = 0,
-        y: float = 0,
-        width: int = 100,
-        height: int = 20,
-        vmin: float = 0,
-        vmax: float = 10,
-        v: float = None,
-        resolution: float = 1,
-        background_color: ColorType = "bg",
-        foreground_color: ColorType = "fg",
-        trough_color: ColorType = "lightgray",
-        show_value: bool = True,
-        label: str = "",
-        font: str = "",
-        fontsize: int = 12,
-        action: Callable = None,
-        xy_anchor: str = "sw",
-        env: "Environment" = None,
-        linecolor: ColorType = None,  # only for backward compatibility
-        labelcolor: ColorType = None,  # only for backward compatibility
-        layer: float = None,  # only for backward compatibility
+            self,
+            x: float = 0,
+            y: float = 0,
+            width: int = 100,
+            height: int = 20,
+            vmin: float = 0,
+            vmax: float = 10,
+            v: float = None,
+            resolution: float = 1,
+            background_color: ColorType = "bg",
+            foreground_color: ColorType = "fg",
+            trough_color: ColorType = "lightgray",
+            show_value: bool = True,
+            label: str = "",
+            font: str = "",
+            fontsize: int = 12,
+            action: Callable = None,
+            xy_anchor: str = "sw",
+            env: "Environment" = None,
+            linecolor: ColorType = None,  # only for backward compatibility
+            labelcolor: ColorType = None,  # only for backward compatibility
+            layer: float = None,  # only for backward compatibility
     ):
         self.env = _set_env(env)
         n = round((vmax - vmin) / resolution) + 1
@@ -19353,12 +17902,8 @@ class AnimateSlider:
 
     def install(self):
         if not Pythonista:
-            x = self.x + self.env.xy_anchor_to_x(
-                self.xy_anchor, screen_coordinates=True
-            )
-            y = self.y + self.env.xy_anchor_to_y(
-                self.xy_anchor, screen_coordinates=True
-            )
+            x = self.x + self.env.xy_anchor_to_x(self.xy_anchor, screen_coordinates=True)
+            y = self.y + self.env.xy_anchor_to_y(self.xy_anchor, screen_coordinates=True)
             self.slider = tkinter.Scale(
                 self.env.root,
                 from_=self.vmin,
@@ -19369,23 +17914,14 @@ class AnimateSlider:
                 length=self.width,
                 width=self.height,
             )
-            self.slider.window = g.canvas.create_window(
-                x, self.env._height - y, anchor=tkinter.NW, window=self.slider
-            )
+            self.slider.window = g.canvas.create_window(x, self.env._height - y, anchor=tkinter.NW, window=self.slider)
             self.slider.config(
                 font=(self.font, int(self.fontsize * 0.8)),
-                foreground=self.env.colorspec_to_hex(
-                    self.env.colorspec_to_tuple(self.foreground_color), False
-                ),
-                background=self.env.colorspec_to_hex(
-                    self.env.colorspec_to_tuple(self.background_color), False
-                ),
-                highlightbackground=self.env.colorspec_to_hex(
-                    self.env.colorspec_to_tuple(self.background_color), False
-                ),
-                troughcolor=self.env.colorspec_to_hex(
-                    self.env.colorspec_to_tuple(self.trough_color), False
-                ),
+                foreground=self.env.colorspec_to_hex(self.env.colorspec_to_tuple(self.foreground_color), False),
+                background=self.env.colorspec_to_hex(self.env.colorspec_to_tuple(self.background_color), False),
+                highlightbackground=self.env.colorspec_to_hex(self.env.colorspec_to_tuple(self.background_color),
+                                                              False),
+                troughcolor=self.env.colorspec_to_hex(self.env.colorspec_to_tuple(self.trough_color), False),
                 showvalue=self.show_value,
                 label=self._label,
             )
@@ -19525,29 +18061,29 @@ class AnimateQueue(DynamicClass):
     """
 
     def __init__(
-        self,
-        queue,
-        x=50,
-        y=50,
-        direction="w",
-        trajectory=None,
-        max_length=None,
-        xy_anchor="sw",
-        reverse=False,
-        title=None,
-        titlecolor="fg",
-        titlefontsize=15,
-        titlefont="",
-        titleoffsetx=None,
-        titleoffsety=None,
-        layer=0,
-        id=None,
-        arg=None,
-        parent=None,
-        over3d=None,
-        keep=True,
-        visible=True,
-        screen_coordinates=True,
+            self,
+            queue,
+            x=50,
+            y=50,
+            direction="w",
+            trajectory=None,
+            max_length=None,
+            xy_anchor="sw",
+            reverse=False,
+            title=None,
+            titlecolor="fg",
+            titlefontsize=15,
+            titlefont="",
+            titleoffsetx=None,
+            titleoffsety=None,
+            layer=0,
+            id=None,
+            arg=None,
+            parent=None,
+            over3d=None,
+            keep=True,
+            visible=True,
+            screen_coordinates=True,
     ):
         super().__init__()
         _checkisqueue(queue)
@@ -19624,12 +18160,8 @@ class AnimateQueue(DynamicClass):
         titleoffsetx = self.titleoffsetx(t)
         titleoffsety = self.titleoffsety(t)
 
-        x += self._queue.env.xy_anchor_to_x(
-            xy_anchor, screen_coordinates=True, over3d=self.over3d
-        )
-        y += self._queue.env.xy_anchor_to_y(
-            xy_anchor, screen_coordinates=True, over3d=self.over3d
-        )
+        x += self._queue.env.xy_anchor_to_x(xy_anchor, screen_coordinates=True, over3d=self.over3d)
+        y += self._queue.env.xy_anchor_to_y(xy_anchor, screen_coordinates=True, over3d=self.over3d)
 
         if direction == "e":
             self.x_t = x + (-25 if titleoffsetx is None else titleoffsetx)
@@ -19666,9 +18198,7 @@ class AnimateQueue(DynamicClass):
                 if nargs == 1:
                     animation_objects = self.current_aos[c] = c.animation_objects()
                 else:
-                    animation_objects = self.current_aos[c] = c.animation_objects(
-                        self.id(t)
-                    )
+                    animation_objects = self.current_aos[c] = c.animation_objects(self.id(t))
             else:
                 animation_objects = self.current_aos[c] = prev_aos[c]
                 del prev_aos[c]
@@ -19818,20 +18348,20 @@ class Animate3dQueue(DynamicClass):
     """
 
     def __init__(
-        self,
-        queue: "Queue",
-        x: Union[float, Callable] = 0,
-        y: Union[float, Callable] = 0,
-        z: Union[float, Callable] = 0,
-        direction: Union[str, Callable] = "x+",
-        max_length: Union[int, Callable] = None,
-        reverse: Union[bool, Callable] = False,
-        layer: Union[int, Callable] = 0,
-        id: Union[Any, Callable] = None,
-        arg: Any = None,
-        parent: "Component" = None,
-        visible: Union[bool, Callable] = True,
-        keep: Union[bool, Callable] = True,
+            self,
+            queue: "Queue",
+            x: Union[float, Callable] = 0,
+            y: Union[float, Callable] = 0,
+            z: Union[float, Callable] = 0,
+            direction: Union[str, Callable] = "x+",
+            max_length: Union[int, Callable] = None,
+            reverse: Union[bool, Callable] = False,
+            layer: Union[int, Callable] = 0,
+            id: Union[Any, Callable] = None,
+            arg: Any = None,
+            parent: "Component" = None,
+            visible: Union[bool, Callable] = True,
+            keep: Union[bool, Callable] = True,
     ):
         super().__init__()
         _checkisqueue(queue)
@@ -19853,9 +18383,7 @@ class Animate3dQueue(DynamicClass):
             parent._animation_children.add(self)
         self.env = queue.env
         self.layer = layer
-        self.register_dynamic_attributes(
-            "x y z id max_length direction reverse layer visible keep"
-        )
+        self.register_dynamic_attributes("x y z id max_length direction reverse layer visible keep")
         self.show()
 
     def update(self, t):
@@ -19885,9 +18413,7 @@ class Animate3dQueue(DynamicClass):
                 if nargs == 1:
                     animation_objects = self.current_aos[c] = c.animation3d_objects()
                 else:
-                    animation_objects = self.current_aos[c] = c.animation3d_objects(
-                        self.id(t)
-                    )
+                    animation_objects = self.current_aos[c] = c.animation3d_objects(self.id(t))
             else:
                 animation_objects = self.current_aos[c] = prev_aos[c]
                 del prev_aos[c]
@@ -20006,9 +18532,7 @@ class AnimateCombined:
             if hasattr(item, key):
                 return getattr(item, key)
 
-        raise AttributeError(
-            f"None of the AnimateCombined animation objects has an attribute {key!r}"
-        )
+        raise AttributeError(f"None of the AnimateCombined animation objects has an attribute {key!r}")
 
     def append(self, item):
         """
@@ -20171,27 +18695,27 @@ class AnimateText(Animate2dBase):
     """
 
     def __init__(
-        self,
-        text: Union[str, Iterable[str], Callable] = None,
-        x: Union[float, Callable] = None,
-        y: Union[float, Callable] = None,
-        font: Union[str, Callable] = None,
-        fontsize: Union[float, Callable] = None,
-        textcolor: Union[ColorType, Callable] = None,
-        text_anchor: Union[str, Callable] = None,
-        angle: Union[float, Callable] = None,
-        xy_anchor: Union[str, Callable] = None,
-        layer: Union[float, Callable] = None,
-        max_lines: Union[int, Callable] = None,
-        offsetx: Union[float, Callable] = None,
-        offsety: Union[float, Callable] = None,
-        arg: Any = None,
-        visible: Union[bool, Callable] = None,
-        keep: Union[bool, Callable] = None,
-        parent: "Component" = None,
-        env: "Environment" = None,
-        screen_coordinates: bool = False,
-        over3d: bool = None,
+            self,
+            text: Union[str, Iterable[str], Callable] = None,
+            x: Union[float, Callable] = None,
+            y: Union[float, Callable] = None,
+            font: Union[str, Callable] = None,
+            fontsize: Union[float, Callable] = None,
+            textcolor: Union[ColorType, Callable] = None,
+            text_anchor: Union[str, Callable] = None,
+            angle: Union[float, Callable] = None,
+            xy_anchor: Union[str, Callable] = None,
+            layer: Union[float, Callable] = None,
+            max_lines: Union[int, Callable] = None,
+            offsetx: Union[float, Callable] = None,
+            offsety: Union[float, Callable] = None,
+            arg: Any = None,
+            visible: Union[bool, Callable] = None,
+            keep: Union[bool, Callable] = None,
+            parent: "Component" = None,
+            env: "Environment" = None,
+            screen_coordinates: bool = False,
+            over3d: bool = None,
     ):
         super().__init__(
             locals_=locals(),
@@ -20358,34 +18882,34 @@ class AnimateRectangle(Animate2dBase):
     """
 
     def __init__(
-        self,
-        spec: Union[Iterable, Callable] = None,
-        x: Union[float, Callable] = None,
-        y: Union[float, Callable] = None,
-        fillcolor: Union[ColorType, Callable] = None,
-        linecolor: Union[ColorType, Callable] = None,
-        linewidth: Union[float, Callable] = None,
-        text: Union[str, Callable] = None,
-        fontsize: Union[float, Callable] = None,
-        textcolor: Union[ColorType, Callable] = None,
-        font: Union[str, Callable] = None,
-        angle: Union[float, Callable] = None,
-        xy_anchor: Union[str, Callable] = None,
-        layer: Union[float, Callable] = None,
-        max_lines: Union[int, Callable] = None,
-        offsetx: Union[float, Callable] = None,
-        offsety: Union[float, Callable] = None,
-        as_points: Union[bool, Callable] = None,
-        text_anchor: Union[str, Callable] = None,
-        text_offsetx: Union[float, Callable] = None,
-        text_offsety: Union[float, Callable] = None,
-        arg: Any = None,
-        parent: "Component" = None,
-        visible: Union[bool, Callable] = None,
-        keep: Union[bool, Callable] = None,
-        env: "Environment" = None,
-        screen_coordinates: bool = False,
-        over3d: bool = None,
+            self,
+            spec: Union[Iterable, Callable] = None,
+            x: Union[float, Callable] = None,
+            y: Union[float, Callable] = None,
+            fillcolor: Union[ColorType, Callable] = None,
+            linecolor: Union[ColorType, Callable] = None,
+            linewidth: Union[float, Callable] = None,
+            text: Union[str, Callable] = None,
+            fontsize: Union[float, Callable] = None,
+            textcolor: Union[ColorType, Callable] = None,
+            font: Union[str, Callable] = None,
+            angle: Union[float, Callable] = None,
+            xy_anchor: Union[str, Callable] = None,
+            layer: Union[float, Callable] = None,
+            max_lines: Union[int, Callable] = None,
+            offsetx: Union[float, Callable] = None,
+            offsety: Union[float, Callable] = None,
+            as_points: Union[bool, Callable] = None,
+            text_anchor: Union[str, Callable] = None,
+            text_offsetx: Union[float, Callable] = None,
+            text_offsety: Union[float, Callable] = None,
+            arg: Any = None,
+            parent: "Component" = None,
+            visible: Union[bool, Callable] = None,
+            keep: Union[bool, Callable] = None,
+            env: "Environment" = None,
+            screen_coordinates: bool = False,
+            over3d: bool = None,
     ):
         super().__init__(
             locals_=locals(),
@@ -20571,34 +19095,34 @@ class AnimatePolygon(Animate2dBase):
     """
 
     def __init__(
-        self,
-        spec: Union[Iterable, Callable] = None,
-        x: Union[float, Callable] = None,
-        y: Union[float, Callable] = None,
-        fillcolor: Union[ColorType, Callable] = None,
-        linecolor: Union[ColorType, Callable] = None,
-        linewidth: Union[float, Callable] = None,
-        text: Union[str, Callable] = None,
-        fontsize: Union[float, Callable] = None,
-        textcolor: Union[ColorType, Callable] = None,
-        font: Union[str, Callable] = None,
-        angle: Union[float, Callable] = None,
-        xy_anchor: Union[str, Callable] = None,
-        layer: Union[float, Callable] = None,
-        max_lines: Union[int, Callable] = None,
-        offsetx: Union[float, Callable] = None,
-        offsety: Union[float, Callable] = None,
-        as_points: Union[bool, Callable] = None,
-        text_anchor: Union[str, Callable] = None,
-        text_offsetx: Union[float, Callable] = None,
-        text_offsety: Union[float, Callable] = None,
-        arg: Any = None,
-        parent: "Component" = None,
-        visible: Union[bool, Callable] = None,
-        keep: Union[bool, Callable] = None,
-        env: "Environment" = None,
-        screen_coordinates: bool = False,
-        over3d: bool = None,
+            self,
+            spec: Union[Iterable, Callable] = None,
+            x: Union[float, Callable] = None,
+            y: Union[float, Callable] = None,
+            fillcolor: Union[ColorType, Callable] = None,
+            linecolor: Union[ColorType, Callable] = None,
+            linewidth: Union[float, Callable] = None,
+            text: Union[str, Callable] = None,
+            fontsize: Union[float, Callable] = None,
+            textcolor: Union[ColorType, Callable] = None,
+            font: Union[str, Callable] = None,
+            angle: Union[float, Callable] = None,
+            xy_anchor: Union[str, Callable] = None,
+            layer: Union[float, Callable] = None,
+            max_lines: Union[int, Callable] = None,
+            offsetx: Union[float, Callable] = None,
+            offsety: Union[float, Callable] = None,
+            as_points: Union[bool, Callable] = None,
+            text_anchor: Union[str, Callable] = None,
+            text_offsetx: Union[float, Callable] = None,
+            text_offsety: Union[float, Callable] = None,
+            arg: Any = None,
+            parent: "Component" = None,
+            visible: Union[bool, Callable] = None,
+            keep: Union[bool, Callable] = None,
+            env: "Environment" = None,
+            screen_coordinates: bool = False,
+            over3d: bool = None,
     ):
         super().__init__(
             locals_=locals(),
@@ -20778,34 +19302,34 @@ class AnimateLine(Animate2dBase):
     """
 
     def __init__(
-        self,
-        spec: Union[Iterable, Callable] = None,
-        x: Union[float, Callable] = None,
-        y: Union[float, Callable] = None,
-        fillcolor: Union[ColorType, Callable] = None,
-        linecolor: Union[ColorType, Callable] = None,
-        linewidth: Union[float, Callable] = None,
-        text: Union[str, Callable] = None,
-        fontsize: Union[float, Callable] = None,
-        textcolor: Union[ColorType, Callable] = None,
-        font: Union[str, Callable] = None,
-        angle: Union[float, Callable] = None,
-        xy_anchor: Union[str, Callable] = None,
-        layer: Union[float, Callable] = None,
-        max_lines: Union[int, Callable] = None,
-        offsetx: Union[float, Callable] = None,
-        offsety: Union[float, Callable] = None,
-        as_points: Union[bool, Callable] = None,
-        text_anchor: Union[str, Callable] = None,
-        text_offsetx: Union[float, Callable] = None,
-        text_offsety: Union[float, Callable] = None,
-        arg: Any = None,
-        parent: "Component" = None,
-        visible: Union[bool, Callable] = None,
-        keep: Union[bool, Callable] = None,
-        env: "Environment" = None,
-        screen_coordinates: bool = False,
-        over3d: bool = None,
+            self,
+            spec: Union[Iterable, Callable] = None,
+            x: Union[float, Callable] = None,
+            y: Union[float, Callable] = None,
+            fillcolor: Union[ColorType, Callable] = None,
+            linecolor: Union[ColorType, Callable] = None,
+            linewidth: Union[float, Callable] = None,
+            text: Union[str, Callable] = None,
+            fontsize: Union[float, Callable] = None,
+            textcolor: Union[ColorType, Callable] = None,
+            font: Union[str, Callable] = None,
+            angle: Union[float, Callable] = None,
+            xy_anchor: Union[str, Callable] = None,
+            layer: Union[float, Callable] = None,
+            max_lines: Union[int, Callable] = None,
+            offsetx: Union[float, Callable] = None,
+            offsety: Union[float, Callable] = None,
+            as_points: Union[bool, Callable] = None,
+            text_anchor: Union[str, Callable] = None,
+            text_offsetx: Union[float, Callable] = None,
+            text_offsety: Union[float, Callable] = None,
+            arg: Any = None,
+            parent: "Component" = None,
+            visible: Union[bool, Callable] = None,
+            keep: Union[bool, Callable] = None,
+            env: "Environment" = None,
+            screen_coordinates: bool = False,
+            over3d: bool = None,
     ):
         fillcolor = None  # required for make_pil_image
 
@@ -20987,34 +19511,34 @@ class AnimatePoints(Animate2dBase):
     """
 
     def __init__(
-        self,
-        spec: Union[Iterable, Callable] = None,
-        x: Union[float, Callable] = None,
-        y: Union[float, Callable] = None,
-        fillcolor: Union[ColorType, Callable] = None,
-        linecolor: Union[ColorType, Callable] = None,
-        linewidth: Union[float, Callable] = None,
-        text: Union[str, Callable] = None,
-        fontsize: Union[float, Callable] = None,
-        textcolor: Union[ColorType, Callable] = None,
-        font: Union[str, Callable] = None,
-        angle: Union[float, Callable] = None,
-        xy_anchor: Union[str, Callable] = None,
-        layer: Union[float, Callable] = None,
-        max_lines: Union[int, Callable] = None,
-        offsetx: Union[float, Callable] = None,
-        offsety: Union[float, Callable] = None,
-        as_points: Union[bool, Callable] = None,
-        text_anchor: Union[str, Callable] = None,
-        text_offsetx: Union[float, Callable] = None,
-        text_offsety: Union[float, Callable] = None,
-        arg: Any = None,
-        parent: "Component" = None,
-        visible: Union[bool, Callable] = None,
-        keep: Union[bool, Callable] = None,
-        env: "Environment" = None,
-        screen_coordinates: bool = False,
-        over3d: bool = None,
+            self,
+            spec: Union[Iterable, Callable] = None,
+            x: Union[float, Callable] = None,
+            y: Union[float, Callable] = None,
+            fillcolor: Union[ColorType, Callable] = None,
+            linecolor: Union[ColorType, Callable] = None,
+            linewidth: Union[float, Callable] = None,
+            text: Union[str, Callable] = None,
+            fontsize: Union[float, Callable] = None,
+            textcolor: Union[ColorType, Callable] = None,
+            font: Union[str, Callable] = None,
+            angle: Union[float, Callable] = None,
+            xy_anchor: Union[str, Callable] = None,
+            layer: Union[float, Callable] = None,
+            max_lines: Union[int, Callable] = None,
+            offsetx: Union[float, Callable] = None,
+            offsety: Union[float, Callable] = None,
+            as_points: Union[bool, Callable] = None,
+            text_anchor: Union[str, Callable] = None,
+            text_offsetx: Union[float, Callable] = None,
+            text_offsety: Union[float, Callable] = None,
+            arg: Any = None,
+            parent: "Component" = None,
+            visible: Union[bool, Callable] = None,
+            keep: Union[bool, Callable] = None,
+            env: "Environment" = None,
+            screen_coordinates: bool = False,
+            over3d: bool = None,
     ):
         fillcolor = None  # required for make_pil_image
 
@@ -21211,38 +19735,38 @@ class AnimateCircle(Animate2dBase):
     """
 
     def __init__(
-        self,
-        radius: Union[float, Callable] = None,
-        radius1: Union[float, Callable] = None,
-        arc_angle0: Union[float, Callable] = None,
-        arc_angle1: Union[float, Callable] = None,
-        draw_arc: Union[float, Callable] = None,
-        x: Union[float, Callable] = None,
-        y: Union[float, Callable] = None,
-        fillcolor: Union[ColorType, Callable] = None,
-        linecolor: Union[ColorType, Callable] = None,
-        linewidth: Union[float, Callable] = None,
-        text: Union[str, Callable] = None,
-        fontsize: Union[float, Callable] = None,
-        textcolor: Union[ColorType, Callable] = None,
-        font: Union[str, Callable] = None,
-        angle: Union[float, Callable] = None,
-        xy_anchor: Union[str, Callable] = None,
-        layer: Union[float, Callable] = None,
-        max_lines: Union[int, Callable] = None,
-        offsetx: Union[float, Callable] = None,
-        offsety: Union[float, Callable] = None,
-        as_points: Union[bool, Callable] = None,
-        text_anchor: Union[str, Callable] = None,
-        text_offsetx: Union[float, Callable] = None,
-        text_offsety: Union[float, Callable] = None,
-        arg: Any = None,
-        parent: "Component" = None,
-        visible: Union[bool, Callable] = None,
-        keep: Union[bool, Callable] = None,
-        env: "Environment" = None,
-        screen_coordinates: bool = False,
-        over3d: bool = None,
+            self,
+            radius: Union[float, Callable] = None,
+            radius1: Union[float, Callable] = None,
+            arc_angle0: Union[float, Callable] = None,
+            arc_angle1: Union[float, Callable] = None,
+            draw_arc: Union[float, Callable] = None,
+            x: Union[float, Callable] = None,
+            y: Union[float, Callable] = None,
+            fillcolor: Union[ColorType, Callable] = None,
+            linecolor: Union[ColorType, Callable] = None,
+            linewidth: Union[float, Callable] = None,
+            text: Union[str, Callable] = None,
+            fontsize: Union[float, Callable] = None,
+            textcolor: Union[ColorType, Callable] = None,
+            font: Union[str, Callable] = None,
+            angle: Union[float, Callable] = None,
+            xy_anchor: Union[str, Callable] = None,
+            layer: Union[float, Callable] = None,
+            max_lines: Union[int, Callable] = None,
+            offsetx: Union[float, Callable] = None,
+            offsety: Union[float, Callable] = None,
+            as_points: Union[bool, Callable] = None,
+            text_anchor: Union[str, Callable] = None,
+            text_offsetx: Union[float, Callable] = None,
+            text_offsety: Union[float, Callable] = None,
+            arg: Any = None,
+            parent: "Component" = None,
+            visible: Union[bool, Callable] = None,
+            keep: Union[bool, Callable] = None,
+            env: "Environment" = None,
+            screen_coordinates: bool = False,
+            over3d: bool = None,
     ):
         super().__init__(
             locals_=locals(),
@@ -21341,6 +19865,8 @@ class AnimateImage(Animate2dBase):
     width : float
        width of the image (default: None = no scaling)
 
+    heighth : float
+       height of the image (default: None = no scaling)
 
     text : str, tuple or list
         the text to be displayed
@@ -21471,41 +19997,42 @@ class AnimateImage(Animate2dBase):
     """
 
     def __init__(
-        self,
-        image: Any = None,
-        x: Union[float, Callable] = None,
-        y: Union[float, Callable] = None,
-        width: Union[float, Callable] = None,
-        text: Union[str, Callable] = None,
-        fontsize: Union[float, Callable] = None,
-        textcolor: Union[ColorType, Callable] = None,
-        font: Union[str, Callable] = None,
-        angle: Union[float, Callable] = None,
-        alpha: Union[float, Callable] = None,
-        xy_anchor: Union[str, Callable] = None,
-        layer: Union[float, Callable] = None,
-        max_lines: Union[int, Callable] = None,
-        offsetx: Union[float, Callable] = None,
-        offsety: Union[float, Callable] = None,
-        text_anchor: Union[str, Callable] = None,
-        text_offsetx: Union[float, Callable] = None,
-        text_offsety: Union[float, Callable] = None,
-        anchor: Union[str, Callable] = None,
-        animation_start: Union[float, Callable] = None,
-        animation_repeat: Union[bool, Callable] = None,
-        animation_pingpong: Union[bool, Callable] = None,
-        animation_speed: Union[float, Callable] = None,
-        animation_from: Union[float, Callable] = None,
-        animation_to: Union[float, Callable] = None,
-        flip_horizontal: Union[bool, Callable] = None,
-        flip_vertical: Union[bool, Callable] = None,
-        arg: Any = None,
-        parent: "Component" = None,
-        visible: Union[bool, Callable] = None,
-        keep: Union[bool, Callable] = None,
-        env: "Environment" = None,
-        screen_coordinates: bool = False,
-        over3d: bool = None,
+            self,
+            image: Any = None,
+            x: Union[float, Callable] = None,
+            y: Union[float, Callable] = None,
+            width: Union[float, Callable] = None,
+            height: Union[float, Callable] = None,
+            text: Union[str, Callable] = None,
+            fontsize: Union[float, Callable] = None,
+            textcolor: Union[ColorType, Callable] = None,
+            font: Union[str, Callable] = None,
+            angle: Union[float, Callable] = None,
+            alpha: Union[float, Callable] = None,
+            xy_anchor: Union[str, Callable] = None,
+            layer: Union[float, Callable] = None,
+            max_lines: Union[int, Callable] = None,
+            offsetx: Union[float, Callable] = None,
+            offsety: Union[float, Callable] = None,
+            text_anchor: Union[str, Callable] = None,
+            text_offsetx: Union[float, Callable] = None,
+            text_offsety: Union[float, Callable] = None,
+            anchor: Union[str, Callable] = None,
+            animation_start: Union[float, Callable] = None,
+            animation_repeat: Union[bool, Callable] = None,
+            animation_pingpong: Union[bool, Callable] = None,
+            animation_speed: Union[float, Callable] = None,
+            animation_from: Union[float, Callable] = None,
+            animation_to: Union[float, Callable] = None,
+            flip_horizontal: Union[bool, Callable] = None,
+            flip_vertical: Union[bool, Callable] = None,
+            arg: Any = None,
+            parent: "Component" = None,
+            visible: Union[bool, Callable] = None,
+            keep: Union[bool, Callable] = None,
+            env: "Environment" = None,
+            screen_coordinates: bool = False,
+            over3d: bool = None,
     ):
         if env is None:  # this required here to get access to env.now()
             env = g.default_env
@@ -21518,6 +20045,7 @@ class AnimateImage(Animate2dBase):
                 x=0,
                 y=0,
                 width=None,
+                height=None,
                 text="",
                 fontsize=15,
                 textcolor="bg",
@@ -21581,26 +20109,10 @@ def AnimateGrid(spacing: float = 100, env: "Environment" = None, **kwargs):
         env = g.default_env
 
     for y in arange(env.y0(), env.y1() + 1, spacing):
-        AnimateLine(
-            spec=(0, 0, env.x1() - env.x0(), 0),
-            x=0,
-            y=y,
-            text=str(y),
-            text_anchor="sw",
-            env=env,
-            **kwargs,
-        )
+        AnimateLine(spec=(0, 0, env.x1() - env.x0(), 0), x=0, y=y, text=str(y), text_anchor="sw", env=env, **kwargs)
 
     for x in arange(env.x0(), env.x1() + 1, spacing):
-        AnimateLine(
-            spec=(0, 0, 0, env.y1() - env.y0()),
-            x=x,
-            y=0,
-            text=str(x),
-            text_anchor="se",
-            env=env,
-            **kwargs,
-        )
+        AnimateLine(spec=(0, 0, 0, env.y1() - env.y0()), x=x, y=0, text=str(x), text_anchor="se", env=env, **kwargs)
 
 
 class ComponentGenerator(Component):
@@ -21616,10 +20128,10 @@ class ComponentGenerator(Component):
 
     Parameters
     ----------
-    component_class : callable, usually a subclass of Component or Pdf or Cdf distribution
+    component_class : callable, usually a subclass of Component or Pdf/Pmf or Cdf distribution
         the type of components to be generated
 
-        in case of a distribution, the Pdf or Cdf should return a callable
+        in case of a distribution, the Pdf/Pmf or Cdf should return a callable
 
     generator_name : str
         name of the component generator.
@@ -21749,33 +20261,29 @@ class ComponentGenerator(Component):
     """
 
     def __init__(
-        self,
-        component_class: Type,
-        generator_name: str = None,
-        at: Union[float, Callable] = None,
-        delay: Union[float, Callable] = None,
-        till: Union[float, Callable] = None,
-        duration: Union[float, Callable] = None,
-        number: Union[int, Callable] = None,
-        iat=None,
-        force_at: bool = False,
-        force_till: bool = False,
-        suppress_trace: bool = False,
-        suppress_pause_at_step: bool = False,
-        disturbance: Callable = None,
-        equidistant: bool = False,
-        at_end: Callable = None,
-        moments: Iterable = None,
-        env: "Environment" = None,
-        **kwargs,
+            self,
+            component_class: Type,
+            generator_name: str = None,
+            at: Union[float, Callable] = None,
+            delay: Union[float, Callable] = None,
+            till: Union[float, Callable] = None,
+            duration: Union[float, Callable] = None,
+            number: Union[int, Callable] = None,
+            iat=None,
+            force_at: bool = False,
+            force_till: bool = False,
+            suppress_trace: bool = False,
+            suppress_pause_at_step: bool = False,
+            disturbance: Callable = None,
+            equidistant: bool = False,
+            at_end: Callable = None,
+            moments: Iterable = None,
+            env: "Environment" = None,
+            **kwargs,
     ):
         if generator_name is None:
-            if inspect.isclass(component_class) and issubclass(
-                component_class, Component
-            ):
-                generator_name = (
-                    str(component_class).split(".")[-1][:-2] + ".generator."
-                )
+            if inspect.isclass(component_class) and issubclass(component_class, Component):
+                generator_name = str(component_class).split(".")[-1][:-2] + ".generator."
             elif isinstance(component_class, _Distribution):
                 generator_name = str(component_class) + ".generator."
             else:
@@ -21788,21 +20296,8 @@ class ComponentGenerator(Component):
         if not callable(component_class):
             raise ValueError("component_class must be a callable")
         if moments is not None:
-            if any(
-                prop
-                for prop in (
-                    at,
-                    delay,
-                    till,
-                    duration,
-                    number,
-                    iat,
-                    force_at,
-                    force_till,
-                    disturbance,
-                    equidistant,
-                )
-            ):
+            if any(prop for prop in
+                   (at, delay, till, duration, number, iat, force_at, force_till, disturbance, equidistant)):
                 raise ValueError(
                     "specifying at, delay, till,duration, number, iat,force_at, force_till, disturbance or equidistant is not allowed, if moments is specified"
                 )
@@ -21820,9 +20315,7 @@ class ComponentGenerator(Component):
             if iat is None and not equidistant:
                 raise ValueError("disturbance can only be used with an iat")
             if not issubclass(component_class, Component):
-                raise ValueError(
-                    "component_class has to be a Component subclass if disturbance is specified."
-                )
+                raise ValueError("component_class has to be a Component subclass if disturbance is specified.")
         at = env.spec_to_time(at)
         delay = env.spec_to_duration(delay)
         if delay is not None and at is not None:
@@ -21857,33 +20350,22 @@ class ComponentGenerator(Component):
             if (self.iat is None and not equidistant) or moments:
                 if not moments:
                     if till == inf or self.number == inf:
-                        raise ValueError(
-                            "iat not specified --> till and number need to be specified"
-                        )
+                        raise ValueError("iat not specified --> till and number need to be specified")
                     if disturbance is not None:
-                        raise ValueError(
-                            "iat not specified --> disturbance not allowed"
-                        )
+                        raise ValueError("iat not specified --> disturbance not allowed")
 
                     moments = sorted([Uniform(at, till)() for _ in range(self.number)])
                     if force_at or force_till:
                         if number == 1:
                             if force_at and force_till:
-                                raise ValueError(
-                                    "force_at and force_till does not allow number=1"
-                                )
+                                raise ValueError("force_at and force_till does not allow number=1")
                             moments = [at] if force_at else [till]
                         else:
                             v_at = at if force_at else moments[0]
                             v_till = till if force_till else moments[-1]
                             min_moment = moments[0]
                             max_moment = moments[-1]
-                            moments = [
-                                interpolate(
-                                    moment, min_moment, max_moment, v_at, v_till
-                                )
-                                for moment in moments
-                            ]
+                            moments = [interpolate(moment, min_moment, max_moment, v_at, v_till) for moment in moments]
                 self.intervals = [t1 - t0 for t0, t1 in zip([0] + moments, moments)]
                 at = self.intervals[0]
                 self.intervals[0] = 0
@@ -21896,9 +20378,7 @@ class ComponentGenerator(Component):
                     if duration < 0:
                         raise ValueError("at > till not allowed for equidistant")
                     if duration == inf:
-                        raise ValueError(
-                            "infinite duration not allowed for equidistant"
-                        )
+                        raise ValueError("infinite duration not allowed for equidistant")
                     if self.number == 1:
                         raise ValueError("number=1 not allowed for equidistant")
                     if self.iat is not None:
@@ -21920,23 +20400,13 @@ class ComponentGenerator(Component):
                     process = "do_finalize"
                 else:
                     if self.disturbance:
-                        process = (
-                            "do_iat_disturbance_yieldless"
-                            if env._yieldless
-                            else "do_iat_disturbance"
-                        )
+                        process = "do_iat_disturbance_yieldless" if env._yieldless else "do_iat_disturbance"
                     else:
                         process = "do_iat_yieldless" if env._yieldless else "do_iat"
         self.kwargs = kwargs
 
-        super().__init__(
-            name=generator_name,
-            env=env,
-            process=process,
-            at=at,
-            suppress_trace=suppress_trace,
-            suppress_pause_at_step=suppress_pause_at_step,
-        )
+        super().__init__(name=generator_name, env=env, process=process, at=at, suppress_trace=suppress_trace,
+                         suppress_pause_at_step=suppress_pause_at_step)
 
     def do_spread(self):
         for interval in self.intervals:
@@ -22109,9 +20579,7 @@ class ComponentGenerator(Component):
         result.append(object_to_str(self) + " " + hex(id(self)))
         result.append("  name=" + self.name())
 
-        result.append(
-            "  class of components=" + str(self.component_class).split(".")[-1][:-2]
-        )
+        result.append("  class of components=" + str(self.component_class).split(".")[-1][:-2])
         result.append("  iat=" + repr(self.iat))
         result.append("  suppress_trace=" + str(self._suppress_trace))
         result.append("  suppress_pause_at_step=" + str(self._suppress_pause_at_step))
@@ -22126,19 +20594,14 @@ class ComponentGenerator(Component):
 class _BlindVideoMaker(Component):
     def handle(self):
         self.env._t = self.env._now
-        self.env.animation_pre_tick_sys(
-            self.env.t()
-        )  # required to update sys objects, like AnimateQueue
+        self.env.animation_pre_tick_sys(self.env.t())  # required to update sys objects, like AnimateQueue
         if self.env._animate3d:
             if not self.env._gl_initialized:
                 self.env.animation3d_init()
 
             self.env._exclude_from_animation = "*"  # makes that both video and non video over2d animation objects are shown
 
-            an_objects3d = sorted(
-                self.env.an_objects3d,
-                key=lambda obj: (obj.layer(self.env._t), obj.sequence),
-            )
+            an_objects3d = sorted(self.env.an_objects3d, key=lambda obj: (obj.layer(self.env._t), obj.sequence))
             for an in an_objects3d:
                 if an.keep(self.env._t):
                     if an.visible(self.env._t):
@@ -22182,13 +20645,13 @@ class _Distribution:
     _mean: float
 
     def bounded_sample(
-        self,
-        lowerbound: float = None,
-        upperbound: float = None,
-        fail_value: float = None,
-        number_of_retries: int = None,
-        include_lowerbound: bool = True,
-        include_upperbound: bool = True,
+            self,
+            lowerbound: float = None,
+            upperbound: float = None,
+            fail_value: float = None,
+            number_of_retries: int = None,
+            include_lowerbound: bool = True,
+            include_upperbound: bool = True,
     ) -> float:
         """
         Parameters
@@ -22230,18 +20693,11 @@ class _Distribution:
         If, after number_of_tries retries, the sampled value is still not within the given bounds,
         fail_value  will be returned
 
-        Samples that cannot be converted (only possible with Pdf and CumPdf) to float
+        Samples that cannot be converted (only possible with /Pmf and CumPdf/CumPmf) to float
         are assumed to be within the bounds.
         """
-        return Bounded(
-            self,
-            lowerbound,
-            upperbound,
-            fail_value,
-            number_of_retries,
-            include_lowerbound,
-            include_upperbound,
-        ).sample()
+        return Bounded(self, lowerbound, upperbound, fail_value, number_of_retries, include_lowerbound,
+                       include_upperbound).sample()
 
     def __call__(self, *args, **kwargs):
         return self.sample(*args, **kwargs)
@@ -22354,9 +20810,7 @@ class _Expression(_Distribution):
             return m0 - m1
 
         if self.op == operator.mul:
-            if isinstance(self.dis0, _Distribution) and isinstance(
-                self.dis1, _Distribution
-            ):
+            if isinstance(self.dis0, _Distribution) and isinstance(self.dis1, _Distribution):
                 return nan
             else:
                 return m0 * m1
@@ -22480,37 +20934,31 @@ class Bounded(_Distribution):
     If, after number_of_tries retries, the sampled value is still not within the given bounds,
     fail_value  will be returned
 
-    Samples that cannot be converted to float (only possible with Pdf and CumPdf)
+    Samples that cannot be converted to float (only possible with Pdf/Pmf and CumPdf)
     are assumed to be within the bounds.
     """
 
     def __init__(
-        self,
-        dis,
-        lowerbound: float = None,
-        upperbound: float = None,
-        fail_value: float = None,
-        number_of_retries: int = None,
-        include_lowerbound: bool = True,
-        include_upperbound: bool = True,
-        time_unit: str = None,
-        env: "Environment" = None,
+            self,
+            dis,
+            lowerbound: float = None,
+            upperbound: float = None,
+            fail_value: float = None,
+            number_of_retries: int = None,
+            include_lowerbound: bool = True,
+            include_upperbound: bool = True,
+            time_unit: str = None,
+            env: "Environment" = None,
     ):
         self.register_time_unit(time_unit, env)
-        self.lowerbound = (
-            -inf if lowerbound is None else lowerbound * self.time_unit_factor
-        )
-        self.upperbound = (
-            inf if upperbound is None else upperbound * self.time_unit_factor
-        )
+        self.lowerbound = -inf if lowerbound is None else lowerbound * self.time_unit_factor
+        self.upperbound = inf if upperbound is None else upperbound * self.time_unit_factor
 
         if self.lowerbound > self.upperbound:
             raise ValueError("lowerbound > upperbound")
 
         if fail_value is None:
-            self.fail_value = (
-                self.upperbound if self.lowerbound == -inf else self.lowerbound
-            )
+            self.fail_value = self.upperbound if self.lowerbound == -inf else self.lowerbound
         else:
             self.fail_value = fail_value
 
@@ -22529,9 +20977,7 @@ class Bounded(_Distribution):
             except (ValueError, TypeError):
                 return sample  # a value that cannot be converted to a float is sampled is assumed to be correct
 
-            if self.lowerbound_op(samplefloat, self.lowerbound) and self.upperbound_op(
-                samplefloat, self.upperbound
-            ):
+            if self.lowerbound_op(samplefloat, self.lowerbound) and self.upperbound_op(samplefloat, self.upperbound):
                 return sample
 
         return self.fail_value
@@ -22621,14 +21067,8 @@ class Exponential(_Distribution):
     Either mean or rate has to be specified, not both
     """
 
-    def __init__(
-        self,
-        mean: float = None,
-        time_unit: str = None,
-        rate: float = None,
-        randomstream: Any = None,
-        env: "Environment" = None,
-    ):
+    def __init__(self, mean: float = None, time_unit: str = None, rate: float = None, randomstream: Any = None,
+                 env: "Environment" = None):
         self.register_time_unit(time_unit, env)
         if mean is None:
             if rate is None:
@@ -22677,10 +21117,7 @@ class Exponential(_Distribution):
         result.append("Exponential distribution " + hex(id(self)))
         result.append("  mean=" + str(self._mean) + " " + self.time_unit)
         result.append(
-            "  rate (lambda)="
-            + str(1 / self._mean)
-            + (" " if self.time_unit == "" else " /" + self.time_unit)
-        )
+            "  rate (lambda)=" + str(1 / self._mean) + (" " if self.time_unit == "" else " /" + self.time_unit))
         result.append("  randomstream=" + hex(id(self.randomstream)))
         return return_or_print(result, as_str, file)
 
@@ -22757,14 +21194,14 @@ class Normal(_Distribution):
     """
 
     def __init__(
-        self,
-        mean: float,
-        standard_deviation: float = None,
-        time_unit: str = None,
-        coefficient_of_variation: float = None,
-        use_gauss: bool = False,
-        randomstream: Any = None,
-        env: "Environment" = None,
+            self,
+            mean: float,
+            standard_deviation: float = None,
+            time_unit: str = None,
+            coefficient_of_variation: float = None,
+            use_gauss: bool = False,
+            randomstream: Any = None,
+            env: "Environment" = None,
     ):
         self.register_time_unit(time_unit, env)
         self._use_gauss = use_gauss
@@ -22774,17 +21211,13 @@ class Normal(_Distribution):
                 self._standard_deviation = 0.0
             else:
                 if mean == 0:
-                    raise ValueError(
-                        "coefficient_of_variation not allowed with mean = 0"
-                    )
+                    raise ValueError("coefficient_of_variation not allowed with mean = 0")
                 self._standard_deviation = coefficient_of_variation * mean
         else:
             if coefficient_of_variation is None:
                 self._standard_deviation = standard_deviation
             else:
-                raise TypeError(
-                    "both standard_deviation and coefficient_of_variation specified"
-                )
+                raise TypeError("both standard_deviation and coefficient_of_variation specified")
         if self._standard_deviation < 0:
             raise ValueError("standard_deviation < 0")
         if randomstream is None:
@@ -22818,19 +21251,11 @@ class Normal(_Distribution):
         result = []
         result.append("Normal distribution " + hex(id(self)))
         result.append("  mean=" + str(self._mean) + " " + self.time_unit)
-        result.append(
-            "  standard_deviation="
-            + str(self._standard_deviation)
-            + " "
-            + self.time_unit
-        )
+        result.append("  standard_deviation=" + str(self._standard_deviation) + " " + self.time_unit)
         if self._mean == 0:
             result.append("  coefficient of variation= N/A")
         else:
-            result.append(
-                "  coefficient_of_variation="
-                + str(self._standard_deviation / self._mean)
-            )
+            result.append("  coefficient_of_variation=" + str(self._standard_deviation / self._mean))
         if self._use_gauss:
             result.append("  use_gauss=True")
         result.append("  randomstream=" + hex(id(self.randomstream)))
@@ -22843,15 +21268,9 @@ class Normal(_Distribution):
         Sample of the distribution : float
         """
         if self._use_gauss:
-            return (
-                self.randomstream.gauss(self._mean, self._standard_deviation)
-                * self.time_unit_factor
-            )
+            return self.randomstream.gauss(self._mean, self._standard_deviation) * self.time_unit_factor
         else:
-            return (
-                self.randomstream.normalvariate(self._mean, self._standard_deviation)
-                * self.time_unit_factor
-            )
+            return self.randomstream.normalvariate(self._mean, self._standard_deviation) * self.time_unit_factor
 
     def mean(self) -> float:
         """
@@ -22912,14 +21331,8 @@ class IntUniform(_Distribution):
     This will print 10 throws of a die.
     """
 
-    def __init__(
-        self,
-        lowerbound: int,
-        upperbound: int = None,
-        randomstream: Any = None,
-        time_unit: str = None,
-        env: "Environment" = None,
-    ):
+    def __init__(self, lowerbound: int, upperbound: int = None, randomstream: Any = None, time_unit: str = None,
+                 env: "Environment" = None):
         self.register_time_unit(time_unit, env)
         self._lowerbound = lowerbound
         if upperbound is None:
@@ -22975,10 +21388,7 @@ class IntUniform(_Distribution):
         -------
         Sample of the distribution: int
         """
-        return (
-            self.randomstream.randint(self._lowerbound, self._upperbound)
-            * self.time_unit_factor
-        )
+        return self.randomstream.randint(self._lowerbound, self._upperbound) * self.time_unit_factor
 
     def mean(self) -> float:
         """
@@ -23027,14 +21437,8 @@ class Uniform(_Distribution):
         if omitted, default_env will be used
     """
 
-    def __init__(
-        self,
-        lowerbound: float,
-        upperbound: float = None,
-        time_unit: str = None,
-        randomstream: Any = None,
-        env: "Environment" = None,
-    ):
+    def __init__(self, lowerbound: float, upperbound: float = None, time_unit: str = None, randomstream: Any = None,
+                 env: "Environment" = None):
         self.register_time_unit(time_unit, env)
         self._lowerbound = lowerbound
         if upperbound is None:
@@ -23085,10 +21489,7 @@ class Uniform(_Distribution):
         -------
         Sample of the distribution: float
         """
-        return (
-            self.randomstream.uniform(self._lowerbound, self._upperbound)
-            * self.time_unit_factor
-        )
+        return self.randomstream.uniform(self._lowerbound, self._upperbound) * self.time_unit_factor
 
     def mean(self) -> float:
         """
@@ -23144,15 +21545,8 @@ class Triangular(_Distribution):
         if omitted, default_env will be used
     """
 
-    def __init__(
-        self,
-        low: float,
-        high: float = None,
-        mode: float = None,
-        time_unit: str = None,
-        randomstream: Any = None,
-        env: "Environment" = None,
-    ):
+    def __init__(self, low: float, high: float = None, mode: float = None, time_unit: str = None,
+                 randomstream: Any = None, env: "Environment" = None):
         self.register_time_unit(time_unit, env)
         self._low = low
         if high is None:
@@ -23212,10 +21606,7 @@ class Triangular(_Distribution):
         -------
         Sample of the distribtion : float
         """
-        return (
-            self.randomstream.triangular(self._low, self._high, self._mode)
-            * self.time_unit_factor
-        )
+        return self.randomstream.triangular(self._low, self._high, self._mode) * self.time_unit_factor
 
     def mean(self) -> float:
         """
@@ -23259,13 +21650,7 @@ class Constant(_Distribution):
         if omitted, default_env will be used
     """
 
-    def __init__(
-        self,
-        value: float,
-        time_unit: str = None,
-        randomstream: Any = None,
-        env: "Environment" = None,
-    ):
+    def __init__(self, value: float, time_unit: str = None, randomstream: Any = None, env: "Environment" = None):
         self.register_time_unit(time_unit, env)
         self._value = value
         if randomstream is None:
@@ -23345,9 +21730,7 @@ class Poisson(_Distribution):
     It is not recommended to use mean (lambda) > 100
     """
 
-    def __init__(
-        self, mean: float, randomstream: Any = None, prefer_numpy: bool = False
-    ):
+    def __init__(self, mean: float, randomstream: Any = None, prefer_numpy: bool = False):
         if mean <= 0:
             raise ValueError("mean (lambda) <=0")
 
@@ -23468,14 +21851,8 @@ class Weibull(_Distribution):
         if omitted, default_env will be used
     """
 
-    def __init__(
-        self,
-        scale: float,
-        shape: float,
-        time_unit: str = None,
-        randomstream: Any = None,
-        env: "Environment" = None,
-    ):
+    def __init__(self, scale: float, shape: float, time_unit: str = None, randomstream: Any = None,
+                 env: "Environment" = None):
         self.register_time_unit(time_unit, env)
         self._scale = scale
         if shape <= 0:
@@ -23524,10 +21901,7 @@ class Weibull(_Distribution):
         -------
         Sample of the distribution : float
         """
-        return (
-            self.randomstream.weibullvariate(self._scale, self._shape)
-            * self.time_unit_factor
-        )
+        return self.randomstream.weibullvariate(self._scale, self._shape) * self.time_unit_factor
 
     def mean(self) -> float:
         """
@@ -23586,15 +21960,8 @@ class Gamma(_Distribution):
     Either scale or rate has to be specified, not both.
     """
 
-    def __init__(
-        self,
-        shape: float,
-        scale: float = None,
-        time_unit: str = None,
-        rate=None,
-        randomstream: Any = None,
-        env: "Environment" = None,
-    ):
+    def __init__(self, shape: float, scale: float = None, time_unit: str = None, rate=None, randomstream: Any = None,
+                 env: "Environment" = None):
         self.register_time_unit(time_unit, env)
         if shape <= 0:
             raise ValueError("shape<=0")
@@ -23648,11 +22015,7 @@ class Gamma(_Distribution):
         result.append("Gamma distribution " + hex(id(self)))
         result.append("  shape (k)=" + str(self._shape))
         result.append("  scale (teta)=" + str(self._scale) + " " + self.time_unit)
-        result.append(
-            "  rate (beta)="
-            + str(1 / self._scale)
-            + ("" if self.time_unit == "" else " /" + self.time_unit)
-        )
+        result.append("  rate (beta)=" + str(1 / self._scale) + ("" if self.time_unit == "" else " /" + self.time_unit))
         result.append("  randomstream=" + hex(id(self.randomstream)))
         return return_or_print(result, as_str, file)
 
@@ -23662,10 +22025,7 @@ class Gamma(_Distribution):
         -------
         Sample of the distribution : float
         """
-        return (
-            self.randomstream.gammavariate(self._shape, self._scale)
-            * self.time_unit_factor
-        )
+        return self.randomstream.gammavariate(self._shape, self._scale) * self.time_unit_factor
 
     def mean(self) -> float:
         """
@@ -23814,15 +22174,8 @@ class Erlang(_Distribution):
     Either rate or scale has to be specified, not both.
     """
 
-    def __init__(
-        self,
-        shape: float,
-        rate: float = None,
-        time_unit: str = None,
-        scale: float = None,
-        randomstream: Any = None,
-        env: "Environment" = None,
-    ):
+    def __init__(self, shape: float, rate: float = None, time_unit: str = None, scale: float = None,
+                 randomstream: Any = None, env: "Environment" = None):
         self.register_time_unit(time_unit, env)
         if int(shape) != shape:
             raise TypeError("shape not integer")
@@ -23877,11 +22230,7 @@ class Erlang(_Distribution):
         result = []
         result.append("Erlang distribution " + hex(id(self)))
         result.append("  shape (k)=" + str(self._shape))
-        result.append(
-            "  rate (lambda)="
-            + str(self._rate)
-            + ("" if self.time_unit == "" else " /" + self.time_unit)
-        )
+        result.append("  rate (lambda)=" + str(self._rate) + ("" if self.time_unit == "" else " /" + self.time_unit))
         result.append("  scale (mu)=" + str(1 / self._rate))
         result.append("  randomstream=" + hex(id(self.randomstream)))
         return return_or_print(result, as_str, file)
@@ -23892,10 +22241,7 @@ class Erlang(_Distribution):
         -------
         Sample of the distribution : float
         """
-        return (
-            self.randomstream.gammavariate(self._shape, 1 / self._rate)
-            / self.time_unit_factor
-        )
+        return self.randomstream.gammavariate(self._shape, 1 / self._rate) / self.time_unit_factor
 
     def mean(self) -> float:
         """
@@ -23949,13 +22295,7 @@ class Cdf(_Distribution):
         if omitted, default_env will be used
     """
 
-    def __init__(
-        self,
-        spec: Iterable,
-        time_unit: str = None,
-        randomstream: Any = None,
-        env: "Environment" = None,
-    ):
+    def __init__(self, spec: Iterable, time_unit: str = None, randomstream: Any = None, env: "Environment" = None):
         self.register_time_unit(time_unit, env)
         self._x = []
         self._cum = []
@@ -23980,9 +22320,7 @@ class Cdf(_Distribution):
                 raise ValueError(f"x value {x} is smaller than previous value {lastx}")
             cum = spec.pop(0)
             if cum < lastcum:
-                raise ValueError(
-                    f"cumulative value {cum} is smaller than previous value {lastcum}"
-                )
+                raise ValueError(f"cumulative value {cum} is smaller than previous value {lastcum}")
             self._x.append(x)
             self._cum.append(cum)
             lastx = x
@@ -23992,9 +22330,7 @@ class Cdf(_Distribution):
         self._cum = [x / lastcum for x in self._cum]
         self._mean = 0
         for i in range(len(self._cum) - 1):
-            self._mean += ((self._x[i] + self._x[i + 1]) / 2) * (
-                self._cum[i + 1] - self._cum[i]
-            )
+            self._mean += ((self._x[i] + self._x[i + 1]) / 2) * (self._cum[i + 1] - self._cum[i])
 
     def __repr__(self):
         return "Cdf"
@@ -24032,9 +22368,7 @@ class Cdf(_Distribution):
         r = self.randomstream.random()
         for i in range(len(self._cum)):
             if r < self._cum[i]:
-                return interpolate(
-                    r, self._cum[i - 1], self._cum[i], self._x[i - 1], self._x[i]
-                )
+                return interpolate(r, self._cum[i - 1], self._cum[i], self._x[i - 1], self._x[i])
         return self._x[i]
 
     def mean(self) -> float:
@@ -24104,16 +22438,13 @@ class Pdf(_Distribution):
 
     If it is a salabim distribution, not the distribution,
     but a sample will be returned when calling sample.
+
+
+    This method is also available under the name Pmf
     """
 
-    def __init__(
-        self,
-        spec: Union[Iterable, Dict],
-        probabilities=None,
-        time_unit: str = None,
-        randomstream: Any = None,
-        env: "Environment" = None,
-    ):
+    def __init__(self, spec: Union[Iterable, Dict], probabilities=None, time_unit: str = None, randomstream: Any = None,
+                 env: "Environment" = None):
         self.register_time_unit(time_unit, env)
         self._x = []
         self._cum = []
@@ -24139,14 +22470,10 @@ class Pdf(_Distribution):
                     raise ValueError("uneven number of parameters specified")
         else:
             xs = list(spec)
-            if hasattr(probabilities, "__iter__") and not isinstance(
-                probabilities, str
-            ):
+            if hasattr(probabilities, "__iter__") and not isinstance(probabilities, str):
                 probabilities = list(probabilities)
                 if len(xs) != len(probabilities):
-                    raise ValueError(
-                        "length of x-values does not match length of probabilities"
-                    )
+                    raise ValueError("length of x-values does not match length of probabilities")
             else:
                 probabilities = len(spec) * [1]
 
@@ -24155,15 +22482,11 @@ class Pdf(_Distribution):
         for x, p in zip(xs, probabilities):
             if time_unit is not None:
                 if isinstance(x, _Distribution):
-                    raise TypeError(
-                        "time_unit can't be combined with distribution value"
-                    )
+                    raise TypeError("time_unit can't be combined with distribution value")
                 try:
                     x = float(x) * self.time_unit_factor
                 except (ValueError, TypeError):
-                    raise TypeError(
-                        "time_unit can't be combined with non numeric value"
-                    )
+                    raise TypeError("time_unit can't be combined with non numeric value")
 
             self._x.append(x)
             sump += p
@@ -24263,9 +22586,151 @@ class Pdf(_Distribution):
         return self._mean
 
 
+class Pmf(Pdf):
+    """
+    Probability mass function
+
+    Parameters
+    ----------
+    spec : list, tuple or dict
+        either
+
+        -   if no probabilities specified:
+
+            list/tuple with x-values and corresponding probability
+            dict where the keys are re x-values and the values are probabilities
+            (x0, p0, x1, p1, ...xn,pn)
+
+        -   if probabilities is specified:
+
+            list with x-values
+
+    probabilities : iterable or float
+        if omitted, spec contains the probabilities
+
+        the iterable (p0, p1, ...pn) contains the probabilities of the corresponding
+        x-values from spec.
+
+        alternatively, if a float is given (e.g. 1), all x-values
+        have equal probability. The value is not important.
+
+    time_unit : str
+        specifies the time unit
+
+        must be one of "years", "weeks", "days", "hours", "minutes", "seconds", "milliseconds", "microseconds"
+
+        default : no conversion
+
+
+    randomstream : randomstream
+        if omitted, random will be used
+
+        if used as random.Random(12299)
+        it assigns a new stream with the specified seed
+
+    env : Environment
+        environment where the distribution is defined
+
+        if omitted, default_env will be used
+
+    Note
+    ----
+    p0+p1=...+pn>0
+
+    all densities are auto scaled according to the sum of p0 to pn,
+    so no need to have p0 to pn add up to 1 or 100.
+
+    The x-values can be any type.
+
+    If it is a salabim distribution, not the distribution,
+    but a sample will be returned when calling sample.
+
+    This method is also available under the name Pdf
+
+    """
+
+    def __repr__(self):
+        return "Pmf"
+
+    def print_info(self, as_str: bool = False, file: TextIO = None) -> str:
+        """
+        prints information about the distribution
+
+        Parameters
+        ----------
+        as_str: bool
+            if False (default), print the info
+            if True, return a string containing the info
+
+        file: file
+            if None(default), all output is directed to stdout
+
+            otherwise, the output is directed to the file
+
+        Returns
+        -------
+        info (if as_str is True) : str
+        """
+        result = []
+        result.append("Pmf distribution " + hex(id(self)))
+        result.append("  randomstream=" + hex(id(self.randomstream)))
+        return return_or_print(result, as_str, file)
+
+    def sample(self, n: int = None) -> Any:
+        """
+        Parameters
+        ----------
+        n : number of samples : int
+            if not specified, specifies just return one sample, as usual
+
+            if specified, return a list of n sampled values from the distribution without replacement.
+            This requires that all probabilities are equal.
+
+            If n > number of values in the Pmf distribution, n is assumed to be the number of values
+            in the distribution.
+
+            If a sampled value is a distribution, a sample from that distribution will be returned.
+
+        Returns
+        -------
+        Sample of the distribution : any (usually float) or list
+            In case n is specified, returns a list of n values
+
+        """
+        if self.supports_n:
+            if n is None:
+                return self.randomstream.sample(self._x, 1)[0]
+            else:
+                if n < 0:
+                    raise ValueError("n < 0")
+                n = min(n, len(self._x))
+                xs = self.randomstream.sample(self._x, n)
+                return [x.sample() if isinstance(x, _Distribution) else x for x in xs]
+        else:
+            if n is None:
+                r = self.randomstream.random()
+                for cum, x in zip([0] + self._cum, [0] + self._x):
+                    if r <= cum:
+                        if isinstance(x, _Distribution):
+                            return x.sample()
+                        return x
+            else:
+                raise ValueError("not all probabilities are the same")
+
+    def mean(self) -> float:
+        """
+        Returns
+        -------
+        mean of the distribution : float
+            if the mean can't be calculated (if not all x-values are scalars or distributions),
+            nan will be returned.
+        """
+        return self._mean
+
+
 class CumPdf(_Distribution):
     """
-    Cumulative Probability distribution function
+    Cumulative Probability mass function
 
     Parameters
     ----------
@@ -24318,15 +22783,13 @@ class CumPdf(_Distribution):
 
     If it is a salabim distribution, not the distribution,
     but a sample will be returned when calling sample.
+
+    This method is also available under the name CumPmf
     """
 
     def __init__(
-        self,
-        spec: Iterable,
-        cumprobabilities: Union[float, Iterable] = None,
-        time_unit: str = None,
-        randomstream: Any = None,
-        env: "Environment" = None,
+            self, spec: Iterable, cumprobabilities: Union[float, Iterable] = None, time_unit: str = None,
+            randomstream: Any = None, env: "Environment" = None
     ):
         self.register_time_unit(time_unit, env)
         self._x = []
@@ -24355,22 +22818,16 @@ class CumPdf(_Distribution):
             xs = list(spec)
 
             if len(xs) != len(cumprobabilities):
-                raise ValueError(
-                    "length of x-values does not match length of cumulative probabilities"
-                )
+                raise ValueError("length of x-values does not match length of cumulative probabilities")
 
         for x, p in zip(xs, cumprobabilities):
             if time_unit is not None:
                 if isinstance(x, _Distribution):
-                    raise TypeError(
-                        "time_unit can't be combined with distribution value"
-                    )
+                    raise TypeError("time_unit can't be combined with distribution value")
                 try:
                     x = float(x) * self.time_unit_factor
                 except (ValueError, TypeError):
-                    raise TypeError(
-                        "time_unit can't be combined with non numeric value"
-                    )
+                    raise TypeError("time_unit can't be combined with non numeric value")
             self._x.append(x)
             p = p - sump
             if p < 0:
@@ -24444,6 +22901,116 @@ class CumPdf(_Distribution):
         return self._mean
 
 
+class CumPmf(CumPdf):
+    """
+    Cumulative Probability mass function
+
+    Parameters
+    ----------
+    spec : list or tuple
+        either
+
+        -   if no cumprobabilities specified:
+
+            list with x-values and corresponding cumulative probability
+            (x0, p0, x1, p1, ...xn,pn)
+
+        -   if cumprobabilities is specified:
+
+            list with x-values
+
+    cumprobabilities : list, tuple or float
+        if omitted, spec contains the probabilities
+
+        the list (p0, p1, ...pn) contains the cumulative probabilities of the corresponding
+        x-values from spec.
+
+
+    time_unit : str
+        specifies the time unit
+
+        must be one of "years", "weeks", "days", "hours", "minutes", "seconds", "milliseconds", "microseconds"
+
+        default : no conversion
+
+
+    randomstream : randomstream
+        if omitted, random will be used
+
+        if used as random.Random(12299)
+        it assigns a new stream with the specified seed
+
+    env : Environment
+        environment where the distribution is defined
+
+        if omitted, default_env will be used
+
+    Note
+    ----
+    p0<=p1<=..pn>0
+
+    all densities are auto scaled according to pn,
+    so no need to have pn be 1 or 100.
+
+    The x-values can be any type.
+
+    If it is a salabim distribution, not the distribution,
+    but a sample will be returned when calling sample.
+
+    This method is also available under the name CumPdf
+    """
+
+    def __repr__(self):
+        return "CumPmf"
+
+    def print_info(self, as_str: bool = False, file: TextIO = None) -> str:
+        """
+        prints information about the distribution
+
+        Parameters
+        ----------
+        as_str: bool
+            if False (default), print the info
+            if True, return a string containing the info
+
+        file: file
+            if None(default), all output is directed to stdout
+
+            otherwise, the output is directed to the file
+
+        Returns
+        -------
+        info (if as_str is True) : str
+        """
+        result = []
+        result.append("CumPmf distribution " + hex(id(self)))
+        result.append("  randomstream=" + hex(id(self.randomstream)))
+        return return_or_print(result, as_str, file)
+
+    def sample(self) -> Any:
+        """
+        Returns
+        -------
+        Sample of the distribution : any (usually float)
+        """
+        r = self.randomstream.random()
+        for cum, x in zip([0] + self._cum, [0] + self._x):
+            if r <= cum:
+                if isinstance(x, _Distribution):
+                    return x.sample()
+                return x
+
+    def mean(self) -> float:
+        """
+        Returns
+        -------
+        mean of the distribution : float
+            if the mean can't be calculated (if not all x-values are scalars or distributions),
+            nan will be returned.
+        """
+        return self._mean
+
+
 class External(_Distribution):
     """
     External distribution function
@@ -24487,9 +23054,7 @@ class External(_Distribution):
         if "scipy" in sys.modules:
             import scipy
 
-            self.dis_is_scipy = isinstance(
-                dis, (scipy.stats.rv_continuous, scipy.stats.rv_discrete)
-            )
+            self.dis_is_scipy = isinstance(dis, (scipy.stats.rv_continuous, scipy.stats.rv_discrete))
         self.dis = dis
         self.time_unit = None
         time_unit = None
@@ -24506,13 +23071,7 @@ class External(_Distribution):
         self.register_time_unit(time_unit, env)
         self.samples = []
         if self.dis_is_scipy:
-            self._mean = self.dis.mean(
-                **{
-                    k: v
-                    for k, v in self.kwargs.items()
-                    if k not in ("size", "random_state")
-                }
-            )
+            self._mean = self.dis.mean(**{k: v for k, v in self.kwargs.items() if k not in ("size", "random_state")})
         else:
             self._mean = nan
 
@@ -24579,9 +23138,7 @@ class External(_Distribution):
             descr.append(kwarg + "=" + repr(self.kwargs[kwarg]))
         if self.time_unit != "":
             descr.append("time_unit=" + repr(self.time_unit))
-        result.append(
-            "External(" + ", ".join(descr) + ") distribution " + hex(id(self))
-        )
+        result.append("External(" + ", ".join(descr) + ") distribution " + hex(id(self)))
         return return_or_print(result, as_str, file)
 
 
@@ -24676,21 +23233,21 @@ class Distribution(_Distribution):
 
         else:
             for distype in (
-                "Uniform",
-                "Constant",
-                "Triangular",
-                "Exponential",
-                "Normal",
-                "Cdf",
-                "Pdf",
-                "CumPdf",
-                "Weibull",
-                "Gamma",
-                "Erlang",
-                "Beta",
-                "IntUniform",
-                "Poisson",
-                "External",
+                    "Uniform",
+                    "Constant",
+                    "Triangular",
+                    "Exponential",
+                    "Normal",
+                    "Cdf",
+                    "Pdf",
+                    "CumPdf",
+                    "Weibull",
+                    "Gamma",
+                    "Erlang",
+                    "Beta",
+                    "IntUniform",
+                    "Poisson",
+                    "External",
             ):
                 if pre == distype.upper()[: len(pre)]:
                     sp[0] = distype
@@ -24820,37 +23377,18 @@ class State:
         if omitted, default_env is used
     """
 
-    def __init__(
-        self,
-        name: str = None,
-        value: Any = False,
-        type: str = "any",
-        monitor: bool = True,
-        env: "Environment" = None,
-        *args,
-        **kwargs,
-    ):
+    def __init__(self, name: str = None, value: Any = False, type: str = "any", monitor: bool = True,
+                 env: "Environment" = None, *args, **kwargs):
         self.env = _set_env(env)
         _set_name(name, self.env._nameserializeState, self)
         self._value = value
         with self.env.suppress_trace():
-            self._waiters = Queue(
-                name="waiters of " + self.name(), monitor=monitor, env=self.env
-            )
+            self._waiters = Queue(name="waiters of " + self.name(), monitor=monitor, env=self.env)
             self._waiters._isinternal = True
-        self.value = _StateMonitor(
-            parent=self,
-            name="Value of " + self.name(),
-            level=True,
-            initial_tally=value,
-            monitor=monitor,
-            type=type,
-            env=self.env,
-        )
+        self.value = _StateMonitor(parent=self, name="Value of " + self.name(), level=True, initial_tally=value,
+                                   monitor=monitor, type=type, env=self.env)
         if self.env._trace:
-            self.env.print_trace(
-                "", "", self.name() + " create", "value = " + repr(self._value)
-            )
+            self.env.print_trace("", "", self.name() + " create", "value = " + repr(self._value))
         self.setup(*args, **kwargs)
 
     def setup(self) -> None:
@@ -24910,13 +23448,8 @@ class State:
     def __repr__(self):
         return object_to_str(self) + " (" + self.name() + ")"
 
-    def print_histograms(
-        self,
-        exclude: Iterable = (),
-        as_str: bool = False,
-        file: TextIO = None,
-        graph_scale: float = None,
-    ) -> str:
+    def print_histograms(self, exclude: Iterable = (), as_str: bool = False, file: TextIO = None,
+                         graph_scale: float = None) -> str:
         """
         print histograms of the waiters queue and the value monitor
 
@@ -24945,15 +23478,9 @@ class State:
         """
         result = []
         if self.waiters() not in exclude:
-            result.append(
-                self.waiters().print_histograms(
-                    exclude=exclude, as_str=True, graph_scale=graph_scale
-                )
-            )
+            result.append(self.waiters().print_histograms(exclude=exclude, as_str=True, graph_scale=graph_scale))
         if self.value not in exclude:
-            result.append(
-                self.value.print_histogram(as_str=True, graph_scale=graph_scale)
-            )
+            result.append(self.value.print_histogram(as_str=True, graph_scale=graph_scale))
         return return_or_print(result, as_str, file)
 
     def print_info(self, as_str: bool = False, file: TextIO = None) -> str:
@@ -25061,17 +23588,13 @@ class State:
         This method is identical to set, except the default value is False.
         """
         if self.env._trace:
-            self.env.print_trace(
-                "", "", self.name() + " reset", "value = " + repr(value)
-            )
+            self.env.print_trace("", "", self.name() + " reset", "value = " + repr(value))
         if self._value != value:
             self._value = value
             self.value.tally(value)
             self._trywait()
 
-    def trigger(
-        self, value: Any = True, value_after: Any = None, max: Union[float, int] = inf
-    ):
+    def trigger(self, value: Any = True, value_after: Any = None, max: Union[float, int] = inf):
         """
         triggers the value of the state
 
@@ -25101,18 +23624,9 @@ class State:
         if value_after is None:
             value_after = self._value
         if self.env._trace:
-            self.env.print_trace(
-                "",
-                "",
-                self.name() + " trigger",
-                " value = "
-                + str(value)
-                + " --> "
-                + str(value_after)
-                + " allow "
-                + str(max)
-                + " components",
-            )
+            self.env.print_trace("", "", self.name() + " trigger",
+                                 " value = " + str(value) + " --> " + str(value_after) + " allow " + str(
+                                     max) + " components")
         self._value = value
         self.value.tally(value)  # strictly speaking, not required
         self._trywait(max)
@@ -25254,26 +23768,15 @@ class State:
         statistics (if as_str is True) : str
         """
         result = []
+        result.append(f"Statistics of {self.name()} at {fn(self.env._now - self.env._offset, 13, 3)}")
         result.append(
-            f"Statistics of {self.name()} at {fn(self.env._now - self.env._offset, 13, 3)}"
-        )
-        result.append(
-            self.waiters().length.print_statistics(
-                show_header=False, show_legend=True, do_indent=True, as_str=True
-            )
-        )
+            self.waiters().length.print_statistics(show_header=False, show_legend=True, do_indent=True, as_str=True))
         result.append("")
         result.append(
-            self.waiters().length_of_stay.print_statistics(
-                show_header=False, show_legend=False, do_indent=True, as_str=True
-            )
-        )
+            self.waiters().length_of_stay.print_statistics(show_header=False, show_legend=False, do_indent=True,
+                                                           as_str=True))
         result.append("")
-        result.append(
-            self.value.print_statistics(
-                show_header=False, show_legend=False, do_indent=True, as_str=True
-            )
-        )
+        result.append(self.value.print_statistics(show_header=False, show_legend=False, do_indent=True, as_str=True))
         return return_or_print(result, as_str, file)
 
     def waiters(self) -> Queue:
@@ -25345,25 +23848,23 @@ class Resource:
     """
 
     def __init__(
-        self,
-        name: str = None,
-        capacity: float = 1,
-        initial_claimed_quantity: float = 0,
-        anonymous: bool = False,
-        preemptive: bool = False,
-        honor_only_first: bool = False,
-        honor_only_highest_priority: bool = False,
-        monitor: bool = True,
-        env: "Environment" = None,
-        *args,
-        **kwargs,
+            self,
+            name: str = None,
+            capacity: float = 1,
+            initial_claimed_quantity: float = 0,
+            anonymous: bool = False,
+            preemptive: bool = False,
+            honor_only_first: bool = False,
+            honor_only_highest_priority: bool = False,
+            monitor: bool = True,
+            env: "Environment" = None,
+            *args,
+            **kwargs,
     ):
         self.env = _set_env(env)
         if initial_claimed_quantity != 0:
             if not anonymous:
-                raise ValueError(
-                    "initial_claimed_quantity != 0 only allowed for anonymous resources"
-                )
+                raise ValueError("initial_claimed_quantity != 0 only allowed for anonymous resources")
 
         self._capacity = capacity
         self._honor_only_first = honor_only_first
@@ -25371,13 +23872,9 @@ class Resource:
 
         _set_name(name, self.env._nameserializeResource, self)
         with self.env.suppress_trace():
-            self._requesters = Queue(
-                name="requesters of " + self.name(), monitor=monitor, env=self.env
-            )
+            self._requesters = Queue(name="requesters of " + self.name(), monitor=monitor, env=self.env)
             self._requesters._isinternal = True
-            self._claimers = Queue(
-                name="claimers of " + self.name(), monitor=monitor, env=self.env
-            )
+            self._claimers = Queue(name="claimers of " + self.name(), monitor=monitor, env=self.env)
             self._claimers._isinternal = True
             self._claimers._isclaimers = True  # used by Component.isbumped()
 
@@ -25387,49 +23884,23 @@ class Resource:
         self._minq = inf
         self._trying = False
 
-        self.capacity = _CapacityMonitor(
-            "Capacity of " + self.name(),
-            level=True,
-            initial_tally=capacity,
-            monitor=monitor,
-            type="float",
-            env=self.env,
-        )
+        self.capacity = _CapacityMonitor("Capacity of " + self.name(), level=True, initial_tally=capacity,
+                                         monitor=monitor, type="float", env=self.env)
         self.capacity.parent = self
         self.claimed_quantity = _SystemMonitor(
-            "Claimed quantity of " + self.name(),
-            level=True,
-            initial_tally=initial_claimed_quantity,
-            monitor=monitor,
-            type="float",
-            env=self.env,
+            "Claimed quantity of " + self.name(), level=True, initial_tally=initial_claimed_quantity, monitor=monitor,
+            type="float", env=self.env
         )
         self.available_quantity = _SystemMonitor(
-            "Available quantity of " + self.name(),
-            level=True,
-            initial_tally=capacity - initial_claimed_quantity,
-            monitor=monitor,
-            type="float",
-            env=self.env,
+            "Available quantity of " + self.name(), level=True, initial_tally=capacity - initial_claimed_quantity,
+            monitor=monitor, type="float", env=self.env
         )
 
-        self.occupancy = _SystemMonitor(
-            "Occupancy of " + self.name(),
-            level=True,
-            initial_tally=0,
-            monitor=monitor,
-            type="float",
-            env=self.env,
-        )
+        self.occupancy = _SystemMonitor("Occupancy of " + self.name(), level=True, initial_tally=0, monitor=monitor,
+                                        type="float", env=self.env)
         if self.env._trace:
-            self.env.print_trace(
-                "",
-                "",
-                self.name() + " create",
-                "capacity="
-                + str(self._capacity)
-                + (" anonymous" if self._anonymous else ""),
-            )
+            self.env.print_trace("", "", self.name() + " create",
+                                 "capacity=" + str(self._capacity) + (" anonymous" if self._anonymous else ""))
         self.setup(*args, **kwargs)
 
     def ispreemptive(self) -> bool:
@@ -25503,12 +23974,7 @@ class Resource:
 
         self.requesters().reset_monitors(monitor=monitor, stats_only=stats_only)
         self.claimers().reset_monitors(monitor=monitor, stats_only=stats_only)
-        for m in (
-            self.capacity,
-            self.available_quantity,
-            self.claimed_quantity,
-            self.occupancy,
-        ):
+        for m in (self.capacity, self.available_quantity, self.claimed_quantity, self.occupancy):
             m.reset(monitor=monitor, stats_only=stats_only)
 
     def print_statistics(self, as_str: bool = False, file: TextIO = None) -> str:
@@ -25531,55 +23997,23 @@ class Resource:
         statistics (if as_str is True) : str
         """
         result = []
-        result.append(
-            f"Statistics of {self.name()} at {(self.env._now - self.env._offset):13.3f}"
-        )
+        result.append(f"Statistics of {self.name()} at {(self.env._now - self.env._offset):13.3f}")
         show_legend = True
         for q in [self.requesters(), self.claimers()]:
             result.append(
-                q.length.print_statistics(
-                    show_header=False,
-                    show_legend=show_legend,
-                    do_indent=True,
-                    as_str=True,
-                )
-            )
+                q.length.print_statistics(show_header=False, show_legend=show_legend, do_indent=True, as_str=True))
             show_legend = False
             result.append("")
-            result.append(
-                q.length_of_stay.print_statistics(
-                    show_header=False,
-                    show_legend=show_legend,
-                    do_indent=True,
-                    as_str=True,
-                )
-            )
+            result.append(q.length_of_stay.print_statistics(show_header=False, show_legend=show_legend, do_indent=True,
+                                                            as_str=True))
             result.append("")
 
-        for m in (
-            self.capacity,
-            self.available_quantity,
-            self.claimed_quantity,
-            self.occupancy,
-        ):
-            result.append(
-                m.print_statistics(
-                    show_header=False,
-                    show_legend=show_legend,
-                    do_indent=True,
-                    as_str=True,
-                )
-            )
+        for m in (self.capacity, self.available_quantity, self.claimed_quantity, self.occupancy):
+            result.append(m.print_statistics(show_header=False, show_legend=show_legend, do_indent=True, as_str=True))
             result.append("")
         return return_or_print(result, as_str, file)
 
-    def print_histograms(
-        self,
-        exclude=(),
-        as_str: bool = False,
-        file: TextIO = None,
-        graph_scale: float = None,
-    ) -> str:
+    def print_histograms(self, exclude=(), as_str: bool = False, file: TextIO = None, graph_scale: float = None) -> str:
         """
         prints histograms of the requesters and claimers queue as well as
         the capacity, available_quantity and claimed_quantity timstamped monitors of the resource
@@ -25610,17 +24044,8 @@ class Resource:
         result = []
         for q in (self.requesters(), self.claimers()):
             if q not in exclude:
-                result.append(
-                    q.print_histograms(
-                        exclude=exclude, as_str=True, graph_scale=graph_scale
-                    )
-                )
-        for m in (
-            self.capacity,
-            self.available_quantity,
-            self.claimed_quantity,
-            self.occupancy,
-        ):
+                result.append(q.print_histograms(exclude=exclude, as_str=True, graph_scale=graph_scale))
+        for m in (self.capacity, self.available_quantity, self.claimed_quantity, self.occupancy):
             if m not in exclude:
                 result.append(m.print_histogram(as_str=True, graph_scale=graph_scale))
         return return_or_print(result, as_str, file)
@@ -25645,12 +24070,7 @@ class Resource:
         """
         self.requesters().monitor(value)
         self.claimers().monitor(value)
-        for m in (
-            self.capacity,
-            self.available_quantity,
-            self.claimed_quantity,
-            self.occupancy,
-        ):
+        for m in (self.capacity, self.available_quantity, self.claimed_quantity, self.occupancy):
             m.monitor(value)
 
     def register(self, registry: List) -> "Resource":
@@ -25729,28 +24149,21 @@ class Resource:
             while mx != self._requesters._tail:
                 c = mx.component
                 mx = mx.successor
-                result.append(
-                    "    " + pad(c.name(), 20) + " quantity=" + str(c._requests[self])
-                )
+                result.append("    " + pad(c.name(), 20) + " quantity=" + str(c._requests[self]))
         else:
             result.append("  no requesting components")
 
         result.append("  claimed_quantity=" + str(self._claimed_quantity))
         if self._claimed_quantity >= 0:
             if self._anonymous:
-                result.append(
-                    "  not claimed by any components,"
-                    + " because the resource is anonymous"
-                )
+                result.append("  not claimed by any components," + " because the resource is anonymous")
             else:
                 result.append("  claimed by:")
                 mx = self._claimers._head.successor
                 while mx != self._claimers._tail:
                     c = mx.component
                     mx = mx.successor
-                    result.append(
-                        "    " + pad(c.name(), 20) + " quantity=" + str(c._claims[self])
-                    )
+                    result.append("    " + pad(c.name(), 20) + " quantity=" + str(c._claims[self]))
         return return_or_print(result, as_str, file)
 
     def _tryrequest(self):
@@ -25763,10 +24176,7 @@ class Resource:
                 while mx != self._requesters._tail:
                     if self._honor_only_first and mx != mx_first:
                         break
-                    if (
-                        self._honor_only_highest_priority
-                        and mx.priority != mx_first_priority
-                    ):
+                    if self._honor_only_highest_priority and mx.priority != mx_first_priority:
                         break
                     c = mx.component
                     mx = mx.successor
@@ -25782,10 +24192,7 @@ class Resource:
             while mx != self._requesters._tail:
                 if self._honor_only_first and mx != mx_first:
                     break
-                if (
-                    self._honor_only_highest_priority
-                    and mx.priority != mx_first_priority
-                ):
+                if self._honor_only_highest_priority and mx.priority != mx_first_priority:
                     break
                 if self._minq > (self._capacity - self._claimed_quantity + 1e-8):
                     break  # inpossible to honor any more requests
@@ -25822,9 +24229,7 @@ class Resource:
             if self._claimed_quantity < 1e-8:
                 self._claimed_quantity = 0
             self.claimed_quantity.tally(self._claimed_quantity)
-            self.occupancy.tally(
-                0 if self._capacity <= 0 else self._claimed_quantity / self._capacity
-            )
+            self.occupancy.tally(0 if self._capacity <= 0 else self._claimed_quantity / self._capacity)
             self.available_quantity.tally(self._capacity - self._claimed_quantity)
             self._tryrequest()
 
@@ -25869,9 +24274,7 @@ class Resource:
         self._capacity = cap
         self.capacity.tally(self._capacity)
         self.available_quantity.tally(self._capacity - self._claimed_quantity)
-        self.occupancy.tally(
-            0 if self._capacity <= 0 else self._claimed_quantity / self._capacity
-        )
+        self.occupancy.tally(0 if self._capacity <= 0 else self._claimed_quantity / self._capacity)
         self._tryrequest()
 
     def name(self, value: str = None) -> str:
@@ -25992,13 +24395,8 @@ class PeriodMonitor:
         del self.periods
         self.m.period_monitors.remove(self)
 
-    def __init__(
-        self,
-        parent_monitor: "Monitor",
-        periods: Iterable = None,
-        period_monitor_names: Iterable = None,
-        env: "Environment" = None,
-    ):
+    def __init__(self, parent_monitor: "Monitor", periods: Iterable = None, period_monitor_names: Iterable = None,
+                 env: "Environment" = None):
         self.pc = _PeriodComponent(pm=self, skip_standby=True, suppress_trace=True)
         self.env = _set_env(env)
 
@@ -26010,13 +24408,7 @@ class PeriodMonitor:
             period_monitor_names = []
             for duration in periods:
                 period_monitor_names.append(
-                    parent_monitor.name()
-                    + ".period ["
-                    + str(cum)
-                    + " - "
-                    + str(cum + duration)
-                    + "]"
-                )
+                    parent_monitor.name() + ".period [" + str(cum) + " - " + str(cum + duration) + "]")
                 cum += duration
 
         self.m = parent_monitor
@@ -26030,26 +24422,18 @@ class PeriodMonitor:
 
         self.iperiod = 0
         if self.m._level:
-            self.perperiod = [
-                Monitor(
-                    name=period_monitor_name, level=True, monitor=False, env=self.env
-                )
-                for period_monitor_name in period_monitor_names
-            ]
+            self.perperiod = [Monitor(name=period_monitor_name, level=True, monitor=False, env=self.env) for
+                              period_monitor_name in period_monitor_names]
         else:
-            self.perperiod = [
-                Monitor(name=period_monitor_name, monitor=False, env=self.env)
-                for period_monitor_name in period_monitor_names
-            ]
+            self.perperiod = [Monitor(name=period_monitor_name, monitor=False, env=self.env) for period_monitor_name in
+                              period_monitor_names]
 
 
 class AudioClip:
     @staticmethod
     def send(command):
         buffer = ctypes.c_buffer(255)
-        errorcode = ctypes.windll.winmm.mciSendStringA(
-            str(command).encode(), buffer, 254, 0
-        )
+        errorcode = ctypes.windll.winmm.mciSendStringA(str(command).encode(), buffer, 254, 0)
         if errorcode:
             return errorcode, AudioClip.get_error(errorcode)
         else:
@@ -26100,9 +24484,7 @@ class AudioClip:
         if self._alias:
             start_ms = (0 if start is None else min(start, self.duration)) * 1000
             end_ms = (self.duration if end is None else min(end, self.duration)) * 1000
-            err, buf = AudioClip.directsend(
-                "play", self._alias, "from", int(start_ms), "to", int(end_ms)
-            )
+            err, buf = AudioClip.directsend("play", self._alias, "from", int(start_ms), "to", int(end_ms))
 
     def isplaying(self):
         return self._mode() == "playing"
@@ -26198,9 +24580,9 @@ class _APNG:
         def parse_chunks(b):
             i = 8
             while i < len(b):
-                (data_len,) = struct.unpack("!I", b[i : i + 4])
-                type_ = b[i + 4 : i + 8].decode("latin-1")
-                yield _APNG.Chunk(type_, b[i : i + data_len + 12])
+                (data_len,) = struct.unpack("!I", b[i: i + 4])
+                type_ = b[i + 4: i + 8].decode("latin-1")
+                yield _APNG.Chunk(type_, b[i: i + data_len + 12])
                 i += data_len + 12
 
         @classmethod
@@ -26211,17 +24593,8 @@ class _APNG:
             return im
 
     class FrameControl:
-        def __init__(
-            self,
-            width=None,
-            height=None,
-            x_offset=0,
-            y_offset=0,
-            delay=100,
-            delay_den=1000,
-            depose_op=1,
-            blend_op=0,
-        ):
+        def __init__(self, width=None, height=None, x_offset=0, y_offset=0, delay=100, delay_den=1000, depose_op=1,
+                     blend_op=0):
             self.width = width
             self.height = height
             self.x_offset = x_offset
@@ -26232,17 +24605,8 @@ class _APNG:
             self.blend_op = blend_op
 
         def to_bytes(self):
-            return struct.pack(
-                "!IIIIHHbb",
-                self.width,
-                self.height,
-                self.x_offset,
-                self.y_offset,
-                self.delay,
-                self.delay_den,
-                self.depose_op,
-                self.blend_op,
-            )
+            return struct.pack("!IIIIHHbb", self.width, self.height, self.x_offset, self.y_offset, self.delay,
+                               self.delay_den, self.depose_op, self.blend_op)
 
     def __init__(self, num_plays=0):
         self.frames = []
@@ -26266,35 +24630,17 @@ class _APNG:
         self.frames.append((png, control))
 
     def to_bytes(self):
-        CHUNK_BEFORE_IDAT = {
-            "cHRM",
-            "gAMA",
-            "iCCP",
-            "sBIT",
-            "sRGB",
-            "bKGD",
-            "hIST",
-            "tRNS",
-            "pHYs",
-            "sPLT",
-            "tIME",
-            "PLTE",
-        }
-        PNG_SIGN = b"\x89\x50\x4E\x47\x0D\x0A\x1A\x0A"
+        CHUNK_BEFORE_IDAT = {"cHRM", "gAMA", "iCCP", "sBIT", "sRGB", "bKGD", "hIST", "tRNS", "pHYs", "sPLT", "tIME",
+                             "PLTE"}
+        PNG_SIGN = b"\x89\x50\x4e\x47\x0d\x0a\x1a\x0a"
         out = [PNG_SIGN]
         other_chunks = []
         seq = 0
         png, control = self.frames[0]
         out.append(png.hdr)
-        out.append(
-            self.make_chunk(
-                "acTL", struct.pack("!II", len(self.frames), self.num_plays)
-            )
-        )
+        out.append(self.make_chunk("acTL", struct.pack("!II", len(self.frames), self.num_plays)))
         if control:
-            out.append(
-                self.make_chunk("fcTL", struct.pack("!I", seq) + control.to_bytes())
-            )
+            out.append(self.make_chunk("fcTL", struct.pack("!I", seq) + control.to_bytes()))
             seq += 1
         idat_chunks = []
         for type_, data in png.chunks:
@@ -26307,18 +24653,14 @@ class _APNG:
             out.append(data)
         out.extend(idat_chunks)
         for png, control in self.frames[1:]:
-            out.append(
-                self.make_chunk("fcTL", struct.pack("!I", seq) + control.to_bytes())
-            )
+            out.append(self.make_chunk("fcTL", struct.pack("!I", seq) + control.to_bytes()))
             seq += 1
             for type_, data in png.chunks:
                 if type_ in ("IHDR", "IEND") or type_ in CHUNK_BEFORE_IDAT:
                     continue
 
                 if type_ == "IDAT":
-                    out.append(
-                        self.make_chunk("fdAT", struct.pack("!I", seq) + data[8:-4])
-                    )
+                    out.append(self.make_chunk("fdAT", struct.pack("!I", seq) + data[8:-4]))
                     seq += 1
                 else:
                     other_chunks.append(data)
@@ -26421,13 +24763,8 @@ def _i(p, v0, v1):
     return (1 - p) * v0 + p * v1
 
 
-def interpolate(
-    t: float,
-    t0: float,
-    t1: float,
-    v0: Union[float, Iterable],
-    v1: Union[float, Iterable],
-) -> Union[float, Tuple]:
+def interpolate(t: float, t0: float, t1: float, v0: Union[float, Iterable], v1: Union[float, Iterable]) -> Union[
+    float, Tuple]:
     """
     does linear interpolation
 
@@ -26552,9 +24889,7 @@ def arange(start: float, stop: float, step: float = 1) -> Iterable:
         value += step
 
 
-def linspace(
-    start: float, stop: float, num: int = 50, endpoint: bool = True
-) -> Iterable:
+def linspace(start: float, stop: float, num: int = 50, endpoint: bool = True) -> Iterable:
     """
     like numpy.linspace, but returns a list
 
@@ -26588,9 +24923,7 @@ def linspace(
     return [start + step * i for i in range(num)]
 
 
-def interp(
-    x: float, xp: Iterable, fp: Iterable, left: float = None, right: float = None
-) -> Any:
+def interp(x: float, xp: Iterable, fp: Iterable, left: float = None, right: float = None) -> Any:
     """
     linear interpolatation
 
@@ -26639,9 +24972,8 @@ def interp(
 
     if isinstance(fp[0], (tuple, list)):
         return type(fp[0])(
-            el_i_min_1 + (el_i - el_i_min_1) * (x - xp[i - 1]) / (xp[i] - xp[i - 1])
-            for el_i_min_1, el_i in zip(fp[i - 1], fp[i])
-        )
+            el_i_min_1 + (el_i - el_i_min_1) * (x - xp[i - 1]) / (xp[i] - xp[i - 1]) for el_i_min_1, el_i in
+            zip(fp[i - 1], fp[i]))
 
     return fp[i - 1] + (fp[i] - fp[i - 1]) * (x - xp[i - 1]) / (xp[i] - xp[i - 1])
 
@@ -26726,18 +25058,13 @@ def fn(x, length, d):
     if x >= 10 ** (length - d - 1):
         return ("{:" + str(length) + "." + str(length - d - 3) + "e}").format(x)
     if x == int(x):
-        return ("{:" + str(length - d - 1) + "d}{:" + str(d + 1) + "s}").format(
-            int(x), ""
-        )
+        return ("{:" + str(length - d - 1) + "d}{:" + str(d + 1) + "s}").format(int(x), "")
     return ("{:" + str(length) + "." + str(d) + "f}").format(x)
 
 
 def _checkrandomstream(randomstream):
     if not isinstance(randomstream, random.Random):
-        raise TypeError(
-            "Type randomstream or random.Random expected, got "
-            + str(type(randomstream))
-        )
+        raise TypeError("Type randomstream or random.Random expected, got " + str(type(randomstream)))
 
 
 def _checkismonitor(monitor):
@@ -26871,9 +25198,7 @@ def _call(c, t, self):
 def de_none(lst):
     if lst is None:
         return None
-    lst = list(
-        lst
-    )  # it is necessary to convert to list, because input maybe a tuple or even a deque
+    lst = list(lst)  # it is necessary to convert to list, because input maybe a tuple or even a deque
     result = lst[:2]
     for item in lst[2:]:
         if item is None:
@@ -26888,11 +25213,7 @@ def statuses() -> Tuple:
     tuple of all statuses a component can be in, in alphabetical order.
     """
 
-    return tuple(
-        "current data interrupted passive requesting scheduled standby waiting".split(
-            " "
-        )
-    )
+    return tuple("current data interrupted passive requesting scheduled standby waiting".split(" "))
 
 
 current = "current"
@@ -26905,9 +25226,7 @@ standby = "standby"
 waiting = "waiting"
 
 
-def random_seed(
-    seed: Hashable = None, randomstream: Any = None, set_numpy_random_seed: bool = True
-):
+def random_seed(seed: Hashable = None, randomstream: Any = None, set_numpy_random_seed: bool = True):
     """
     Reseeds a randomstream
 
@@ -26957,7 +25276,7 @@ def resize_with_pad(im, target_width, target_height):
     """
     Resize PIL image keeping ratio and using black background.
     """
-    if im.height == target_width and im.width == target_height:
+    if im.height == target_height and im.width == target_width:
         return im
     target_ratio = target_height / target_width
     im_ratio = im.height / im.width
@@ -26972,10 +25291,7 @@ def resize_with_pad(im, target_width, target_height):
 
     image_resize = im.resize((resize_width, resize_height), Image.LANCZOS)
     background = Image.new("RGBA", (target_width, target_height), (0, 0, 0, 255))
-    offset = (
-        round((target_width - resize_width) / 2),
-        round((target_height - resize_height) / 2),
-    )
+    offset = (round((target_width - resize_width) / 2), round((target_height - resize_height) / 2))
     background.paste(image_resize, offset)
     return background.convert("RGB")
 
@@ -27003,12 +25319,8 @@ class _AnimateIntro(Animate3dBase):
         self.lights_param = (-1, -1, 1, 0)
         self.lag = 1
 
-        self.register_dynamic_attributes(
-            "field_of_view_y z_near z_far x_eye y_eye z_eye x_center y_center z_center"
-        )
-        self.register_dynamic_attributes(
-            "model_lights_pname model_lights_param lights_light lights_pname lights_param"
-        )
+        self.register_dynamic_attributes("field_of_view_y z_near z_far x_eye y_eye z_eye x_center y_center z_center")
+        self.register_dynamic_attributes("model_lights_pname model_lights_param lights_light lights_pname lights_param")
 
     def draw(self, t):
         x_eye = self.x_eye(t)
@@ -27033,17 +25345,13 @@ class _AnimateIntro(Animate3dBase):
             z_up = 1
 
         if self.model_lights_pname(t) is None:
-            self.model_lights_pname = (
-                gl.GL_LIGHT_MODEL_AMBIENT
-            )  # in principal only at first call
+            self.model_lights_pname = gl.GL_LIGHT_MODEL_AMBIENT  # in principal only at first call
         if self.lights_light(t) is None:
             self.lights_light = gl.GL_LIGHT0  # in principal only at first call
         if self.lights_pname(t) is None:
             self.lights_pname = gl.GL_POSITION  # in principal only at first call
 
-        background_color = list(
-            self.env.colorspec_to_gl_color(self.env._background3d_color)
-        ) + [0.0]
+        background_color = list(self.env.colorspec_to_gl_color(self.env._background3d_color)) + [0.0]
         gl.glClearColor(*background_color)
 
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
@@ -27051,26 +25359,19 @@ class _AnimateIntro(Animate3dBase):
         gl.glMatrixMode(gl.GL_PROJECTION)
 
         gl.glLoadIdentity()
-        glu.gluPerspective(
-            self.field_of_view_y(t),
-            glut.glutGet(glut.GLUT_WINDOW_WIDTH)
-            / glut.glutGet(glut.GLUT_WINDOW_HEIGHT),
-            self.z_near(t),
-            self.z_far(t),
-        )
+        glu.gluPerspective(self.field_of_view_y(t),
+                           glut.glutGet(glut.GLUT_WINDOW_WIDTH) / glut.glutGet(glut.GLUT_WINDOW_HEIGHT), self.z_near(t),
+                           self.z_far(t))
 
-        glu.gluLookAt(
-            x_eye, y_eye, z_eye, x_center, y_center, z_center, x_up, y_up, z_up
-        )
-
+        glu.gluLookAt(x_eye, y_eye, z_eye, x_center, y_center, z_center, x_up, y_up, z_up)
         gl.glEnable(gl.GL_LIGHTING)
         gl.glLightModelfv(self.model_lights_pname(t), self.model_lights_param(t))
         gl.glLightfv(self.lights_light(t), self.lights_pname(t), self.lights_param(t))
         gl.glEnable(gl.GL_LIGHT0)
 
         gl.glMatrixMode(gl.GL_MODELVIEW)
+
         gl.glLoadIdentity()
-        set_projection_dot_view_matrix()
 
 
 class _AnimateExtro(Animate3dBase):
@@ -27083,10 +25384,7 @@ class _AnimateExtro(Animate3dBase):
 
     def draw(self, t):
         if self.env.an_objects_over3d:
-            for ao in sorted(
-                self.env.an_objects_over3d,
-                key=lambda obj: (-obj.layer(t), obj.sequence),
-            ):
+            for ao in sorted(self.env.an_objects_over3d, key=lambda obj: (-obj.layer(t), obj.sequence)):
                 ao.make_pil_image(t - self.env._offset)
 
                 if ao._image_visible:
@@ -27119,24 +25417,11 @@ class _AnimateExtro(Animate3dBase):
 
             gl.glOrtho(0, self.env._width3d, 0, self.env._height3d, -1, 1)
             if overlap:
-                overlay_image = Image.new(
-                    "RGBA", (self.env._width3d, self.env._height3d), (0, 0, 0, 0)
-                )
-                for ao in sorted(
-                    self.env.an_objects_over3d,
-                    key=lambda obj: (-obj.layer(t), obj.sequence),
-                ):
+                overlay_image = Image.new("RGBA", (self.env._width3d, self.env._height3d), (0, 0, 0, 0))
+                for ao in sorted(self.env.an_objects_over3d, key=lambda obj: (-obj.layer(t), obj.sequence)):
                     if ao._image_visible:
-                        overlay_image.paste(
-                            ao._image,
-                            (
-                                int(ao._image_x),
-                                int(
-                                    self.env._height3d - ao._image_y - ao._image.size[1]
-                                ),
-                            ),
-                            ao._image,
-                        )
+                        overlay_image.paste(ao._image, (
+                        int(ao._image_x), int(self.env._height3d - ao._image_y - ao._image.size[1])), ao._image)
                     imdata = overlay_image.tobytes("raw", "RGBA", 0, -1)
 
                 w = overlay_image.size[0]
@@ -27146,10 +25431,7 @@ class _AnimateExtro(Animate3dBase):
                 gl.glDrawPixels(w, h, gl.GL_RGBA, gl.GL_UNSIGNED_BYTE, imdata)
 
             else:
-                for ao in sorted(
-                    self.env.an_objects_over3d,
-                    key=lambda obj: (-obj.layer(self.env._t), obj.sequence),
-                ):
+                for ao in sorted(self.env.an_objects_over3d, key=lambda obj: (-obj.layer(self.env._t), obj.sequence)):
                     if ao._image_visible:
                         imdata = ao._image.tobytes("raw", "RGBA", 0, -1)
                         w = ao._image.size[0]
@@ -27265,31 +25547,33 @@ class Animate3dObj(Animate3dBase):
     """
 
     def __init__(
-        self,
-        filename: Union[str, Callable],
-        x: Union[float, Callable] = 0,
-        y: Union[float, Callable] = 0,
-        z: Union[float, Callable] = 0,
-        x_angle: Union[float, Callable] = 0,
-        y_angle: Union[float, Callable] = 0,
-        z_angle: Union[float, Callable] = 0,
-        x_translate: Union[float, Callable] = 0,
-        y_translate: Union[float, Callable] = 0,
-        z_translate: Union[float, Callable] = 0,
-        x_scale: Union[float, Callable] = 1,
-        y_scale: Union[float, Callable] = 1,
-        z_scale: Union[float, Callable] = 1,
-        show_warnings: Union[bool, Callable] = False,
-        visible: Union[bool, Callable] = True,
-        arg: Any = None,
-        layer: Union[float, Callable] = 0,
-        parent: "Component" = None,
-        env: "Environment" = None,
-        **kwargs,
+            self,
+            filename: Union[str, Callable],
+            x: Union[float, Callable] = 0,
+            y: Union[float, Callable] = 0,
+            z: Union[float, Callable] = 0,
+            x_angle: Union[float, Callable] = 0,
+            y_angle: Union[float, Callable] = 0,
+            z_angle: Union[float, Callable] = 0,
+            x_translate: Union[float, Callable] = 0,
+            y_translate: Union[float, Callable] = 0,
+            z_translate: Union[float, Callable] = 0,
+            x_scale: Union[float, Callable] = 1,
+            y_scale: Union[float, Callable] = 1,
+            z_scale: Union[float, Callable] = 1,
+            show_warnings: Union[bool, Callable] = False,
+            visible: Union[bool, Callable] = True,
+            arg: Any = None,
+            layer: Union[float, Callable] = 0,
+            parent: "Component" = None,
+            env: "Environment" = None,
+            **kwargs,
     ):
-        super().__init__(
-            visible=visible, arg=arg, layer=layer, parent=parent, env=env, **kwargs
-        )
+        super().__init__(visible=visible, arg=arg, layer=layer, parent=parent, env=env, **kwargs)
+
+        global pywavefront
+        global visualization
+        global pyglet
 
         self.x = x
         self.y = y
@@ -27308,24 +25592,31 @@ class Animate3dObj(Animate3dBase):
         self.show_warnings = show_warnings
 
         self.register_dynamic_attributes(
-            "x y z x_angle y_angle z_angle x_translate y_translate z_translate x_scale y_scale z_scale filename show_warnings"
-        )
+            "x y z x_angle y_angle z_angle x_translate y_translate z_translate x_scale y_scale z_scale filename show_warnings")
         self.x_offset = 0
         self.y_offset = 0
         self.z_offset = 0
 
-        if "pywavefront" not in sys.modules:
-            global pywavefront
-            global visualization
-            try:
-                import pywavefront
-                from pywavefront import visualization
-            except ImportError:
-                pywavefront = None
+        try:
+            import pywavefront
+        except ImportError:
+            pywavefront = None
+
+        try:
+            import pyglet  # this is a requirement for visualization!
+        except ImportError:
+            pyglet = None
+
+        from pywavefront import visualization
 
     def draw(self, t):
+        global pywavefront
+        global visualization
+        global pyglet
         if pywavefront is None:
             raise ImportError("Animate3dObj requires pywavefront. Not found")
+        if pyglet is None:
+            raise ImportError("Animate3dObj requires pyglet. Not found")
 
         obj_filename = Path(self.filename(t))
         if not obj_filename.suffix:
@@ -27351,19 +25642,14 @@ class Animate3dObj(Animate3dBase):
             os.chdir(save_cwd)
             logging.basicConfig(level=save_logging_level)
 
-            self.env.obj_filenames[obj_filename] = pywavefront.Wavefront(
-                obj_filename, create_materials=create_materials
-            )
+            self.env.obj_filenames[obj_filename] = pywavefront.Wavefront(obj_filename,
+                                                                         create_materials=create_materials)
 
         obj = self.env.obj_filenames[obj_filename]
 
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glPushMatrix()
-        gl.glTranslate(
-            self.x(t) + self.x_offset,
-            self.y(t) + self.y_offset,
-            self.z(t) + self.z_offset,
-        )
+        gl.glTranslate(self.x(t) + self.x_offset, self.y(t) + self.y_offset, self.z(t) + self.z_offset)
         gl.glRotate(self.z_angle(t), 0.0, 0.0, 1.0)
         gl.glRotate(self.y_angle(t), 0.0, 1.0, 0.0)
         gl.glRotate(self.x_angle(t), 1.0, 0.0, 0.0)
@@ -27442,23 +25728,21 @@ class Animate3dRectangle(Animate3dBase):
     """
 
     def __init__(
-        self,
-        x0: Union[float, Callable] = 0,
-        y0: Union[float, Callable] = 0,
-        x1: Union[float, Callable] = 1,
-        y1: Union[float, Callable] = 1,
-        z: Union[float, Callable] = 0,
-        color: Union[ColorType, Callable] = "white",
-        visible: Union[bool, Callable] = True,
-        arg: Any = None,
-        layer: Union[float, Callable] = 0,
-        parent: "Component" = None,
-        env: "Environment" = None,
-        **kwargs,
+            self,
+            x0: Union[float, Callable] = 0,
+            y0: Union[float, Callable] = 0,
+            x1: Union[float, Callable] = 1,
+            y1: Union[float, Callable] = 1,
+            z: Union[float, Callable] = 0,
+            color: Union[ColorType, Callable] = "white",
+            visible: Union[bool, Callable] = True,
+            arg: Any = None,
+            layer: Union[float, Callable] = 0,
+            parent: "Component" = None,
+            env: "Environment" = None,
+            **kwargs,
     ):
-        super().__init__(
-            visible=visible, arg=arg, layer=layer, parent=parent, env=env, **kwargs
-        )
+        super().__init__(visible=visible, arg=arg, layer=layer, parent=parent, env=env, **kwargs)
 
         self.x0 = x0
         self.y0 = y0
@@ -27550,24 +25834,22 @@ class Animate3dLine(Animate3dBase):
     """
 
     def __init__(
-        self,
-        x0: Union[float, Callable] = 0,
-        y0: Union[float, Callable] = 0,
-        z0: Union[float, Callable] = 0,
-        x1: Union[float, Callable] = 1,
-        y1: Union[float, Callable] = 1,
-        z1: Union[float, Callable] = 0,
-        color: Union[ColorType, Callable] = "white",
-        visible: Union[bool, Callable] = True,
-        arg: Any = None,
-        layer: Union[float, Callable] = 0,
-        parent: "Component" = None,
-        env: "Environment" = None,
-        **kwargs,
+            self,
+            x0: Union[float, Callable] = 0,
+            y0: Union[float, Callable] = 0,
+            z0: Union[float, Callable] = 0,
+            x1: Union[float, Callable] = 1,
+            y1: Union[float, Callable] = 1,
+            z1: Union[float, Callable] = 0,
+            color: Union[ColorType, Callable] = "white",
+            visible: Union[bool, Callable] = True,
+            arg: Any = None,
+            layer: Union[float, Callable] = 0,
+            parent: "Component" = None,
+            env: "Environment" = None,
+            **kwargs,
     ):
-        super().__init__(
-            visible=visible, arg=arg, layer=layer, parent=parent, env=env, **kwargs
-        )
+        super().__init__(visible=visible, arg=arg, layer=layer, parent=parent, env=env, **kwargs)
 
         self.x0 = x0
         self.y0 = y0
@@ -27652,21 +25934,19 @@ class Animate3dGrid(Animate3dBase):
     """
 
     def __init__(
-        self,
-        x_range: Union[Iterable[float], Callable] = [0],
-        y_range: Union[Iterable[float], Callable] = [0],
-        z_range: Union[Iterable[float], Callable] = [0],
-        color: Union[ColorType, Callable] = "white",
-        visible: Union[bool, Callable] = True,
-        arg: Any = None,
-        layer: Union[float, Callable] = 0,
-        parent: "Component" = None,
-        env: "Environment" = None,
-        **kwargs,
+            self,
+            x_range: Union[Iterable[float], Callable] = [0],
+            y_range: Union[Iterable[float], Callable] = [0],
+            z_range: Union[Iterable[float], Callable] = [0],
+            color: Union[ColorType, Callable] = "white",
+            visible: Union[bool, Callable] = True,
+            arg: Any = None,
+            layer: Union[float, Callable] = 0,
+            parent: "Component" = None,
+            env: "Environment" = None,
+            **kwargs,
     ):
-        super().__init__(
-            visible=visible, arg=arg, layer=layer, parent=parent, env=env, **kwargs
-        )
+        super().__init__(visible=visible, arg=arg, layer=layer, parent=parent, env=env, **kwargs)
 
         self.x_range = x_range
         self.y_range = y_range
@@ -27682,72 +25962,24 @@ class Animate3dGrid(Animate3dBase):
 
         for x in x_range:
             for y in y_range:
-                draw_line3d(
-                    x0=x,
-                    y0=y,
-                    z0=min(z_range),
-                    x1=x,
-                    y1=y,
-                    z1=max(z_range),
-                    gl_color=gl_color,
-                )
+                draw_line3d(x0=x, y0=y, z0=min(z_range), x1=x, y1=y, z1=max(z_range), gl_color=gl_color)
 
             for z in z_range:
-                draw_line3d(
-                    x0=x,
-                    y0=min(y_range),
-                    z0=z,
-                    x1=x,
-                    y1=max(y_range),
-                    z1=z,
-                    gl_color=gl_color,
-                )
+                draw_line3d(x0=x, y0=min(y_range), z0=z, x1=x, y1=max(y_range), z1=z, gl_color=gl_color)
 
         for y in y_range:
             for x in x_range:
-                draw_line3d(
-                    x0=x,
-                    y0=y,
-                    z0=min(z_range),
-                    x1=x,
-                    y1=y,
-                    z1=max(z_range),
-                    gl_color=gl_color,
-                )
+                draw_line3d(x0=x, y0=y, z0=min(z_range), x1=x, y1=y, z1=max(z_range), gl_color=gl_color)
 
             for z in z_range:
-                draw_line3d(
-                    x0=min(x_range),
-                    y0=y,
-                    z0=z,
-                    x1=max(x_range),
-                    y1=y,
-                    z1=z,
-                    gl_color=gl_color,
-                )
+                draw_line3d(x0=min(x_range), y0=y, z0=z, x1=max(x_range), y1=y, z1=z, gl_color=gl_color)
 
         for z in z_range:
             for x in x_range:
-                draw_line3d(
-                    x0=x,
-                    y0=min(y_range),
-                    z0=z,
-                    x1=x,
-                    y1=max(y_range),
-                    z1=z,
-                    gl_color=gl_color,
-                )
+                draw_line3d(x0=x, y0=min(y_range), z0=z, x1=x, y1=max(y_range), z1=z, gl_color=gl_color)
 
             for y in y_range:
-                draw_line3d(
-                    x0=min(x_range),
-                    y0=y,
-                    z0=z,
-                    x1=max(x_range),
-                    y1=y,
-                    z1=z,
-                    gl_color=gl_color,
-                )
+                draw_line3d(x0=min(x_range), y0=y, z0=z, x1=max(x_range), y1=y, z1=z, gl_color=gl_color)
 
 
 class Animate3dBox(Animate3dBase):
@@ -27857,30 +26089,28 @@ class Animate3dBox(Animate3dBase):
     """
 
     def __init__(
-        self,
-        x_len: Union[float, Callable] = 1,
-        y_len: Union[float, Callable] = 1,
-        z_len: Union[float, Callable] = 1,
-        x: Union[float, Callable] = 0,
-        y: Union[float, Callable] = 0,
-        z: Union[float, Callable] = 0,
-        z_angle: Union[float, Callable] = 0,
-        x_ref: Union[float, Callable] = 0,
-        y_ref: Union[float, Callable] = 0,
-        z_ref: Union[float, Callable] = 0,
-        color: Union[ColorType, Callable] = "white",
-        edge_color: Union[ColorType, Callable] = "",
-        shaded: Union[bool, Callable] = False,
-        visible: Union[bool, Callable] = True,
-        arg: Any = None,
-        layer: Union[float, Callable] = 0,
-        parent: "Component" = None,
-        env: "Environment" = None,
-        **kwargs,
+            self,
+            x_len: Union[float, Callable] = 1,
+            y_len: Union[float, Callable] = 1,
+            z_len: Union[float, Callable] = 1,
+            x: Union[float, Callable] = 0,
+            y: Union[float, Callable] = 0,
+            z: Union[float, Callable] = 0,
+            z_angle: Union[float, Callable] = 0,
+            x_ref: Union[float, Callable] = 0,
+            y_ref: Union[float, Callable] = 0,
+            z_ref: Union[float, Callable] = 0,
+            color: Union[ColorType, Callable] = "white",
+            edge_color: Union[ColorType, Callable] = "",
+            shaded: Union[bool, Callable] = False,
+            visible: Union[bool, Callable] = True,
+            arg: Any = None,
+            layer: Union[float, Callable] = 0,
+            parent: "Component" = None,
+            env: "Environment" = None,
+            **kwargs,
     ):
-        super().__init__(
-            visible=visible, arg=arg, layer=layer, parent=parent, env=env, **kwargs
-        )
+        super().__init__(visible=visible, arg=arg, layer=layer, parent=parent, env=env, **kwargs)
 
         self.x_len = x_len
         self.y_len = y_len
@@ -27895,52 +26125,34 @@ class Animate3dBox(Animate3dBase):
         self.color = color
         self.edge_color = edge_color
         self.shaded = shaded
-        self.register_dynamic_attributes(
-            "x_len y_len z_len x y z z_angle x_ref y_ref z_ref color edge_color shaded"
-        )
+        self.register_dynamic_attributes("x_len y_len z_len x y z z_angle x_ref y_ref z_ref color edge_color shaded")
         self.x_offset = 0
         self.y_offset = 0
         self.z_offset = 0
 
     def draw(self, t):
         gl_color, show = self.env.colorspec_to_gl_color_alpha(self.color(t))
-        gl_edge_color, show_edge = self.env.colorspec_to_gl_color_alpha(
-            self.edge_color(t)
+        gl_edge_color, show_edge = self.env.colorspec_to_gl_color_alpha(self.edge_color(t))
+
+        draw_box3d(
+            x_len=self.x_len(t),
+            y_len=self.y_len(t),
+            z_len=self.z_len(t),
+            x=self.x(t) + self.x_offset,
+            y=self.y(t) + self.y_offset,
+            z=self.z(t) + self.z_offset,
+            x_angle=0,
+            y_angle=0,
+            z_angle=self.z_angle(t),
+            x_ref=self.x_ref(t),
+            y_ref=self.y_ref(t),
+            z_ref=self.z_ref(t),
+            gl_color=gl_color,
+            show=show,
+            edge_gl_color=gl_edge_color,
+            show_edge=show_edge,
+            shaded=self.shaded(t),
         )
-        x = self.x(t)
-        y = self.y(t)
-        z = self.z(t)
-        x_ref = self.x_ref(t)
-        y_ref = self.y_ref(t)
-        z_ref = self.z_ref(t)
-        x_len = self.x_len(t)
-        y_len = self.y_len(t)
-        z_len = self.z_len(t)
-
-        x_c = (x + x_ref / 2 * x_len) + 0
-        y_c = (y + y_ref / 2 * y_len) + 0
-        z_c = (z + z_ref / 2 * z_len) + 0
-
-        if self.is_point_in_frustum(t):
-            draw_box3d(
-                x_len=self.x_len(t),
-                y_len=self.y_len(t),
-                z_len=self.z_len(t),
-                x=self.x(t) + self.x_offset,
-                y=self.y(t) + self.y_offset,
-                z=self.z(t) + self.z_offset,
-                x_angle=0,
-                y_angle=0,
-                z_angle=self.z_angle(t),
-                x_ref=self.x_ref(t),
-                y_ref=self.y_ref(t),
-                z_ref=self.z_ref(t),
-                gl_color=gl_color,
-                show=show,
-                edge_gl_color=gl_edge_color,
-                show_edge=show_edge,
-                shaded=self.shaded(t),
-            )
 
 
 class Animate3dBar(Animate3dBase):
@@ -28042,30 +26254,28 @@ class Animate3dBar(Animate3dBase):
     """
 
     def __init__(
-        self,
-        x0: Union[float, Callable] = 0,
-        y0: Union[float, Callable] = 0,
-        z0: Union[float, Callable] = 0,
-        x1: Union[float, Callable] = 1,
-        y1: Union[float, Callable] = 1,
-        z1: Union[float, Callable] = 1,
-        color: Union[ColorType, Callable] = "white",
-        edge_color: Union[ColorType, Callable] = "",
-        bar_width: Union[float, Callable] = 1,
-        bar_width_2: Union[float, Callable] = None,
-        shaded: Union[bool, Callable] = False,
-        rotation_angle: Union[float, Callable] = 0,
-        show_lids: Union[bool, Callable] = True,
-        visible: Union[bool, Callable] = True,
-        arg: Any = None,
-        layer: Union[float, Callable] = 0,
-        parent: "Component" = None,
-        env: "Environment" = None,
-        **kwargs,
+            self,
+            x0: Union[float, Callable] = 0,
+            y0: Union[float, Callable] = 0,
+            z0: Union[float, Callable] = 0,
+            x1: Union[float, Callable] = 1,
+            y1: Union[float, Callable] = 1,
+            z1: Union[float, Callable] = 1,
+            color: Union[ColorType, Callable] = "white",
+            edge_color: Union[ColorType, Callable] = "",
+            bar_width: Union[float, Callable] = 1,
+            bar_width_2: Union[float, Callable] = None,
+            shaded: Union[bool, Callable] = False,
+            rotation_angle: Union[float, Callable] = 0,
+            show_lids: Union[bool, Callable] = True,
+            visible: Union[bool, Callable] = True,
+            arg: Any = None,
+            layer: Union[float, Callable] = 0,
+            parent: "Component" = None,
+            env: "Environment" = None,
+            **kwargs,
     ):
-        super().__init__(
-            visible=visible, arg=arg, layer=layer, parent=parent, env=env, **kwargs
-        )
+        super().__init__(visible=visible, arg=arg, layer=layer, parent=parent, env=env, **kwargs)
 
         self.x0 = x0
         self.y0 = y0
@@ -28081,8 +26291,7 @@ class Animate3dBar(Animate3dBase):
         self.rotation_angle = rotation_angle
         self.show_lids = show_lids
         self.register_dynamic_attributes(
-            "x0 y0 z0 x1 y1 z1 color bar_width bar_width_2 edge_color shaded rotation_angle show_lids"
-        )
+            "x0 y0 z0 x1 y1 z1 color bar_width bar_width_2 edge_color shaded rotation_angle show_lids")
         self.x_offset = 0
         self.y_offset = 0
         self.z_offset = 0
@@ -28095,9 +26304,7 @@ class Animate3dBar(Animate3dBase):
         bar_width = self.bar_width(t)
         bar_width_2 = self.bar_width_2(t)
         gl_color, show = self.env.colorspec_to_gl_color_alpha(self.color(t))
-        edge_gl_color, show_edge = self.env.colorspec_to_gl_color_alpha(
-            self.edge_color(t)
-        )
+        edge_gl_color, show_edge = self.env.colorspec_to_gl_color_alpha(self.edge_color(t))
         shaded = self.shaded(t)
         rotation_angle = self.rotation_angle(t)
         show_lids = self.show_lids(t)
@@ -28207,28 +26414,26 @@ class Animate3dCylinder(Animate3dBase):
     """
 
     def __init__(
-        self,
-        x0: Union[float, Callable] = 0,
-        y0: Union[float, Callable] = 0,
-        z0: Union[float, Callable] = 0,
-        x1: Union[float, Callable] = 1,
-        y1: Union[float, Callable] = 1,
-        z1: Union[float, Callable] = 1,
-        color: Union[ColorType, Callable] = "white",
-        radius: Union[float, Callable] = 1,
-        number_of_sides: Union[int, Callable] = 8,
-        rotation_angle: Union[float, Callable] = 0,
-        show_lids: Union[bool, Callable] = True,
-        visible: Union[bool, Callable] = True,
-        arg: Any = None,
-        layer: Union[float, Callable] = 0,
-        parent: "Component" = None,
-        env: "Environment" = None,
-        **kwargs,
+            self,
+            x0: Union[float, Callable] = 0,
+            y0: Union[float, Callable] = 0,
+            z0: Union[float, Callable] = 0,
+            x1: Union[float, Callable] = 1,
+            y1: Union[float, Callable] = 1,
+            z1: Union[float, Callable] = 1,
+            color: Union[ColorType, Callable] = "white",
+            radius: Union[float, Callable] = 1,
+            number_of_sides: Union[int, Callable] = 8,
+            rotation_angle: Union[float, Callable] = 0,
+            show_lids: Union[bool, Callable] = True,
+            visible: Union[bool, Callable] = True,
+            arg: Any = None,
+            layer: Union[float, Callable] = 0,
+            parent: "Component" = None,
+            env: "Environment" = None,
+            **kwargs,
     ):
-        super().__init__(
-            visible=visible, arg=arg, layer=layer, parent=parent, env=env, **kwargs
-        )
+        super().__init__(visible=visible, arg=arg, layer=layer, parent=parent, env=env, **kwargs)
         self.x0 = x0
         self.y0 = y0
         self.z0 = z0
@@ -28240,9 +26445,7 @@ class Animate3dCylinder(Animate3dBase):
         self.number_of_sides = number_of_sides
         self.rotation_angle = rotation_angle
         self.show_lids = show_lids
-        self.register_dynamic_attributes(
-            "x0 y0 z0 x1 y1 z1 color radius number_of_sides rotation_angle show_lids"
-        )
+        self.register_dynamic_attributes("x0 y0 z0 x1 y1 z1 color radius number_of_sides rotation_angle show_lids")
         self.x_offset = 0
         self.y_offset = 0
         self.z_offset = 0
@@ -28338,24 +26541,22 @@ class Animate3dSphere(Animate3dBase):
     """
 
     def __init__(
-        self,
-        radius: Union[float, Callable] = 1,
-        x: Union[float, Callable] = 0,
-        y: Union[float, Callable] = 0,
-        z: Union[float, Callable] = 0,
-        color: Union[ColorType, Callable] = "white",
-        number_of_slices: Union[int, Callable] = 32,
-        number_of_stacks: Union[int, Callable] = None,
-        visible: Union[bool, Callable] = True,
-        arg: Any = None,
-        layer: Union[float, Callable] = 0,
-        parent: "Component" = None,
-        env: "Environment" = None,
-        **kwargs,
+            self,
+            radius: Union[float, Callable] = 1,
+            x: Union[float, Callable] = 0,
+            y: Union[float, Callable] = 0,
+            z: Union[float, Callable] = 0,
+            color: Union[ColorType, Callable] = "white",
+            number_of_slices: Union[int, Callable] = 32,
+            number_of_stacks: Union[int, Callable] = None,
+            visible: Union[bool, Callable] = True,
+            arg: Any = None,
+            layer: Union[float, Callable] = 0,
+            parent: "Component" = None,
+            env: "Environment" = None,
+            **kwargs,
     ):
-        super().__init__(
-            visible=visible, arg=arg, layer=layer, parent=parent, env=env, **kwargs
-        )
+        super().__init__(visible=visible, arg=arg, layer=layer, parent=parent, env=env, **kwargs)
 
         self.radius = radius
         self.x = x
@@ -28364,9 +26565,7 @@ class Animate3dSphere(Animate3dBase):
         self.color = color
         self.number_of_slices = number_of_slices
         self.number_of_stacks = number_of_stacks
-        self.register_dynamic_attributes(
-            "radius x y z color number_of_slices number_of_stacks"
-        )
+        self.register_dynamic_attributes("radius x y z color number_of_slices number_of_stacks")
         self.x_offset = 0
         self.y_offset = 0
         self.z_offset = 0
@@ -28385,21 +26584,21 @@ class Animate3dSphere(Animate3dBase):
 
 
 def draw_bar3d(
-    x0=0,
-    y0=0,
-    z0=0,
-    x1=1,
-    y1=1,
-    z1=1,
-    gl_color=(1, 1, 1),
-    show=True,
-    edge_gl_color=(1, 1, 1),
-    show_edge=False,
-    bar_width=1,
-    bar_width_2=None,
-    rotation_angle=0,
-    shaded=False,
-    show_lids=True,
+        x0=0,
+        y0=0,
+        z0=0,
+        x1=1,
+        y1=1,
+        z1=1,
+        gl_color=(1, 1, 1),
+        show=True,
+        edge_gl_color=(1, 1, 1),
+        show_edge=False,
+        bar_width=1,
+        bar_width_2=None,
+        rotation_angle=0,
+        shaded=False,
+        show_lids=True,
 ):
     """
     draws a 3d bar (should be added to the event loop by encapsulating with Animate3dBase)
@@ -28441,8 +26640,8 @@ def draw_bar3d(
     dy = y1 - y0
     dz = z1 - z0
 
-    length = math.sqrt(dx**2 + dy**2 + dz**2)
-    y_angle = -math.degrees(math.atan2(dz, math.sqrt(dx**2 + dy**2)))
+    length = math.sqrt(dx ** 2 + dy ** 2 + dz ** 2)
+    y_angle = -math.degrees(math.atan2(dz, math.sqrt(dx ** 2 + dy ** 2)))
     z_angle = math.degrees(math.atan2(dy, dx))
     bar_width_2 = bar_width if bar_width_2 is None else bar_width_2
 
@@ -28468,19 +26667,8 @@ def draw_bar3d(
     )
 
 
-def draw_cylinder3d(
-    x0=0,
-    y0=0,
-    z0=0,
-    x1=1,
-    y1=1,
-    z1=1,
-    gl_color=(1, 1, 1),
-    radius=1,
-    number_of_sides=8,
-    rotation_angle=0,
-    show_lids=True,
-):
+def draw_cylinder3d(x0=0, y0=0, z0=0, x1=1, y1=1, z1=1, gl_color=(1, 1, 1), radius=1, number_of_sides=8,
+                    rotation_angle=0, show_lids=True):
     """
     draws a 3d cylinder (should be added to the event loop by encapsulating with Animate3dBase)
 
@@ -28513,8 +26701,8 @@ def draw_cylinder3d(
     dy = y1 - y0
     dz = z1 - z0
 
-    length = math.sqrt(dx**2 + dy**2 + dz**2)
-    y_angle = -math.degrees(math.atan2(dz, math.sqrt(dx**2 + dy**2)))
+    length = math.sqrt(dx ** 2 + dy ** 2 + dz ** 2)
+    y_angle = -math.degrees(math.atan2(dz, math.sqrt(dx ** 2 + dy ** 2)))
     z_angle = math.degrees(math.atan2(dy, dx))
     x_angle = rotation_angle
     gl.glPushMatrix()
@@ -28554,9 +26742,7 @@ def draw_cylinder3d(
 
     """ draw sides """
     gl.glBegin(gl.GL_QUADS)
-    for i, (two_d_vertex0, two_d_vertex1) in enumerate(
-        zip(two_d_vertices, two_d_vertices[1:])
-    ):
+    for i, (two_d_vertex0, two_d_vertex1) in enumerate(zip(two_d_vertices, two_d_vertices[1:])):
         a1 = math.radians((start_angle + (i + 0.5) * step_angle))
         gl.glNormal3f(0, math.cos(a1), math.sin(a1))
         gl.glVertex3f(0, *two_d_vertex0)
@@ -28627,24 +26813,24 @@ def draw_rectangle3d(x0=0, y0=0, z=0, x1=1, y1=1, gl_color=(1, 1, 1)):
 
 
 def draw_box3d(
-    x_len=1,
-    y_len=1,
-    z_len=1,
-    x=0,
-    y=0,
-    z=0,
-    x_angle=0,
-    y_angle=0,
-    z_angle=0,
-    x_ref=0,
-    y_ref=0,
-    z_ref=0,
-    gl_color=(1, 1, 1),
-    show=True,
-    edge_gl_color=(1, 1, 1),
-    show_edge=False,
-    shaded=False,
-    _show_lids=True,
+        x_len=1,
+        y_len=1,
+        z_len=1,
+        x=0,
+        y=0,
+        z=0,
+        x_angle=0,
+        y_angle=0,
+        z_angle=0,
+        x_ref=0,
+        y_ref=0,
+        z_ref=0,
+        gl_color=(1, 1, 1),
+        show=True,
+        edge_gl_color=(1, 1, 1),
+        show_edge=False,
+        shaded=False,
+        _show_lids=True,
 ):
     """
     draws a 3d box (should be added to the event loop by encapsulating with Animate3dBase)
@@ -28704,16 +26890,8 @@ def draw_box3d(
     z1 = ((z_ref - 1) / 2) * z_len
     z2 = ((z_ref + 1) / 2) * z_len
 
-    bv = [
-        [x1, y1, z1],
-        [x2, y1, z1],
-        [x2, y2, z1],
-        [x1, y2, z1],
-        [x1, y1, z2],
-        [x2, y1, z2],
-        [x2, y2, z2],
-        [x1, y2, z2],
-    ]
+    bv = [[x1, y1, z1], [x2, y1, z1], [x2, y2, z1], [x1, y2, z1], [x1, y1, z2], [x2, y1, z2], [x2, y2, z2],
+          [x1, y2, z2]]
 
     gl.glPushMatrix()
 
@@ -28825,15 +27003,7 @@ def draw_box3d(
     gl.glPopMatrix()
 
 
-def draw_sphere3d(
-    x=0,
-    y=0,
-    z=0,
-    radius=1,
-    number_of_slices=32,
-    number_of_stacks=None,
-    gl_color=(1, 1, 1),
-):
+def draw_sphere3d(x=0, y=0, z=0, radius=1, number_of_slices=32, number_of_stacks=None, gl_color=(1, 1, 1)):
     """
     draws a 3d spere (should be added to the event loop by encapsulating with Animate3dBase)
 
@@ -28850,12 +27020,8 @@ def draw_sphere3d(
     gl.glTranslate(x, y, z)
     gl.glMaterialfv(gl.GL_FRONT, gl.GL_AMBIENT_AND_DIFFUSE, gl_color)
 
-    glu.gluSphere(
-        quadratic,
-        radius,
-        number_of_slices,
-        number_of_slices if number_of_stacks is None else number_of_stacks,
-    )
+    glu.gluSphere(quadratic, radius, number_of_slices,
+                  number_of_slices if number_of_stacks is None else number_of_stacks)
 
     gl.glPopMatrix()
 
@@ -28864,7 +27030,8 @@ def _std_fonts():
     # the names of the standard fonts are generated by ttf fontdict.py on the standard development machine
     if not hasattr(_std_fonts, "cached"):
         _std_fonts.cached = pickle.loads(
-            b"(dp0\nVHuxley_Titling\np1\nVHuxley Titling\np2\nsVGlock___\np3\nVGlockenspiel\np4\nsVPENLIIT_\np5\nVPenultimateLightItal\np6\nsVERASMD\np7\nVEras Medium ITC\np8\nsVNirmala\np9\nVNirmala UI\np10\nsVebrimabd\np11\nVEbrima Bold\np12\nsVostrich-dashed\np13\nVOstrich Sans Dashed Medium\np14\nsVLato-Hairline\np15\nVLato Hairline\np16\nsVLTYPEO\np17\nVLucida Sans Typewriter Oblique\np18\nsVbnmachine\np19\nVBN Machine\np20\nsVLTYPEB\np21\nVLucida Sans Typewriter Bold\np22\nsVBOOKOSI\np23\nVBookman Old Style Italic\np24\nsVEmmett__\np25\nVEmmett\np26\nsVCURLZ___\np27\nVCurlz MT\np28\nsVhandmeds\np29\nVHand Me Down S (BRK)\np30\nsVsegoesc\np31\nVSegoe Script\np32\nsVTCM_____\np33\nVTw Cen MT\np34\nsVJosefinSlab-ThinItalic\np35\nVJosefin Slab Thin Italic\np36\nsVSTENCIL\np37\nVStencil\np38\nsVsanss___\np39\nVSansSerif\np40\nsVBOD_CI\np41\nVBodoni MT Condensed Italic\np42\nsVGreek_i\np43\nVGreek Diner Inline TT\np44\nsVHTOWERT\np45\nVHigh Tower Text\np46\nsVTCCB____\np47\nVTw Cen MT Condensed Bold\np48\nsVCools___\np49\nVCoolsville\np50\nsVbnjinx\np51\nVBN Jinx\np52\nsVFREESCPT\np53\nVFreestyle Script\np54\nsVGARA\np55\nVGaramond\np56\nsVDejaVuSansMono\np57\nVDejaVu Sans Mono Book\np58\nsVCALVIN__\np59\nVCalvin\np60\nsVGIL_____\np61\nVGill Sans MT\np62\nsVCandaraz\np63\nVCandara Bold Italic\np64\nsVVollkorn-Bold\np65\nVVollkorn Bold\np66\nsVariblk\np67\nVArial Black\np68\nsVGOTHIC\np69\nVCentury Gothic\np70\nsVMAIAN\np71\nVMaiandra GD\np72\nsVBSSYM7\np73\nVBookshelf Symbol 7\np74\nsVAcme____\np75\nVAcmeFont\np76\nsVDetente_\np77\nVDetente\np78\nsVCandarai\np79\nVCandara Italic\np80\nsVFTLTLT\np81\nVFootlight MT Light\np82\nsVGILC____\np83\nVGill Sans MT Condensed\np84\nsVLFAXD\np85\nVLucida Fax Demibold\np86\nsVNIAGSOL\np87\nVNiagara Solid\np88\nsVLFAXI\np89\nVLucida Fax Italic\np90\nsVCandarab\np91\nVCandara Bold\np92\nsVFRSCRIPT\np93\nVFrench Script MT\np94\nsVLBRITE\np95\nVLucida Bright\np96\nsVFRABK\np97\nVFranklin Gothic Book\np98\nsVostrich-bold\np99\nVOstrich Sans Bold\np100\nsVTCCM____\np101\nVTw Cen MT Condensed\np102\nsVcorbelz\np103\nVCorbel Bold Italic\np104\nsVTCMI____\np105\nVTw Cen MT Italic\np106\nsVethnocen\np107\nVEthnocentric\np108\nsVVINERITC\np109\nVViner Hand ITC\np110\nsVROCKB\np111\nVRockwell Bold\np112\nsVconsola\np113\nVConsolas\np114\nsVcorbeli\np115\nVCorbel Italic\np116\nsVPENUL___\np117\nVPenultimate\np118\nsVMAGNETOB\np119\nVMagneto Bold\np120\nsVisocp___\np121\nVISOCP\np122\nsVQUIVEIT_\np123\nVQuiverItal\np124\nsVARLRDBD\np125\nVArial Rounded MT Bold\np126\nsVJosefinSlab-SemiBold\np127\nVJosefin Slab SemiBold\np128\nsVntailub\np129\nVMicrosoft New Tai Lue Bold\np130\nsVflubber\np131\nVFlubber\np132\nsVBASKVILL\np133\nVBaskerville Old Face\np134\nsVGILB____\np135\nVGill Sans MT Bold\np136\nsVPERTILI\np137\nVPerpetua Titling MT Light\np138\nsVLato-HairlineItalic\np139\nVLato Hairline Italic\np140\nsVComfortaa-Light\np141\nVComfortaa Light\np142\nsVtrebucit\np143\nVTrebuchet MS Italic\np144\nsVmalgunbd\np145\nVMalgun Gothic Bold\np146\nsVITCBLKAD\np147\nVBlackadder ITC\np148\nsVsansso__\np149\nVSansSerif Oblique\np150\nsVCALISTBI\np151\nVCalisto MT Bold Italic\np152\nsVsyastro_\np153\nVSyastro\np154\nsVSamsungIF_Md\np155\nVSamsung InterFace Medium\np156\nsVHombre__\np157\nVHombre\np158\nsVseguiemj\np159\nVSegoe UI Emoji\np160\nsVFRAHVIT\np161\nVFranklin Gothic Heavy Italic\np162\nsVJUICE___\np163\nVJuice ITC\np164\nsVFRAMDCN\np165\nVFranklin Gothic Medium Cond\np166\nsVseguisb\np167\nVSegoe UI Semibold\np168\nsVconsolai\np169\nVConsolas Italic\np170\nsVGLECB\np171\nVGloucester MT Extra Condensed\np172\nsVframd\np173\nVFranklin Gothic Medium\np174\nsVSCHLBKI\np175\nVCentury Schoolbook Italic\np176\nsVCENTAUR\np177\nVCentaur\np178\nsVromantic\np179\nVRomantic\np180\nsVBOD_CB\np181\nVBodoni MT Condensed Bold\np182\nsVverdana\np183\nVVerdana\np184\nsVTangerine_Regular\np185\nVTangerine\np186\nsVseguili\np187\nVSegoe UI Light Italic\np188\nsVNunito-Regular\np189\nVNunito\np190\nsVSCHLBKB\np191\nVCentury Schoolbook Bold\np192\nsVGOTHICB\np193\nVCentury Gothic Bold\np194\nsVpalai\np195\nVPalatino Linotype Italic\np196\nsVBKANT\np197\nVBook Antiqua\np198\nsVLato-Italic\np199\nVLato Italic\np200\nsVPERBI___\np201\nVPerpetua Bold Italic\np202\nsVGOTHICI\np203\nVCentury Gothic Italic\np204\nsVROCKBI\np205\nVRockwell Bold Italic\np206\nsVLTYPEBO\np207\nVLucida Sans Typewriter Bold Oblique\np208\nsVAmeth___\np209\nVAmethyst\np210\nsVyearsupplyoffairycakes\np211\nVYear supply of fairy cakes\np212\nsVGILBI___\np213\nVGill Sans MT Bold Italic\np214\nsVBOOKOS\np215\nVBookman Old Style\np216\nsVVollkorn-Italic\np217\nVVollkorn Italic\np218\nsVswiss\np219\nVSwis721 BT Roman\np220\nsVcomsc\np221\nVCommercialScript BT\np222\nsVchinyen\np223\nVChinyen Normal\np224\nsVeurr____\np225\nVEuroRoman\np226\nsVROCK\np227\nVRockwell\np228\nsVPERTIBD\np229\nVPerpetua Titling MT Bold\np230\nsVCHILLER\np231\nVChiller\np232\nsVtechb___\np233\nVTechnicBold\np234\nsVLato-Light\np235\nVLato Light\np236\nsVOUTLOOK\np237\nVMS Outlook\np238\nsVmtproxy6\np239\nVProxy 6\np240\nsVdutcheb\np241\nVDutch801 XBd BT Extra Bold\np242\nsVgadugib\np243\nVGadugi Bold\np244\nsVBOD_CR\np245\nVBodoni MT Condensed\np246\nsVmtproxy7\np247\nVProxy 7\np248\nsVnobile_bold\np249\nVNobile Bold\np250\nsVELEPHNT\np251\nVElephant\np252\nsVCOPRGTL\np253\nVCopperplate Gothic Light\np254\nsVMTCORSVA\np255\nVMonotype Corsiva\np256\nsVconsolaz\np257\nVConsolas Bold Italic\np258\nsVBOOKOSBI\np259\nVBookman Old Style Bold Italic\np260\nsVtrebuc\np261\nVTrebuchet MS\np262\nsVcomici\np263\nVComic Sans MS Italic\np264\nsVJosefinSlab-BoldItalic\np265\nVJosefin Slab Bold Italic\np266\nsVMycalc__\np267\nVMycalc\np268\nsVmarlett\np269\nVMarlett\np270\nsVsymeteo_\np271\nVSymeteo\np272\nsVcandles_\np273\nVCandles\np274\nsVbobcat\np275\nVBobcat Normal\np276\nsVLSANSDI\np277\nVLucida Sans Demibold Italic\np278\nsVINFROMAN\np279\nVInformal Roman\np280\nsVsf movie poster2\np281\nVSF Movie Poster\np282\nsVcomicz\np283\nVComic Sans MS Bold Italic\np284\nsVcracj___\np285\nVCracked Johnnie\np286\nsVcourbd\np287\nVCourier New Bold\np288\nsVItali___\np289\nVItalianate\np290\nsVITCEDSCR\np291\nVEdwardian Script ITC\np292\nsVcourbi\np293\nVCourier New Bold Italic\np294\nsVcalibrili\np295\nVCalibri Light Italic\np296\nsVgazzarelli\np297\nVGazzarelli\np298\nsVGabriola\np299\nVGabriola\np300\nsVVollkorn-BoldItalic\np301\nVVollkorn Bold Italic\np302\nsVromant__\np303\nVRomanT\np304\nsVisoct3__\np305\nVISOCT3\np306\nsVsegoeuib\np307\nVSegoe UI Bold\np308\nsVtimesbd\np309\nVTimes New Roman Bold\np310\nsVgoodtime\np311\nVGood Times\np312\nsVsegoeuii\np313\nVSegoe UI Italic\np314\nsVBOD_BLAR\np315\nVBodoni MT Black\np316\nsVhimalaya\np317\nVMicrosoft Himalaya\np318\nsVsegoeuil\np319\nVSegoe UI Light\np320\nsVPermanentMarker\np321\nVPermanent Marker\np322\nsVBOD_BLAI\np323\nVBodoni MT Black Italic\np324\nsVTCBI____\np325\nVTw Cen MT Bold Italic\np326\nsVarial\np327\nVArial\np328\nsVBrand___\np329\nVBrandish\np330\nsVsegoeuiz\np331\nVSegoe UI Bold Italic\np332\nsVswisscb\np333\nVSwis721 Cn BT Bold\np334\nsVPAPYRUS\np335\nVPapyrus\np336\nsVANTIC___\np337\nVAnticFont\np338\nsVGIGI\np339\nVGigi\np340\nsVENGR\np341\nVEngravers MT\np342\nsVsegmdl2\np343\nVSegoe MDL2 Assets\np344\nsVBRLNSDB\np345\nVBerlin Sans FB Demi Bold\np346\nsVLato-BoldItalic\np347\nVLato Bold Italic\np348\nsVholomdl2\np349\nVHoloLens MDL2 Assets\np350\nsVBRITANIC\np351\nVBritannic Bold\np352\nsVNirmalaB\np353\nVNirmala UI Bold\np354\nsVVollkorn-Regular\np355\nVVollkorn\np356\nsVStephen_\np357\nVStephen\np358\nsVbabyk___\np359\nVBaby Kruffy\np360\nsVHARVEST_\np361\nVHarvest\np362\nsVKUNSTLER\np363\nVKunstler Script\np364\nsVstylu\np365\nVStylus BT Roman\np366\nsVWINGDNG3\np367\nVWingdings 3\np368\nsVWINGDNG2\np369\nVWingdings 2\np370\nsVlucon\np371\nVLucida Console\np372\nsVCandara\np373\nVCandara\np374\nsVBERNHC\np375\nVBernard MT Condensed\np376\nsVtechnic_\np377\nVTechnic\np378\nsVLimou___\np379\nVLimousine\np380\nsVTCB_____\np381\nVTw Cen MT Bold\np382\nsVPirate__\np383\nVPirate\np384\nsVFrnkvent\np385\nVFrankfurter Venetian TT\np386\nsVromand__\np387\nVRomanD\np388\nsVLTYPE\np389\nVLucida Sans Typewriter\np390\nsVSHOWG\np391\nVShowcard Gothic\np392\nsVMOD20\np393\nVModern No. 20\np394\nsVostrich-rounded\np395\nVOstrich Sans Rounded Medium\np396\nsVJosefinSlab-Italic\np397\nVJosefin Slab Italic\np398\nsVneon2\np399\nVNeon Lights\np400\nsVpalabi\np401\nVPalatino Linotype Bold Italic\np402\nsVwoodcut\np403\nVWoodcut\np404\nsVToledo__\np405\nVToledo\np406\nsVverdanai\np407\nVVerdana Italic\np408\nsVSamsungIF_Rg\np409\nVSamsung InterFace\np410\nsVtrebucbd\np411\nVTrebuchet MS Bold\np412\nsVPALSCRI\np413\nVPalace Script MT\np414\nsVComfortaa-Regular\np415\nVComfortaa\np416\nsVmicross\np417\nVMicrosoft Sans Serif\np418\nsVseguisli\np419\nVSegoe UI Semilight Italic\np420\nsVtaile\np421\nVMicrosoft Tai Le\np422\nsVcour\np423\nVCourier New\np424\nsVparryhotter\np425\nVParry Hotter\np426\nsVgreekc__\np427\nVGreekC\np428\nsVRAGE\np429\nVRage Italic\np430\nsVMATURASC\np431\nVMatura MT Script Capitals\np432\nsVBASTION_\np433\nVBastion\np434\nsVREFSAN\np435\nVMS Reference Sans Serif\np436\nsVterminat\np437\nVTerminator Two\np438\nsVmmrtextb\np439\nVMyanmar Text Bold\np440\nsVgothici_\np441\nVGothicI\np442\nsVmonotxt_\np443\nVMonotxt\np444\nsVcorbelb\np445\nVCorbel Bold\np446\nsVVALKEN__\np447\nVValken\np448\nsVRowdyhe_\np449\nVRowdyHeavy\np450\nsVLato-Black\np451\nVLato Black\np452\nsVswisski\np453\nVSwis721 Blk BT Black Italic\np454\nsVcouri\np455\nVCourier New Italic\np456\nsVMTEXTRA\np457\nVMT Extra\np458\nsVsanssbo_\np459\nVSansSerif BoldOblique\np460\nsVl_10646\np461\nVLucida Sans Unicode\np462\nsVLato-BlackItalic\np463\nVLato Black Italic\np464\nsVseguibli\np465\nVSegoe UI Black Italic\np466\nsVGeotype\np467\nVGeotype TT\np468\nsVxfiles\np469\nVX-Files\np470\nsVjavatext\np471\nVJavanese Text\np472\nsVseguisym\np473\nVSegoe UI Symbol\np474\nsVverdanaz\np475\nVVerdana Bold Italic\np476\nsVGILI____\np477\nVGill Sans MT Italic\np478\nsVALGER\np479\nVAlgerian\np480\nsVAGENCYR\np481\nVAgency FB\np482\nsVnobile\np483\nVNobile\np484\nsVHaxton\np485\nVHaxton Logos TT\np486\nsVswissbo\np487\nVSwis721 BdOul BT Bold\np488\nsVBELLI\np489\nVBell MT Italic\np490\nsVBROADW\np491\nVBroadway\np492\nsVsegoepr\np493\nVSegoe Print\np494\nsVGILLUBCD\np495\nVGill Sans Ultra Bold Condensed\np496\nsVverdanab\np497\nVVerdana Bold\np498\nsVSalina__\np499\nVSalina\np500\nsVAGENCYB\np501\nVAgency FB Bold\np502\nsVAutumn__\np503\nVAutumn\np504\nsVGOUDOS\np505\nVGoudy Old Style\np506\nsVconstanz\np507\nVConstantia Bold Italic\np508\nsVPOORICH\np509\nVPoor Richard\np510\nsVPRISTINA\np511\nVPristina\np512\nsVLATINWD\np513\nVWide Latin\np514\nsVromanc__\np515\nVRomanC\np516\nsVLeelawUI\np517\nVLeelawadee UI\np518\nsVitalict_\np519\nVItalicT\np520\nsVostrich-regular\np521\nVOstrich Sans Medium\np522\nsVmonosbi\np523\nVMonospac821 BT Bold Italic\np524\nsVcambriai\np525\nVCambria Italic\np526\nsVisocp2__\np527\nVISOCP2\np528\nsVltromatic\np529\nVLetterOMatic!\np530\nsVbgothm\np531\nVBankGothic Md BT Medium\np532\nsVbgothl\np533\nVBankGothic Lt BT Light\np534\nsVSwkeys1\np535\nVSWGamekeys MT\np536\nsVCENSCBK\np537\nVCentury Schoolbook\np538\nsVgothicg_\np539\nVGothicG\np540\nsValmosnow\np541\nVAlmonte Snow\np542\nsVTangerine_Bold\np543\nVTangerine Bold\np544\nsVswisseb\np545\nVSwis721 Ex BT Bold\np546\nsVCOLONNA\np547\nVColonna MT\np548\nsVsupef___\np549\nVSuperFrench\np550\nsVTCCEB\np551\nVTw Cen MT Condensed Extra Bold\np552\nsVsylfaen\np553\nVSylfaen\np554\nsVcomicbd\np555\nVComic Sans MS Bold\np556\nsVRoland__\np557\nVRoland\np558\nsVELEPHNTI\np559\nVElephant Italic\np560\nsVmmrtext\np561\nVMyanmar Text\np562\nsVsymap___\np563\nVSymap\np564\nsVswissko\np565\nVSwis721 BlkOul BT Black\np566\nsVswissck\np567\nVSwis721 BlkCn BT Black\np568\nsVWhimsy\np569\nVWhimsy TT\np570\nsVsanssb__\np571\nVSansSerif Bold\np572\nsVtaileb\np573\nVMicrosoft Tai Le Bold\np574\nsVcomic\np575\nVComic Sans MS\np576\nsVGLSNECB\np577\nVGill Sans MT Ext Condensed Bold\np578\nsVColbert_\np579\nVColbert\np580\nsVJOKERMAN\np581\nVJokerman\np582\nsVARIALNB\np583\nVArial Narrow Bold\np584\nsVDOMIN___\np585\nVDominican\np586\nsVBRUSHSCI\np587\nVBrush Script MT Italic\np588\nsVCALLI___\np589\nVCalligraphic\np590\nsVFRADM\np591\nVFranklin Gothic Demi\np592\nsVJosefinSlab-LightItalic\np593\nVJosefin Slab Light Italic\np594\nsVsimplex_\np595\nVSimplex\np596\nsVphagspab\np597\nVMicrosoft PhagsPa Bold\np598\nsVswissek\np599\nVSwis721 BlkEx BT Black\np600\nsVscripts_\np601\nVScriptS\np602\nsVswisscl\np603\nVSwis721 LtCn BT Light\np604\nsVCASTELAR\np605\nVCastellar\np606\nsVdutchi\np607\nVDutch801 Rm BT Italic\np608\nsVnasaliza\np609\nVNasalization Medium\np610\nsVariali\np611\nVArial Italic\np612\nsVOpinehe_\np613\nVOpineHeavy\np614\nsVPLAYBILL\np615\nVPlaybill\np616\nsVROCCB___\np617\nVRockwell Condensed Bold\np618\nsVCALIST\np619\nVCalisto MT\np620\nsVCALISTB\np621\nVCalisto MT Bold\np622\nsVHATTEN\np623\nVHaettenschweiler\np624\nsVntailu\np625\nVMicrosoft New Tai Lue\np626\nsVCALISTI\np627\nVCalisto MT Italic\np628\nsVsegoeprb\np629\nVSegoe Print Bold\np630\nsVDAYTON__\np631\nVDayton\np632\nsVswissel\np633\nVSwis721 LtEx BT Light\np634\nsVmael____\np635\nVMael\np636\nsVisoct2__\np637\nVISOCT2\np638\nsVBorea___\np639\nVBorealis\np640\nsVwingding\np641\nVWingdings\np642\nsVONYX\np643\nVOnyx\np644\nsVmonosi\np645\nVMonospac821 BT Italic\np646\nsVtimesi\np647\nVTimes New Roman Italic\np648\nsVostrich-light\np649\nVOstrich Sans Condensed Light\np650\nsVseguihis\np651\nVSegoe UI Historic\np652\nsVNovem___\np653\nVNovember\np654\nsVOCRAEXT\np655\nVOCR A Extended\np656\nsVostrich-black\np657\nVOstrich Sans Black\np658\nsVnarrow\np659\nVPR Celtic Narrow Normal\np660\nsVitalic__\np661\nVItalic\np662\nsVmonosb\np663\nVMonospac821 BT Bold\np664\nsVPERB____\np665\nVPerpetua Bold\np666\nsVCreteRound-Regular\np667\nVCrete Round\np668\nsVcalibri\np669\nVCalibri\np670\nsVSCRIPTBL\np671\nVScript MT Bold\np672\nsVComfortaa-Bold\np673\nVComfortaa Bold\np674\nsVARIALN\np675\nVArial Narrow\np676\nsVHARNGTON\np677\nVHarrington\np678\nsVJosefinSlab-Bold\np679\nVJosefin Slab Bold\np680\nsVVIVALDII\np681\nVVivaldi Italic\np682\nsVhollh___\np683\nVHollywood Hills\np684\nsVBOD_R\np685\nVBodoni MT\np686\nsVSkinny__\np687\nVSkinny\np688\nsVLBRITED\np689\nVLucida Bright Demibold\np690\nsVframdit\np691\nVFranklin Gothic Medium Italic\np692\nsVsymusic_\np693\nVSymusic\np694\nsVgadugi\np695\nVGadugi\np696\nsVswissbi\np697\nVSwis721 BT Bold Italic\np698\nsVBOD_B\np699\nVBodoni MT Bold\np700\nsVERASDEMI\np701\nVEras Demi ITC\np702\nsVWaverly_\np703\nVWaverly\np704\nsVcompi\np705\nVCommercialPi BT\np706\nsVBOD_I\np707\nVBodoni MT Italic\np708\nsVconstan\np709\nVConstantia\np710\nsVARIALNBI\np711\nVArial Narrow Bold Italic\np712\nsVarialbi\np713\nVArial Bold Italic\np714\nsVJosefinSlab-Light\np715\nVJosefin Slab Light\np716\nsVBOD_CBI\np717\nVBodoni MT Condensed Bold Italic\np718\nsVwebdings\np719\nVWebdings\np720\nsVRAVIE\np721\nVRavie\np722\nsVROCC____\np723\nVRockwell Condensed\np724\nsVFELIXTI\np725\nVFelix Titling\np726\nsVRussrite\np727\nVRussel Write TT\np728\nsVisocteur\np729\nVISOCTEUR\np730\nsVLSANSD\np731\nVLucida Sans Demibold Roman\np732\nsVmalgun\np733\nVMalgun Gothic\np734\nsVheavyhea2\np735\nVHeavy Heap\np736\nsVGOUDYSTO\np737\nVGoudy Stout\np738\nsVVLADIMIR\np739\nVVladimir Script\np740\nsVARIALUNI\np741\nVArial Unicode MS\np742\nsVJosefinSlab-Thin\np743\nVJosefin Slab Thin\np744\nsVFRADMCN\np745\nVFranklin Gothic Demi Cond\np746\nsVBlackout-2am\np747\nVBlackout 2 AM\np748\nsVpalab\np749\nVPalatino Linotype Bold\np750\nsVDejaVuSansMono-Oblique\np751\nVDejaVu Sans Mono Oblique\np752\nsVANTQUABI\np753\nVBook Antiqua Bold Italic\np754\nsVswissc\np755\nVSwis721 Cn BT Roman\np756\nsVSPLASH__\np757\nVSplash\np758\nsVNIAGENG\np759\nVNiagara Engraved\np760\nsVCOPRGTB\np761\nVCopperplate Gothic Bold\np762\nsVBruss___\np763\nVBrussels\np764\nsVconsolab\np765\nVConsolas Bold\np766\nsVGOTHICBI\np767\nVCentury Gothic Bold Italic\np768\nsVmtproxy4\np769\nVProxy 4\np770\nsVmtproxy5\np771\nVProxy 5\np772\nsVromai___\np773\nVRomantic Italic\np774\nsVFRABKIT\np775\nVFranklin Gothic Book Italic\np776\nsVBELL\np777\nVBell MT\np778\nsVmtproxy1\np779\nVProxy 1\np780\nsVmtproxy2\np781\nVProxy 2\np782\nsVmtproxy3\np783\nVProxy 3\np784\nsVLCALLIG\np785\nVLucida Calligraphy Italic\np786\nsVphagspa\np787\nVMicrosoft PhagsPa\np788\nsVANTQUAI\np789\nVBook Antiqua Italic\np790\nsVmtproxy8\np791\nVProxy 8\np792\nsVmtproxy9\np793\nVProxy 9\np794\nsVLato-Bold\np795\nVLato Bold\np796\nsVtxt_____\np797\nVTxt\np798\nsVconstanb\np799\nVConstantia Bold\np800\nsVERASBD\np801\nVEras Bold ITC\np802\nsVLato-LightItalic\np803\nVLato Light Italic\np804\nsVRONDALO_\np805\nVRondalo\np806\nsVconstani\np807\nVConstantia Italic\np808\nsVBRLNSB\np809\nVBerlin Sans FB Bold\np810\nsVgeorgiaz\np811\nVGeorgia Bold Italic\np812\nsVgothice_\np813\nVGothicE\np814\nsVcalibriz\np815\nVCalibri Bold Italic\np816\nsVgeorgiab\np817\nVGeorgia Bold\np818\nsVLeelaUIb\np819\nVLeelawadee UI Bold\np820\nsVtimesbi\np821\nVTimes New Roman Bold Italic\np822\nsVPERI____\np823\nVPerpetua Italic\np824\nsVromab___\np825\nVRomantic Bold\np826\nsVBRLNSR\np827\nVBerlin Sans FB\np828\nsVBELLB\np829\nVBell MT Bold\np830\nsVgeorgiai\np831\nVGeorgia Italic\np832\nsVNirmalaS\np833\nVNirmala UI Semilight\np834\nsVdutchb\np835\nVDutch801 Rm BT Bold\np836\nsVdigifit\np837\nVDigifit Normal\np838\nsVROCKEB\np839\nVRockwell Extra Bold\np840\nsVgdt_____\np841\nVGDT\np842\nsVmonbaiti\np843\nVMongolian Baiti\np844\nsVsegoescb\np845\nVSegoe Script Bold\np846\nsVsymath__\np847\nVSymath\np848\nsVisoct___\np849\nVISOCT\np850\nsVTarzan__\np851\nVTarzan\np852\nsVsnowdrft\np853\nVSnowdrift\np854\nsVHTOWERTI\np855\nVHigh Tower Text Italic\np856\nsVCENTURY\np857\nVCentury\np858\nsVmalgunsl\np859\nVMalgun Gothic Semilight\np860\nsVseguibl\np861\nVSegoe UI Black\np862\nsVCreteRound-Italic\np863\nVCrete Round Italic\np864\nsVAlfredo_\np865\nVAlfredo\np866\nsVCOMMONS_\np867\nVCommons\np868\nsVLFAX\np869\nVLucida Fax\np870\nsVLBRITEI\np871\nVLucida Bright Italic\np872\nsVFRAHV\np873\nVFranklin Gothic Heavy\np874\nsVisocteui\np875\nVISOCTEUR Italic\np876\nsVManorly_\np877\nVManorly\np878\nsVBolstbo_\np879\nVBolsterBold Bold\np880\nsVsegoeui\np881\nVSegoe UI\np882\nsVNunito-Light\np883\nVNunito Light\np884\nsVIMPRISHA\np885\nVImprint MT Shadow\np886\nsVgeorgia\np887\nVGeorgia\np888\nsV18cents\np889\nV18thCentury\np890\nsVMOONB___\np891\nVMoonbeam\np892\nsVPER_____\np893\nVPerpetua\np894\nsVHansen__\np895\nVHansen\np896\nsVLato-Regular\np897\nVLato\np898\nsVBOUTON_International_symbols\np899\nVBOUTON International Symbols\np900\nsVCOOPBL\np901\nVCooper Black\np902\nsVmonos\np903\nVMonospac821 BT Roman\np904\nsVtahoma\np905\nVTahoma\np906\nsVcityb___\np907\nVCityBlueprint\np908\nsVswisscbi\np909\nVSwis721 Cn BT Bold Italic\np910\nsVEnliven_\np911\nVEnliven\np912\nsVLeelUIsl\np913\nVLeelawadee UI Semilight\np914\nsVCALIFR\np915\nVCalifornian FB\np916\nsVumath\np917\nVUniversalMath1 BT\np918\nsVswisscbo\np919\nVSwis721 BdCnOul BT Bold Outline\np920\nsVcomplex_\np921\nVComplex\np922\nsVBOOKOSB\np923\nVBookman Old Style Bold\np924\nsVMartina_\np925\nVMartina\np926\nsVromans__\np927\nVRomanS\np928\nsVmvboli\np929\nVMV Boli\np930\nsVCALIFI\np931\nVCalifornian FB Italic\np932\nsVGARABD\np933\nVGaramond Bold\np934\nsVebrima\np935\nVEbrima\np936\nsVTEMPSITC\np937\nVTempus Sans ITC\np938\nsVCALIFB\np939\nVCalifornian FB Bold\np940\nsVitalicc_\np941\nVItalicC\np942\nsVisocp3__\np943\nVISOCP3\np944\nsVscriptc_\np945\nVScriptC\np946\nsValiee13\np947\nVAlien Encounters\np948\nsVnobile_italic\np949\nVNobile Italic\np950\nsVGARAIT\np951\nVGaramond Italic\np952\nsVswissli\np953\nVSwis721 Lt BT Light Italic\np954\nsVCabinSketch-Bold\np955\nVCabinSketch Bold\np956\nsVcorbel\np957\nVCorbel\np958\nsVseguisbi\np959\nVSegoe UI Semibold Italic\np960\nsVSCHLBKBI\np961\nVCentury Schoolbook Bold Italic\np962\nsVasimov\np963\nVAsimov\np964\nsVLFAXDI\np965\nVLucida Fax Demibold Italic\np966\nsVBRADHITC\np967\nVBradley Hand ITC\np968\nsVswisscki\np969\nVSwis721 BlkCn BT Black Italic\np970\nsVGILSANUB\np971\nVGill Sans Ultra Bold\np972\nsVHARLOWSI\np973\nVHarlow Solid Italic Italic\np974\nsVHARVEIT_\np975\nVHarvestItal\np976\nsVcambriab\np977\nVCambria Bold\np978\nsVswissci\np979\nVSwis721 Cn BT Italic\np980\nsVcounb___\np981\nVCountryBlueprint\np982\nsVNotram__\np983\nVNotram\np984\nsVPENULLI_\np985\nVPenultimateLight\np986\nsVtahomabd\np987\nVTahoma Bold\np988\nsVMISTRAL\np989\nVMistral\np990\nsVpala\np991\nVPalatino Linotype\np992\nsVOLDENGL\np993\nVOld English Text MT\np994\nsVinductio\np995\nVInduction Normal\np996\nsVJosefinSlab-SemiBoldItalic\np997\nVJosefin Slab SemiBold Italic\np998\nsVMinerva_\np999\nVMinerva\np1000\nsVsymbol\np1001\nVSymbol\np1002\nsVcambriaz\np1003\nVCambria Bold Italic\np1004\nsVtrebucbi\np1005\nVTrebuchet MS Bold Italic\np1006\nsVtimes\np1007\nVTimes New Roman\np1008\nsVERASLGHT\np1009\nVEras Light ITC\np1010\nsVSteppes\np1011\nVSteppes TT\np1012\nsVREFSPCL\np1013\nVMS Reference Specialty\np1014\nsVPARCHM\np1015\nVParchment\np1016\nsVDejaVuSansMono-Bold\np1017\nVDejaVu Sans Mono Bold\np1018\nsVswisscli\np1019\nVSwis721 LtCn BT Light Italic\np1020\nsVLSANS\np1021\nVLucida Sans\np1022\nsVPhrasme_\np1023\nVPhrasticMedium\np1024\nsVDejaVuSansMono-BoldOblique\np1025\nVDejaVu Sans Mono Bold Oblique\np1026\nsVarialbd\np1027\nVArial Bold\np1028\nsVSNAP____\np1029\nVSnap ITC\np1030\nsVArchitectsDaughter\np1031\nVArchitects Daughter\np1032\nsVCorpo___\np1033\nVCorporate\np1034\nsVeurro___\np1035\nVEuroRoman Oblique\np1036\nsVimpact\np1037\nVImpact\np1038\nsVlittlelo\np1039\nVLittleLordFontleroy\np1040\nsVsimsunb\np1041\nVSimSun-ExtB\np1042\nsVARIALNI\np1043\nVArial Narrow Italic\np1044\nsVdutchbi\np1045\nVDutch801 Rm BT Bold Italic\np1046\nsVcalibrii\np1047\nVCalibri Italic\np1048\nsVDeneane_\np1049\nVDeneane\np1050\nsVFRADMIT\np1051\nVFranklin Gothic Demi Italic\np1052\nsVANTQUAB\np1053\nVBook Antiqua Bold\np1054\nsVcalibril\np1055\nVCalibri Light\np1056\nsVisocpeui\np1057\nVISOCPEUR Italic\np1058\nsVpanroman\np1059\nVPanRoman\np1060\nsVMelodbo_\np1061\nVMelodBold Bold\np1062\nsVcalibrib\np1063\nVCalibri Bold\np1064\nsVdistant galaxy 2\np1065\nVDistant Galaxy\np1066\nsVPacifico\np1067\nVPacifico\np1068\nsVnobile_bold_italic\np1069\nVNobile Bold Italic\np1070\nsVmsyi\np1071\nVMicrosoft Yi Baiti\np1072\nsVBOD_PSTC\np1073\nVBodoni MT Poster Compressed\np1074\nsVLSANSI\np1075\nVLucida Sans Italic\np1076\nsVcreerg__\np1077\nVCreepygirl\np1078\nsVsegoeuisl\np1079\nVSegoe UI Semilight\np1080\nsVvinet\np1081\nVVineta BT\np1082\nsVisocpeur\np1083\nVISOCPEUR\np1084\nsVtechl___\np1085\nVTechnicLite\np1086\nsVswissb\np1087\nVSwis721 BT Bold\np1088\nsVCLARE___\np1089\nVClarendon\np1090\nsVdutch\np1091\nVDutch801 Rm BT Roman\np1092\nsVLBRITEDI\np1093\nVLucida Bright Demibold Italic\np1094\nsVswisse\np1095\nVSwis721 Ex BT Roman\np1096\nsVswissk\np1097\nVSwis721 Blk BT Black\np1098\nsVswissi\np1099\nVSwis721 BT Italic\np1100\nsVfingerpop2\np1101\nVFingerpop\np1102\nsVswissl\np1103\nVSwis721 Lt BT Light\np1104\nsVBAUHS93\np1105\nVBauhaus 93\np1106\nsVVivian__\np1107\nVVivian\np1108\nsVgreeks__\np1109\nVGreekS\np1110\nsVGOUDOSI\np1111\nVGoudy Old Style Italic\np1112\nsVBOD_BI\np1113\nVBodoni MT Bold Italic\np1114\nsVLHANDW\np1115\nVLucida Handwriting Italic\np1116\nsVITCKRIST\np1117\nVKristen ITC\np1118\nsVBALTH___\np1119\nVBalthazar\np1120\nsVFORTE\np1121\nVForte\np1122\nsVJosefinSlab-Regular\np1123\nVJosefin Slab\np1124\nsVROCKI\np1125\nVRockwell Italic\np1126\nsVGOUDOSB\np1127\nVGoudy Old Style Bold\np1128\nsVLEELAWAD\np1129\nVLeelawadee\np1130\nsVLEELAWDB\np1131\nVLeelawadee Bold\np1132\nsVmarlett_0\np1133\nVMarlett\np1134\nsVmplus-1m-bold\np1135\nVM+ 1m bold\np1136\nsVmplus-1m-light\np1137\nVM+ 1m light\np1138\nsVmplus-1m-medium\np1139\nVM+ 1m medium\np1140\nsVmplus-1m-regular\np1141\nVM+ 1m\np1142\nsVmplus-1m-thin\np1143\nVM+ 1m thin\np1144\nsVMSUIGHUB\np1145\nVMicrosoft Uighur Bold\np1146\nsVMSUIGHUR\np1147\nVMicrosoft Uighur\np1148\nsVSamsungIF_Md_0\np1149\nVSamsung InterFace Medium\np1150\nsVSamsungIF_Rg_0\np1151\nVSamsung InterFace\np1152\nsVbahnschrift\np1153\nVBahnschrift\np1154\nsVBowlbyOneSC-Regular\np1155\nVBowlby One SC\np1156\nsVCabinSketch-Regular\np1157\nVCabin Sketch\np1158\nsVCookie-Regular\np1159\nVCookie\np1160\nsVCourgette-Regular\np1161\nVCourgette\np1162\nsVdead\np1163\nVDead Kansas\np1164\nsVDoppioOne-Regular\np1165\nVDoppio One\np1166\nsVeuphorig\np1167\nVEuphorigenic\np1168\nsVGreatVibes-Regular\np1169\nVGreat Vibes\np1170\nsVKalam-Bold\np1171\nVKalam Bold\np1172\nsVKalam-Light\np1173\nVKalam Light\np1174\nsVKalam-Regular\np1175\nVKalam\np1176\nsVLemon-Regular\np1177\nVLemon\np1178\nsVLimelight-Regular\np1179\nVLimelight\np1180\nsVMegrim\np1181\nVMegrim Medium\np1182\nsVMontserratSubrayada-Bold\np1183\nVMontserrat Subrayada Bold\np1184\nsVNotoSans-Regular\np1185\nVNoto Sans\np1186\nsVRussoOne-Regular\np1187\nVRusso One\np1188\nsVSigmarOne-Regular\np1189\nVSigmar One\np1190\nsVYellowtail-Regular\np1191\nVYellowtail\np1192\ns."  # NOQA
+            b"(dp0\nVHuxley_Titling\np1\nVHuxley Titling\np2\nsVGlock___\np3\nVGlockenspiel\np4\nsVPENLIIT_\np5\nVPenultimateLightItal\np6\nsVERASMD\np7\nVEras Medium ITC\np8\nsVNirmala\np9\nVNirmala UI\np10\nsVebrimabd\np11\nVEbrima Bold\np12\nsVostrich-dashed\np13\nVOstrich Sans Dashed Medium\np14\nsVLato-Hairline\np15\nVLato Hairline\np16\nsVLTYPEO\np17\nVLucida Sans Typewriter Oblique\np18\nsVbnmachine\np19\nVBN Machine\np20\nsVLTYPEB\np21\nVLucida Sans Typewriter Bold\np22\nsVBOOKOSI\np23\nVBookman Old Style Italic\np24\nsVEmmett__\np25\nVEmmett\np26\nsVCURLZ___\np27\nVCurlz MT\np28\nsVhandmeds\np29\nVHand Me Down S (BRK)\np30\nsVsegoesc\np31\nVSegoe Script\np32\nsVTCM_____\np33\nVTw Cen MT\np34\nsVJosefinSlab-ThinItalic\np35\nVJosefin Slab Thin Italic\np36\nsVSTENCIL\np37\nVStencil\np38\nsVsanss___\np39\nVSansSerif\np40\nsVBOD_CI\np41\nVBodoni MT Condensed Italic\np42\nsVGreek_i\np43\nVGreek Diner Inline TT\np44\nsVHTOWERT\np45\nVHigh Tower Text\np46\nsVTCCB____\np47\nVTw Cen MT Condensed Bold\np48\nsVCools___\np49\nVCoolsville\np50\nsVbnjinx\np51\nVBN Jinx\np52\nsVFREESCPT\np53\nVFreestyle Script\np54\nsVGARA\np55\nVGaramond\np56\nsVDejaVuSansMono\np57\nVDejaVu Sans Mono Book\np58\nsVCALVIN__\np59\nVCalvin\np60\nsVGIL_____\np61\nVGill Sans MT\np62\nsVCandaraz\np63\nVCandara Bold Italic\np64\nsVVollkorn-Bold\np65\nVVollkorn Bold\np66\nsVariblk\np67\nVArial Black\np68\nsVGOTHIC\np69\nVCentury Gothic\np70\nsVMAIAN\np71\nVMaiandra GD\np72\nsVBSSYM7\np73\nVBookshelf Symbol 7\np74\nsVAcme____\np75\nVAcmeFont\np76\nsVDetente_\np77\nVDetente\np78\nsVCandarai\np79\nVCandara Italic\np80\nsVFTLTLT\np81\nVFootlight MT Light\np82\nsVGILC____\np83\nVGill Sans MT Condensed\np84\nsVLFAXD\np85\nVLucida Fax Demibold\np86\nsVNIAGSOL\np87\nVNiagara Solid\np88\nsVLFAXI\np89\nVLucida Fax Italic\np90\nsVCandarab\np91\nVCandara Bold\np92\nsVFRSCRIPT\np93\nVFrench Script MT\np94\nsVLBRITE\np95\nVLucida Bright\np96\nsVFRABK\np97\nVFranklin Gothic Book\np98\nsVostrich-bold\np99\nVOstrich Sans Bold\np100\nsVTCCM____\np101\nVTw Cen MT Condensed\np102\nsVcorbelz\np103\nVCorbel Bold Italic\np104\nsVTCMI____\np105\nVTw Cen MT Italic\np106\nsVethnocen\np107\nVEthnocentric\np108\nsVVINERITC\np109\nVViner Hand ITC\np110\nsVROCKB\np111\nVRockwell Bold\np112\nsVconsola\np113\nVConsolas\np114\nsVcorbeli\np115\nVCorbel Italic\np116\nsVPENUL___\np117\nVPenultimate\np118\nsVMAGNETOB\np119\nVMagneto Bold\np120\nsVisocp___\np121\nVISOCP\np122\nsVQUIVEIT_\np123\nVQuiverItal\np124\nsVARLRDBD\np125\nVArial Rounded MT Bold\np126\nsVJosefinSlab-SemiBold\np127\nVJosefin Slab SemiBold\np128\nsVntailub\np129\nVMicrosoft New Tai Lue Bold\np130\nsVflubber\np131\nVFlubber\np132\nsVBASKVILL\np133\nVBaskerville Old Face\np134\nsVGILB____\np135\nVGill Sans MT Bold\np136\nsVPERTILI\np137\nVPerpetua Titling MT Light\np138\nsVLato-HairlineItalic\np139\nVLato Hairline Italic\np140\nsVComfortaa-Light\np141\nVComfortaa Light\np142\nsVtrebucit\np143\nVTrebuchet MS Italic\np144\nsVmalgunbd\np145\nVMalgun Gothic Bold\np146\nsVITCBLKAD\np147\nVBlackadder ITC\np148\nsVsansso__\np149\nVSansSerif Oblique\np150\nsVCALISTBI\np151\nVCalisto MT Bold Italic\np152\nsVsyastro_\np153\nVSyastro\np154\nsVSamsungIF_Md\np155\nVSamsung InterFace Medium\np156\nsVHombre__\np157\nVHombre\np158\nsVseguiemj\np159\nVSegoe UI Emoji\np160\nsVFRAHVIT\np161\nVFranklin Gothic Heavy Italic\np162\nsVJUICE___\np163\nVJuice ITC\np164\nsVFRAMDCN\np165\nVFranklin Gothic Medium Cond\np166\nsVseguisb\np167\nVSegoe UI Semibold\np168\nsVconsolai\np169\nVConsolas Italic\np170\nsVGLECB\np171\nVGloucester MT Extra Condensed\np172\nsVframd\np173\nVFranklin Gothic Medium\np174\nsVSCHLBKI\np175\nVCentury Schoolbook Italic\np176\nsVCENTAUR\np177\nVCentaur\np178\nsVromantic\np179\nVRomantic\np180\nsVBOD_CB\np181\nVBodoni MT Condensed Bold\np182\nsVverdana\np183\nVVerdana\np184\nsVTangerine_Regular\np185\nVTangerine\np186\nsVseguili\np187\nVSegoe UI Light Italic\np188\nsVNunito-Regular\np189\nVNunito\np190\nsVSCHLBKB\np191\nVCentury Schoolbook Bold\np192\nsVGOTHICB\np193\nVCentury Gothic Bold\np194\nsVpalai\np195\nVPalatino Linotype Italic\np196\nsVBKANT\np197\nVBook Antiqua\np198\nsVLato-Italic\np199\nVLato Italic\np200\nsVPERBI___\np201\nVPerpetua Bold Italic\np202\nsVGOTHICI\np203\nVCentury Gothic Italic\np204\nsVROCKBI\np205\nVRockwell Bold Italic\np206\nsVLTYPEBO\np207\nVLucida Sans Typewriter Bold Oblique\np208\nsVAmeth___\np209\nVAmethyst\np210\nsVyearsupplyoffairycakes\np211\nVYear supply of fairy cakes\np212\nsVGILBI___\np213\nVGill Sans MT Bold Italic\np214\nsVBOOKOS\np215\nVBookman Old Style\np216\nsVVollkorn-Italic\np217\nVVollkorn Italic\np218\nsVswiss\np219\nVSwis721 BT Roman\np220\nsVcomsc\np221\nVCommercialScript BT\np222\nsVchinyen\np223\nVChinyen Normal\np224\nsVeurr____\np225\nVEuroRoman\np226\nsVROCK\np227\nVRockwell\np228\nsVPERTIBD\np229\nVPerpetua Titling MT Bold\np230\nsVCHILLER\np231\nVChiller\np232\nsVtechb___\np233\nVTechnicBold\np234\nsVLato-Light\np235\nVLato Light\np236\nsVOUTLOOK\np237\nVMS Outlook\np238\nsVmtproxy6\np239\nVProxy 6\np240\nsVdutcheb\np241\nVDutch801 XBd BT Extra Bold\np242\nsVgadugib\np243\nVGadugi Bold\np244\nsVBOD_CR\np245\nVBodoni MT Condensed\np246\nsVmtproxy7\np247\nVProxy 7\np248\nsVnobile_bold\np249\nVNobile Bold\np250\nsVELEPHNT\np251\nVElephant\np252\nsVCOPRGTL\np253\nVCopperplate Gothic Light\np254\nsVMTCORSVA\np255\nVMonotype Corsiva\np256\nsVconsolaz\np257\nVConsolas Bold Italic\np258\nsVBOOKOSBI\np259\nVBookman Old Style Bold Italic\np260\nsVtrebuc\np261\nVTrebuchet MS\np262\nsVcomici\np263\nVComic Sans MS Italic\np264\nsVJosefinSlab-BoldItalic\np265\nVJosefin Slab Bold Italic\np266\nsVMycalc__\np267\nVMycalc\np268\nsVmarlett\np269\nVMarlett\np270\nsVsymeteo_\np271\nVSymeteo\np272\nsVcandles_\np273\nVCandles\np274\nsVbobcat\np275\nVBobcat Normal\np276\nsVLSANSDI\np277\nVLucida Sans Demibold Italic\np278\nsVINFROMAN\np279\nVInformal Roman\np280\nsVsf movie poster2\np281\nVSF Movie Poster\np282\nsVcomicz\np283\nVComic Sans MS Bold Italic\np284\nsVcracj___\np285\nVCracked Johnnie\np286\nsVcourbd\np287\nVCourier New Bold\np288\nsVItali___\np289\nVItalianate\np290\nsVITCEDSCR\np291\nVEdwardian Script ITC\np292\nsVcourbi\np293\nVCourier New Bold Italic\np294\nsVcalibrili\np295\nVCalibri Light Italic\np296\nsVgazzarelli\np297\nVGazzarelli\np298\nsVGabriola\np299\nVGabriola\np300\nsVVollkorn-BoldItalic\np301\nVVollkorn Bold Italic\np302\nsVromant__\np303\nVRomanT\np304\nsVisoct3__\np305\nVISOCT3\np306\nsVsegoeuib\np307\nVSegoe UI Bold\np308\nsVtimesbd\np309\nVTimes New Roman Bold\np310\nsVgoodtime\np311\nVGood Times\np312\nsVsegoeuii\np313\nVSegoe UI Italic\np314\nsVBOD_BLAR\np315\nVBodoni MT Black\np316\nsVhimalaya\np317\nVMicrosoft Himalaya\np318\nsVsegoeuil\np319\nVSegoe UI Light\np320\nsVPermanentMarker\np321\nVPermanent Marker\np322\nsVBOD_BLAI\np323\nVBodoni MT Black Italic\np324\nsVTCBI____\np325\nVTw Cen MT Bold Italic\np326\nsVarial\np327\nVArial\np328\nsVBrand___\np329\nVBrandish\np330\nsVsegoeuiz\np331\nVSegoe UI Bold Italic\np332\nsVswisscb\np333\nVSwis721 Cn BT Bold\np334\nsVPAPYRUS\np335\nVPapyrus\np336\nsVANTIC___\np337\nVAnticFont\np338\nsVGIGI\np339\nVGigi\np340\nsVENGR\np341\nVEngravers MT\np342\nsVsegmdl2\np343\nVSegoe MDL2 Assets\np344\nsVBRLNSDB\np345\nVBerlin Sans FB Demi Bold\np346\nsVLato-BoldItalic\np347\nVLato Bold Italic\np348\nsVholomdl2\np349\nVHoloLens MDL2 Assets\np350\nsVBRITANIC\np351\nVBritannic Bold\np352\nsVNirmalaB\np353\nVNirmala UI Bold\np354\nsVVollkorn-Regular\np355\nVVollkorn\np356\nsVStephen_\np357\nVStephen\np358\nsVbabyk___\np359\nVBaby Kruffy\np360\nsVHARVEST_\np361\nVHarvest\np362\nsVKUNSTLER\np363\nVKunstler Script\np364\nsVstylu\np365\nVStylus BT Roman\np366\nsVWINGDNG3\np367\nVWingdings 3\np368\nsVWINGDNG2\np369\nVWingdings 2\np370\nsVlucon\np371\nVLucida Console\np372\nsVCandara\np373\nVCandara\np374\nsVBERNHC\np375\nVBernard MT Condensed\np376\nsVtechnic_\np377\nVTechnic\np378\nsVLimou___\np379\nVLimousine\np380\nsVTCB_____\np381\nVTw Cen MT Bold\np382\nsVPirate__\np383\nVPirate\np384\nsVFrnkvent\np385\nVFrankfurter Venetian TT\np386\nsVromand__\np387\nVRomanD\np388\nsVLTYPE\np389\nVLucida Sans Typewriter\np390\nsVSHOWG\np391\nVShowcard Gothic\np392\nsVMOD20\np393\nVModern No. 20\np394\nsVostrich-rounded\np395\nVOstrich Sans Rounded Medium\np396\nsVJosefinSlab-Italic\np397\nVJosefin Slab Italic\np398\nsVneon2\np399\nVNeon Lights\np400\nsVpalabi\np401\nVPalatino Linotype Bold Italic\np402\nsVwoodcut\np403\nVWoodcut\np404\nsVToledo__\np405\nVToledo\np406\nsVverdanai\np407\nVVerdana Italic\np408\nsVSamsungIF_Rg\np409\nVSamsung InterFace\np410\nsVtrebucbd\np411\nVTrebuchet MS Bold\np412\nsVPALSCRI\np413\nVPalace Script MT\np414\nsVComfortaa-Regular\np415\nVComfortaa\np416\nsVmicross\np417\nVMicrosoft Sans Serif\np418\nsVseguisli\np419\nVSegoe UI Semilight Italic\np420\nsVtaile\np421\nVMicrosoft Tai Le\np422\nsVcour\np423\nVCourier New\np424\nsVparryhotter\np425\nVParry Hotter\np426\nsVgreekc__\np427\nVGreekC\np428\nsVRAGE\np429\nVRage Italic\np430\nsVMATURASC\np431\nVMatura MT Script Capitals\np432\nsVBASTION_\np433\nVBastion\np434\nsVREFSAN\np435\nVMS Reference Sans Serif\np436\nsVterminat\np437\nVTerminator Two\np438\nsVmmrtextb\np439\nVMyanmar Text Bold\np440\nsVgothici_\np441\nVGothicI\np442\nsVmonotxt_\np443\nVMonotxt\np444\nsVcorbelb\np445\nVCorbel Bold\np446\nsVVALKEN__\np447\nVValken\np448\nsVRowdyhe_\np449\nVRowdyHeavy\np450\nsVLato-Black\np451\nVLato Black\np452\nsVswisski\np453\nVSwis721 Blk BT Black Italic\np454\nsVcouri\np455\nVCourier New Italic\np456\nsVMTEXTRA\np457\nVMT Extra\np458\nsVsanssbo_\np459\nVSansSerif BoldOblique\np460\nsVl_10646\np461\nVLucida Sans Unicode\np462\nsVLato-BlackItalic\np463\nVLato Black Italic\np464\nsVseguibli\np465\nVSegoe UI Black Italic\np466\nsVGeotype\np467\nVGeotype TT\np468\nsVxfiles\np469\nVX-Files\np470\nsVjavatext\np471\nVJavanese Text\np472\nsVseguisym\np473\nVSegoe UI Symbol\np474\nsVverdanaz\np475\nVVerdana Bold Italic\np476\nsVGILI____\np477\nVGill Sans MT Italic\np478\nsVALGER\np479\nVAlgerian\np480\nsVAGENCYR\np481\nVAgency FB\np482\nsVnobile\np483\nVNobile\np484\nsVHaxton\np485\nVHaxton Logos TT\np486\nsVswissbo\np487\nVSwis721 BdOul BT Bold\np488\nsVBELLI\np489\nVBell MT Italic\np490\nsVBROADW\np491\nVBroadway\np492\nsVsegoepr\np493\nVSegoe Print\np494\nsVGILLUBCD\np495\nVGill Sans Ultra Bold Condensed\np496\nsVverdanab\np497\nVVerdana Bold\np498\nsVSalina__\np499\nVSalina\np500\nsVAGENCYB\np501\nVAgency FB Bold\np502\nsVAutumn__\np503\nVAutumn\np504\nsVGOUDOS\np505\nVGoudy Old Style\np506\nsVconstanz\np507\nVConstantia Bold Italic\np508\nsVPOORICH\np509\nVPoor Richard\np510\nsVPRISTINA\np511\nVPristina\np512\nsVLATINWD\np513\nVWide Latin\np514\nsVromanc__\np515\nVRomanC\np516\nsVLeelawUI\np517\nVLeelawadee UI\np518\nsVitalict_\np519\nVItalicT\np520\nsVostrich-regular\np521\nVOstrich Sans Medium\np522\nsVmonosbi\np523\nVMonospac821 BT Bold Italic\np524\nsVcambriai\np525\nVCambria Italic\np526\nsVisocp2__\np527\nVISOCP2\np528\nsVltromatic\np529\nVLetterOMatic!\np530\nsVbgothm\np531\nVBankGothic Md BT Medium\np532\nsVbgothl\np533\nVBankGothic Lt BT Light\np534\nsVSwkeys1\np535\nVSWGamekeys MT\np536\nsVCENSCBK\np537\nVCentury Schoolbook\np538\nsVgothicg_\np539\nVGothicG\np540\nsValmosnow\np541\nVAlmonte Snow\np542\nsVTangerine_Bold\np543\nVTangerine Bold\np544\nsVswisseb\np545\nVSwis721 Ex BT Bold\np546\nsVCOLONNA\np547\nVColonna MT\np548\nsVsupef___\np549\nVSuperFrench\np550\nsVTCCEB\np551\nVTw Cen MT Condensed Extra Bold\np552\nsVsylfaen\np553\nVSylfaen\np554\nsVcomicbd\np555\nVComic Sans MS Bold\np556\nsVRoland__\np557\nVRoland\np558\nsVELEPHNTI\np559\nVElephant Italic\np560\nsVmmrtext\np561\nVMyanmar Text\np562\nsVsymap___\np563\nVSymap\np564\nsVswissko\np565\nVSwis721 BlkOul BT Black\np566\nsVswissck\np567\nVSwis721 BlkCn BT Black\np568\nsVWhimsy\np569\nVWhimsy TT\np570\nsVsanssb__\np571\nVSansSerif Bold\np572\nsVtaileb\np573\nVMicrosoft Tai Le Bold\np574\nsVcomic\np575\nVComic Sans MS\np576\nsVGLSNECB\np577\nVGill Sans MT Ext Condensed Bold\np578\nsVColbert_\np579\nVColbert\np580\nsVJOKERMAN\np581\nVJokerman\np582\nsVARIALNB\np583\nVArial Narrow Bold\np584\nsVDOMIN___\np585\nVDominican\np586\nsVBRUSHSCI\np587\nVBrush Script MT Italic\np588\nsVCALLI___\np589\nVCalligraphic\np590\nsVFRADM\np591\nVFranklin Gothic Demi\np592\nsVJosefinSlab-LightItalic\np593\nVJosefin Slab Light Italic\np594\nsVsimplex_\np595\nVSimplex\np596\nsVphagspab\np597\nVMicrosoft PhagsPa Bold\np598\nsVswissek\np599\nVSwis721 BlkEx BT Black\np600\nsVscripts_\np601\nVScriptS\np602\nsVswisscl\np603\nVSwis721 LtCn BT Light\np604\nsVCASTELAR\np605\nVCastellar\np606\nsVdutchi\np607\nVDutch801 Rm BT Italic\np608\nsVnasaliza\np609\nVNasalization Medium\np610\nsVariali\np611\nVArial Italic\np612\nsVOpinehe_\np613\nVOpineHeavy\np614\nsVPLAYBILL\np615\nVPlaybill\np616\nsVROCCB___\np617\nVRockwell Condensed Bold\np618\nsVCALIST\np619\nVCalisto MT\np620\nsVCALISTB\np621\nVCalisto MT Bold\np622\nsVHATTEN\np623\nVHaettenschweiler\np624\nsVntailu\np625\nVMicrosoft New Tai Lue\np626\nsVCALISTI\np627\nVCalisto MT Italic\np628\nsVsegoeprb\np629\nVSegoe Print Bold\np630\nsVDAYTON__\np631\nVDayton\np632\nsVswissel\np633\nVSwis721 LtEx BT Light\np634\nsVmael____\np635\nVMael\np636\nsVisoct2__\np637\nVISOCT2\np638\nsVBorea___\np639\nVBorealis\np640\nsVwingding\np641\nVWingdings\np642\nsVONYX\np643\nVOnyx\np644\nsVmonosi\np645\nVMonospac821 BT Italic\np646\nsVtimesi\np647\nVTimes New Roman Italic\np648\nsVostrich-light\np649\nVOstrich Sans Condensed Light\np650\nsVseguihis\np651\nVSegoe UI Historic\np652\nsVNovem___\np653\nVNovember\np654\nsVOCRAEXT\np655\nVOCR A Extended\np656\nsVostrich-black\np657\nVOstrich Sans Black\np658\nsVnarrow\np659\nVPR Celtic Narrow Normal\np660\nsVitalic__\np661\nVItalic\np662\nsVmonosb\np663\nVMonospac821 BT Bold\np664\nsVPERB____\np665\nVPerpetua Bold\np666\nsVCreteRound-Regular\np667\nVCrete Round\np668\nsVcalibri\np669\nVCalibri\np670\nsVSCRIPTBL\np671\nVScript MT Bold\np672\nsVComfortaa-Bold\np673\nVComfortaa Bold\np674\nsVARIALN\np675\nVArial Narrow\np676\nsVHARNGTON\np677\nVHarrington\np678\nsVJosefinSlab-Bold\np679\nVJosefin Slab Bold\np680\nsVVIVALDII\np681\nVVivaldi Italic\np682\nsVhollh___\np683\nVHollywood Hills\np684\nsVBOD_R\np685\nVBodoni MT\np686\nsVSkinny__\np687\nVSkinny\np688\nsVLBRITED\np689\nVLucida Bright Demibold\np690\nsVframdit\np691\nVFranklin Gothic Medium Italic\np692\nsVsymusic_\np693\nVSymusic\np694\nsVgadugi\np695\nVGadugi\np696\nsVswissbi\np697\nVSwis721 BT Bold Italic\np698\nsVBOD_B\np699\nVBodoni MT Bold\np700\nsVERASDEMI\np701\nVEras Demi ITC\np702\nsVWaverly_\np703\nVWaverly\np704\nsVcompi\np705\nVCommercialPi BT\np706\nsVBOD_I\np707\nVBodoni MT Italic\np708\nsVconstan\np709\nVConstantia\np710\nsVARIALNBI\np711\nVArial Narrow Bold Italic\np712\nsVarialbi\np713\nVArial Bold Italic\np714\nsVJosefinSlab-Light\np715\nVJosefin Slab Light\np716\nsVBOD_CBI\np717\nVBodoni MT Condensed Bold Italic\np718\nsVwebdings\np719\nVWebdings\np720\nsVRAVIE\np721\nVRavie\np722\nsVROCC____\np723\nVRockwell Condensed\np724\nsVFELIXTI\np725\nVFelix Titling\np726\nsVRussrite\np727\nVRussel Write TT\np728\nsVisocteur\np729\nVISOCTEUR\np730\nsVLSANSD\np731\nVLucida Sans Demibold Roman\np732\nsVmalgun\np733\nVMalgun Gothic\np734\nsVheavyhea2\np735\nVHeavy Heap\np736\nsVGOUDYSTO\np737\nVGoudy Stout\np738\nsVVLADIMIR\np739\nVVladimir Script\np740\nsVARIALUNI\np741\nVArial Unicode MS\np742\nsVJosefinSlab-Thin\np743\nVJosefin Slab Thin\np744\nsVFRADMCN\np745\nVFranklin Gothic Demi Cond\np746\nsVBlackout-2am\np747\nVBlackout 2 AM\np748\nsVpalab\np749\nVPalatino Linotype Bold\np750\nsVDejaVuSansMono-Oblique\np751\nVDejaVu Sans Mono Oblique\np752\nsVANTQUABI\np753\nVBook Antiqua Bold Italic\np754\nsVswissc\np755\nVSwis721 Cn BT Roman\np756\nsVSPLASH__\np757\nVSplash\np758\nsVNIAGENG\np759\nVNiagara Engraved\np760\nsVCOPRGTB\np761\nVCopperplate Gothic Bold\np762\nsVBruss___\np763\nVBrussels\np764\nsVconsolab\np765\nVConsolas Bold\np766\nsVGOTHICBI\np767\nVCentury Gothic Bold Italic\np768\nsVmtproxy4\np769\nVProxy 4\np770\nsVmtproxy5\np771\nVProxy 5\np772\nsVromai___\np773\nVRomantic Italic\np774\nsVFRABKIT\np775\nVFranklin Gothic Book Italic\np776\nsVBELL\np777\nVBell MT\np778\nsVmtproxy1\np779\nVProxy 1\np780\nsVmtproxy2\np781\nVProxy 2\np782\nsVmtproxy3\np783\nVProxy 3\np784\nsVLCALLIG\np785\nVLucida Calligraphy Italic\np786\nsVphagspa\np787\nVMicrosoft PhagsPa\np788\nsVANTQUAI\np789\nVBook Antiqua Italic\np790\nsVmtproxy8\np791\nVProxy 8\np792\nsVmtproxy9\np793\nVProxy 9\np794\nsVLato-Bold\np795\nVLato Bold\np796\nsVtxt_____\np797\nVTxt\np798\nsVconstanb\np799\nVConstantia Bold\np800\nsVERASBD\np801\nVEras Bold ITC\np802\nsVLato-LightItalic\np803\nVLato Light Italic\np804\nsVRONDALO_\np805\nVRondalo\np806\nsVconstani\np807\nVConstantia Italic\np808\nsVBRLNSB\np809\nVBerlin Sans FB Bold\np810\nsVgeorgiaz\np811\nVGeorgia Bold Italic\np812\nsVgothice_\np813\nVGothicE\np814\nsVcalibriz\np815\nVCalibri Bold Italic\np816\nsVgeorgiab\np817\nVGeorgia Bold\np818\nsVLeelaUIb\np819\nVLeelawadee UI Bold\np820\nsVtimesbi\np821\nVTimes New Roman Bold Italic\np822\nsVPERI____\np823\nVPerpetua Italic\np824\nsVromab___\np825\nVRomantic Bold\np826\nsVBRLNSR\np827\nVBerlin Sans FB\np828\nsVBELLB\np829\nVBell MT Bold\np830\nsVgeorgiai\np831\nVGeorgia Italic\np832\nsVNirmalaS\np833\nVNirmala UI Semilight\np834\nsVdutchb\np835\nVDutch801 Rm BT Bold\np836\nsVdigifit\np837\nVDigifit Normal\np838\nsVROCKEB\np839\nVRockwell Extra Bold\np840\nsVgdt_____\np841\nVGDT\np842\nsVmonbaiti\np843\nVMongolian Baiti\np844\nsVsegoescb\np845\nVSegoe Script Bold\np846\nsVsymath__\np847\nVSymath\np848\nsVisoct___\np849\nVISOCT\np850\nsVTarzan__\np851\nVTarzan\np852\nsVsnowdrft\np853\nVSnowdrift\np854\nsVHTOWERTI\np855\nVHigh Tower Text Italic\np856\nsVCENTURY\np857\nVCentury\np858\nsVmalgunsl\np859\nVMalgun Gothic Semilight\np860\nsVseguibl\np861\nVSegoe UI Black\np862\nsVCreteRound-Italic\np863\nVCrete Round Italic\np864\nsVAlfredo_\np865\nVAlfredo\np866\nsVCOMMONS_\np867\nVCommons\np868\nsVLFAX\np869\nVLucida Fax\np870\nsVLBRITEI\np871\nVLucida Bright Italic\np872\nsVFRAHV\np873\nVFranklin Gothic Heavy\np874\nsVisocteui\np875\nVISOCTEUR Italic\np876\nsVManorly_\np877\nVManorly\np878\nsVBolstbo_\np879\nVBolsterBold Bold\np880\nsVsegoeui\np881\nVSegoe UI\np882\nsVNunito-Light\np883\nVNunito Light\np884\nsVIMPRISHA\np885\nVImprint MT Shadow\np886\nsVgeorgia\np887\nVGeorgia\np888\nsV18cents\np889\nV18thCentury\np890\nsVMOONB___\np891\nVMoonbeam\np892\nsVPER_____\np893\nVPerpetua\np894\nsVHansen__\np895\nVHansen\np896\nsVLato-Regular\np897\nVLato\np898\nsVBOUTON_International_symbols\np899\nVBOUTON International Symbols\np900\nsVCOOPBL\np901\nVCooper Black\np902\nsVmonos\np903\nVMonospac821 BT Roman\np904\nsVtahoma\np905\nVTahoma\np906\nsVcityb___\np907\nVCityBlueprint\np908\nsVswisscbi\np909\nVSwis721 Cn BT Bold Italic\np910\nsVEnliven_\np911\nVEnliven\np912\nsVLeelUIsl\np913\nVLeelawadee UI Semilight\np914\nsVCALIFR\np915\nVCalifornian FB\np916\nsVumath\np917\nVUniversalMath1 BT\np918\nsVswisscbo\np919\nVSwis721 BdCnOul BT Bold Outline\np920\nsVcomplex_\np921\nVComplex\np922\nsVBOOKOSB\np923\nVBookman Old Style Bold\np924\nsVMartina_\np925\nVMartina\np926\nsVromans__\np927\nVRomanS\np928\nsVmvboli\np929\nVMV Boli\np930\nsVCALIFI\np931\nVCalifornian FB Italic\np932\nsVGARABD\np933\nVGaramond Bold\np934\nsVebrima\np935\nVEbrima\np936\nsVTEMPSITC\np937\nVTempus Sans ITC\np938\nsVCALIFB\np939\nVCalifornian FB Bold\np940\nsVitalicc_\np941\nVItalicC\np942\nsVisocp3__\np943\nVISOCP3\np944\nsVscriptc_\np945\nVScriptC\np946\nsValiee13\np947\nVAlien Encounters\np948\nsVnobile_italic\np949\nVNobile Italic\np950\nsVGARAIT\np951\nVGaramond Italic\np952\nsVswissli\np953\nVSwis721 Lt BT Light Italic\np954\nsVCabinSketch-Bold\np955\nVCabinSketch Bold\np956\nsVcorbel\np957\nVCorbel\np958\nsVseguisbi\np959\nVSegoe UI Semibold Italic\np960\nsVSCHLBKBI\np961\nVCentury Schoolbook Bold Italic\np962\nsVasimov\np963\nVAsimov\np964\nsVLFAXDI\np965\nVLucida Fax Demibold Italic\np966\nsVBRADHITC\np967\nVBradley Hand ITC\np968\nsVswisscki\np969\nVSwis721 BlkCn BT Black Italic\np970\nsVGILSANUB\np971\nVGill Sans Ultra Bold\np972\nsVHARLOWSI\np973\nVHarlow Solid Italic Italic\np974\nsVHARVEIT_\np975\nVHarvestItal\np976\nsVcambriab\np977\nVCambria Bold\np978\nsVswissci\np979\nVSwis721 Cn BT Italic\np980\nsVcounb___\np981\nVCountryBlueprint\np982\nsVNotram__\np983\nVNotram\np984\nsVPENULLI_\np985\nVPenultimateLight\np986\nsVtahomabd\np987\nVTahoma Bold\np988\nsVMISTRAL\np989\nVMistral\np990\nsVpala\np991\nVPalatino Linotype\np992\nsVOLDENGL\np993\nVOld English Text MT\np994\nsVinductio\np995\nVInduction Normal\np996\nsVJosefinSlab-SemiBoldItalic\np997\nVJosefin Slab SemiBold Italic\np998\nsVMinerva_\np999\nVMinerva\np1000\nsVsymbol\np1001\nVSymbol\np1002\nsVcambriaz\np1003\nVCambria Bold Italic\np1004\nsVtrebucbi\np1005\nVTrebuchet MS Bold Italic\np1006\nsVtimes\np1007\nVTimes New Roman\np1008\nsVERASLGHT\np1009\nVEras Light ITC\np1010\nsVSteppes\np1011\nVSteppes TT\np1012\nsVREFSPCL\np1013\nVMS Reference Specialty\np1014\nsVPARCHM\np1015\nVParchment\np1016\nsVDejaVuSansMono-Bold\np1017\nVDejaVu Sans Mono Bold\np1018\nsVswisscli\np1019\nVSwis721 LtCn BT Light Italic\np1020\nsVLSANS\np1021\nVLucida Sans\np1022\nsVPhrasme_\np1023\nVPhrasticMedium\np1024\nsVDejaVuSansMono-BoldOblique\np1025\nVDejaVu Sans Mono Bold Oblique\np1026\nsVarialbd\np1027\nVArial Bold\np1028\nsVSNAP____\np1029\nVSnap ITC\np1030\nsVArchitectsDaughter\np1031\nVArchitects Daughter\np1032\nsVCorpo___\np1033\nVCorporate\np1034\nsVeurro___\np1035\nVEuroRoman Oblique\np1036\nsVimpact\np1037\nVImpact\np1038\nsVlittlelo\np1039\nVLittleLordFontleroy\np1040\nsVsimsunb\np1041\nVSimSun-ExtB\np1042\nsVARIALNI\np1043\nVArial Narrow Italic\np1044\nsVdutchbi\np1045\nVDutch801 Rm BT Bold Italic\np1046\nsVcalibrii\np1047\nVCalibri Italic\np1048\nsVDeneane_\np1049\nVDeneane\np1050\nsVFRADMIT\np1051\nVFranklin Gothic Demi Italic\np1052\nsVANTQUAB\np1053\nVBook Antiqua Bold\np1054\nsVcalibril\np1055\nVCalibri Light\np1056\nsVisocpeui\np1057\nVISOCPEUR Italic\np1058\nsVpanroman\np1059\nVPanRoman\np1060\nsVMelodbo_\np1061\nVMelodBold Bold\np1062\nsVcalibrib\np1063\nVCalibri Bold\np1064\nsVdistant galaxy 2\np1065\nVDistant Galaxy\np1066\nsVPacifico\np1067\nVPacifico\np1068\nsVnobile_bold_italic\np1069\nVNobile Bold Italic\np1070\nsVmsyi\np1071\nVMicrosoft Yi Baiti\np1072\nsVBOD_PSTC\np1073\nVBodoni MT Poster Compressed\np1074\nsVLSANSI\np1075\nVLucida Sans Italic\np1076\nsVcreerg__\np1077\nVCreepygirl\np1078\nsVsegoeuisl\np1079\nVSegoe UI Semilight\np1080\nsVvinet\np1081\nVVineta BT\np1082\nsVisocpeur\np1083\nVISOCPEUR\np1084\nsVtechl___\np1085\nVTechnicLite\np1086\nsVswissb\np1087\nVSwis721 BT Bold\np1088\nsVCLARE___\np1089\nVClarendon\np1090\nsVdutch\np1091\nVDutch801 Rm BT Roman\np1092\nsVLBRITEDI\np1093\nVLucida Bright Demibold Italic\np1094\nsVswisse\np1095\nVSwis721 Ex BT Roman\np1096\nsVswissk\np1097\nVSwis721 Blk BT Black\np1098\nsVswissi\np1099\nVSwis721 BT Italic\np1100\nsVfingerpop2\np1101\nVFingerpop\np1102\nsVswissl\np1103\nVSwis721 Lt BT Light\np1104\nsVBAUHS93\np1105\nVBauhaus 93\np1106\nsVVivian__\np1107\nVVivian\np1108\nsVgreeks__\np1109\nVGreekS\np1110\nsVGOUDOSI\np1111\nVGoudy Old Style Italic\np1112\nsVBOD_BI\np1113\nVBodoni MT Bold Italic\np1114\nsVLHANDW\np1115\nVLucida Handwriting Italic\np1116\nsVITCKRIST\np1117\nVKristen ITC\np1118\nsVBALTH___\np1119\nVBalthazar\np1120\nsVFORTE\np1121\nVForte\np1122\nsVJosefinSlab-Regular\np1123\nVJosefin Slab\np1124\nsVROCKI\np1125\nVRockwell Italic\np1126\nsVGOUDOSB\np1127\nVGoudy Old Style Bold\np1128\nsVLEELAWAD\np1129\nVLeelawadee\np1130\nsVLEELAWDB\np1131\nVLeelawadee Bold\np1132\nsVmarlett_0\np1133\nVMarlett\np1134\nsVmplus-1m-bold\np1135\nVM+ 1m bold\np1136\nsVmplus-1m-light\np1137\nVM+ 1m light\np1138\nsVmplus-1m-medium\np1139\nVM+ 1m medium\np1140\nsVmplus-1m-regular\np1141\nVM+ 1m\np1142\nsVmplus-1m-thin\np1143\nVM+ 1m thin\np1144\nsVMSUIGHUB\np1145\nVMicrosoft Uighur Bold\np1146\nsVMSUIGHUR\np1147\nVMicrosoft Uighur\np1148\nsVSamsungIF_Md_0\np1149\nVSamsung InterFace Medium\np1150\nsVSamsungIF_Rg_0\np1151\nVSamsung InterFace\np1152\nsVbahnschrift\np1153\nVBahnschrift\np1154\nsVBowlbyOneSC-Regular\np1155\nVBowlby One SC\np1156\nsVCabinSketch-Regular\np1157\nVCabin Sketch\np1158\nsVCookie-Regular\np1159\nVCookie\np1160\nsVCourgette-Regular\np1161\nVCourgette\np1162\nsVdead\np1163\nVDead Kansas\np1164\nsVDoppioOne-Regular\np1165\nVDoppio One\np1166\nsVeuphorig\np1167\nVEuphorigenic\np1168\nsVGreatVibes-Regular\np1169\nVGreat Vibes\np1170\nsVKalam-Bold\np1171\nVKalam Bold\np1172\nsVKalam-Light\np1173\nVKalam Light\np1174\nsVKalam-Regular\np1175\nVKalam\np1176\nsVLemon-Regular\np1177\nVLemon\np1178\nsVLimelight-Regular\np1179\nVLimelight\np1180\nsVMegrim\np1181\nVMegrim Medium\np1182\nsVMontserratSubrayada-Bold\np1183\nVMontserrat Subrayada Bold\np1184\nsVNotoSans-Regular\np1185\nVNoto Sans\np1186\nsVRussoOne-Regular\np1187\nVRusso One\np1188\nsVSigmarOne-Regular\np1189\nVSigmar One\np1190\nsVYellowtail-Regular\np1191\nVYellowtail\np1192\ns."
+            # NOQA
         )
     return _std_fonts.cached
 
@@ -28896,15 +27063,7 @@ def fonts():
         if Windows:
             dir_recursives.append((Path("c:/windows/fonts"), True))
             if os.getenv("LOCALAPPDATA"):
-                dir_recursives.append(
-                    (
-                        Path(os.getenv("LOCALAPPDATA"))
-                        / "Microsoft"
-                        / "Windows"
-                        / "Fonts",
-                        True,
-                    )
-                )
+                dir_recursives.append((Path(os.getenv("LOCALAPPDATA")) / "Microsoft" / "Windows" / "Fonts", True))
 
         else:
             dir_recursives.append((Path("/usr/share/fonts"), True))  # for linux
@@ -28915,9 +27074,7 @@ def fonts():
                 if file_path.suffix.lower() == ".ttf":
                     file = str(file_path)
                     fn = os.path.basename(file).split(".")[0]
-                    if (
-                        "_std_fonts" in globals() and fn in _std_fonts()
-                    ):  # test for availabiitly, because of minimized version
+                    if "_std_fonts" in globals() and fn in _std_fonts():  # test for availabiitly, because of minimized version
                         fullname = _std_fonts()[fn]
                     else:
                         try:
@@ -28940,19 +27097,15 @@ def fonts():
 
 
 def standardfonts():
-    return {
-        "": "Calibri",
-        "std": "Calibri",
-        "mono": "DejaVuSansMono",
-        "narrow": "mplus-1m-regular",
-    }
+    return {"": "Calibri", "std": "Calibri", "mono": "DejaVuSansMono", "narrow": "mplus-1m-regular"}
 
 
 def fallback_font(name, size):
     if name == "dejavusansmono":
         s = (
             "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"  # NOQA
-            "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AYYAAwABBAkADRMmAcAAAwABBAkADgBoFOYAAwABBAkAyAAWFU4AAwABBAkAyQAwFWQAAwABBAkAygAIFZQAAwABBAkAywAOFZwAAwABBAnZAwAaFaoAQwBvAHAAeQByAGkAZwBoAHQAIAAoAGMAKQAgADIAMAAwADMAIABiAHkAIABCAGkAdABzAHQAcgBlAGEAbQAsACAASQBuAGMALgAgAEEAbABsACAAUgBpAGcAaAB0AHMAIABSAGUAcwBlAHIAdgBlAGQALgAKAEQAZQBqAGEAVgB1ACAAYwBoAGEAbgBnAGUAcwAgAGEAcgBlACAAaQBuACAAcAB1AGIAbABpAGMAIABkAG8AbQBhAGkAbgAKAEQAZQBqAGEAVgB1ACAAUwBhAG4AcwAgAE0AbwBuAG8AQgBvAG8AawBEAGUAagBhAFYAdQAgAFMAYQBuAHMAIABNAG8AbgBvAEQAZQBqAGEAVgB1ACAAUwBhAG4AcwAgAE0AbwBuAG8AIABCAG8AbwBrAFYAZQByAHMAaQBvAG4AIAAyAC4AMwA0AEQAZQBqAGEAVgB1AFMAYQBuAHMATQBvAG4AbwBEAGUAagBhAFYAdQAgAGYAbwBuAHQAcwAgAHQAZQBhAG0AaAB0AHQAcAA6AC8ALwBkAGUAagBhAHYAdQAuAHMAbwB1AHIAYwBlAGYAbwByAGcAZQAuAG4AZQB0AEYAbwBuAHQAcwAgAGEAcgBlACAAKABjACkAIABCAGkAdABzAHQAcgBlAGEAbQAgACgAcwBlAGUAIABiAGUAbABvAHcAKQAuACAARABlAGoAYQBWAHUAIABjAGgAYQBuAGcAZQBzACAAYQByAGUAIABpAG4AIABwAHUAYgBsAGkAYwAgAGQAbwBtAGEAaQBuAC4ACgAKAEIAaQB0AHMAdAByAGUAYQBtACAAVgBlAHIAYQAgAEYAbwBuAHQAcwAgAEMAbwBwAHkAcgBpAGcAaAB0AAoALQAtAC0ALQAtAC0ALQAtAC0ALQAtAC0ALQAtAC0ALQAtAC0ALQAtAC0ALQAtAC0ALQAtAC0ALQAtAC0ACgAKAEMAbwBwAHkAcgBpAGcAaAB0ACAAKABjACkAIAAyADAAMAAzACAAYgB5ACAAQgBpAHQAcwB0AHIAZQBhAG0ALAAgAEkAbgBjAC4AIABBAGwAbAAgAFIAaQBnAGgAdABzACAAUgBlAHMAZQByAHYAZQBkAC4AIABCAGkAdABzAHQAcgBlAGEAbQAgAFYAZQByAGEAIABpAHMAIABhACAAdAByAGEAZABlAG0AYQByAGsAIABvAGYAIABCAGkAdABzAHQAcgBlAGEAbQAsACAASQBuAGMALgAKAAoAUABlAHIAbQBpAHMAcwBpAG8AbgAgAGkAcwAgAGgAZQByAGUAYgB5ACAAZwByAGEAbgB0AGUAZAAsACAAZgByAGUAZQAgAG8AZgAgAGMAaABhAHIAZwBlACwAIAB0AG8AIABhAG4AeQAgAHAAZQByAHMAbwBuACAAbwBiAHQAYQBpAG4AaQBuAGcAIABhACAAYwBvAHAAeQAgAG8AZgAgAHQAaABlACAAZgBvAG4AdABzACAAYQBjAGMAbwBtAHAAYQBuAHkAaQBuAGcAIAB0AGgAaQBzACAAbABpAGMAZQBuAHMAZQAgACgAIgBGAG8AbgB0AHMAIgApACAAYQBuAGQAIABhAHMAcwBvAGMAaQBhAHQAZQBkACAAZABvAGMAdQBtAGUAbgB0AGEAdABpAG8AbgAgAGYAaQBsAGUAcwAgACgAdABoAGUAIAAiAEYAbwBuAHQAIABTAG8AZgB0AHcAYQByAGUAIgApACwAIAB0AG8AIAByAGUAcAByAG8AZAB1AGMAZQAgAGEAbgBkACAAZABpAHMAdAByAGkAYgB1AHQAZQAgAHQAaABlACAARgBvAG4AdAAgAFMAbwBmAHQAdwBhAHIAZQAsACAAaQBuAGMAbAB1AGQAaQBuAGcAIAB3AGkAdABoAG8AdQB0ACAAbABpAG0AaQB0AGEAdABpAG8AbgAgAHQAaABlACAAcgBpAGcAaAB0AHMAIAB0AG8AIAB1AHMAZQAsACAAYwBvAHAAeQAsACAAbQBlAHIAZwBlACwAIABwAHUAYgBsAGkAcwBoACwAIABkAGkAcwB0AHIAaQBiAHUAdABlACwAIABhAG4AZAAvAG8AcgAgAHMAZQBsAGwAIABjAG8AcABpAGUAcwAgAG8AZgAgAHQAaABlACAARgBvAG4AdAAgAFMAbwBmAHQAdwBhAHIAZQAsACAAYQBuAGQAIAB0AG8AIABwAGUAcgBtAGkAdAAgAHAAZQByAHMAbwBuAHMAIAB0AG8AIAB3AGgAbwBtACAAdABoAGUAIABGAG8AbgB0ACAAUwBvAGYAdAB3AGEAcgBlACAAaQBzACAAZgB1AHIAbgBpAHMAaABlAGQAIAB0AG8AIABkAG8AIABzAG8ALAAgAHMAdQBiAGoAZQBjAHQAIAB0AG8AIAB0AGgAZQAgAGYAbwBsAGwAbwB3AGkAbgBnACAAYwBvAG4AZABpAHQAaQBvAG4AcwA6AAoACgBUAGgAZQAgAGEAYgBvAHYAZQAgAGMAbwBwAHkAcgBpAGcAaAB0ACAAYQBuAGQAIAB0AHIAYQBkAGUAbQBhAHIAawAgAG4AbwB0AGkAYwBlAHMAIABhAG4AZAAgAHQAaABpAHMAIABwAGUAcgBtAGkAcwBzAGkAbwBuACAAbgBvAHQAaQBjAGUAIABzAGgAYQBsAGwAIABiAGUAIABpAG4AYwBsAHUAZABlAGQAIABpAG4AIABhAGwAbAAgAGMAbwBwAGkAZQBzACAAbwBmACAAbwBuAGUAIABvAHIAIABtAG8AcgBlACAAbwBmACAAdABoAGUAIABGAG8AbgB0ACAAUwBvAGYAdAB3AGEAcgBlACAAdAB5AHAAZQBmAGEAYwBlAHMALgAKAAoAVABoAGUAIABGAG8AbgB0ACAAUwBvAGYAdAB3AGEAcgBlACAAbQBhAHkAIABiAGUAIABtAG8AZABpAGYAaQBlAGQALAAgAGEAbAB0AGUAcgBlAGQALAAgAG8AcgAgAGEAZABkAGUAZAAgAHQAbwAsACAAYQBuAGQAIABpAG4AIABwAGEAcgB0AGkAYwB1AGwAYQByACAAdABoAGUAIABkAGUAcwBpAGcAbgBzACAAbwBmACAAZwBsAHkAcABoAHMAIABvAHIAIABjAGgAYQByAGEAYwB0AGUAcgBzACAAaQBuACAAdABoAGUAIABGAG8AbgB0AHMAIABtAGEAeQAgAGIAZQAgAG0AbwBkAGkAZgBpAGUAZAAgAGEAbgBkACAAYQBkAGQAaQB0AGkAbwBuAGEAbAAgAGcAbAB5AHAAaABzACAAbwByACAAIABvAHIAIABjAGgAYQByAGEAYwB0AGUAcgBzACAAbQBhAHkAIABiAGUAIABhAGQAZABlAGQAIAB0AG8AIAB0AGgAZQAgAEYAbwBuAHQAcwAsACAAbwBuAGwAeQAgAGkAZgAgAHQAaABlACAAZgBvAG4AdABzACAAYQByAGUAIAByAGUAbgBhAG0AZQBkACAAdABvACAAbgBhAG0AZQBzACAAbgBvAHQAIABjAG8AbgB0AGEAaQBuAGkAbgBnACAAZQBpAHQAaABlAHIAIAB0AGgAZQAgAHcAbwByAGQAcwAgACIAQgBpAHQAcwB0AHIAZQBhAG0AIgAgAG8AcgAgAHQAaABlACAAdwBvAHIAZAAgACIAVgBlAHIAYQAiAC4ACgAKAFQAaABpAHMAIABMAGkAYwBlAG4AcwBlACAAYgBlAGMAbwBtAGUAcwAgAG4AdQBsAGwAIABhAG4AZAAgAHYAbwBpAGQAIAB0AG8AIAB0AGgAZQAgAGUAeAB0AGUAbgB0ACAAYQBwAHAAbABpAGMAYQBiAGwAZQAgAHQAbwAgAEYAbwBuAHQAcwAgAG8AcgAgAEYAbwBuAHQAIABTAG8AZgB0AHcAYQByAGUAIAB0AGgAYQB0ACAAaABhAHMAIABiAGUAZQBuACAAbQBvAGQAaQBmAGkAZQBkACAAYQBuAGQAIABpAHMAIABkAGkAcwB0AHIAaQBiAHUAdABlAGQAIAB1AG4AZABlAHIAIAB0AGgAZQAgACIAQgBpAHQAcwB0AHIAZQBhAG0AIABWAGUAcgBhACIAIABuAGEAbQBlAHMALgAKAAoAVABoAGUAIABGAG8AbgB0ACAAUwBvAGYAdAB3AGEAcgBlACAAbQBhAHkAIABiAGUAIABzAG8AbABkACAAYQBzACAAcABhAHIAdAAgAG8AZgAgAGEAIABsAGEAcgBnAGUAcgAgAHMAbwBmAHQAdwBhAHIAZQAgAHAAYQBjAGsAYQBnAGUAIABiAHUAdAAgAG4AbwAgAGMAbwBwAHkAIABvAGYAIABvAG4AZQAgAG8AcgAgAG0AbwByAGUAIABvAGYAIAB0AGgAZQAgAEYAbwBuAHQAIABTAG8AZgB0AHcAYQByAGUAIAB0AHkAcABlAGYAYQBjAGUAcwAgAG0AYQB5ACAAYgBlACAAcwBvAGwAZAAgAGIAeQAgAGkAdABzAGUAbABmAC4ACgAKAFQASABFACAARgBPAE4AVAAgAFMATwBGAFQAVwBBAFIARQAgAEkAUwAgAFAAUgBPAFYASQBEAEUARAAgACIAQQBTACAASQBTACIALAAgAFcASQBUAEgATwBVAFQAIABXAEEAUgBSAEEATgBUAFkAIABPAEYAIABBAE4AWQAgAEsASQBOAEQALAAgAEUAWABQAFIARQBTAFMAIABPAFIAIABJAE0AUABMAEkARQBEACwAIABJAE4AQwBMAFUARABJAE4ARwAgAEIAVQBUACAATgBPAFQAIABMAEkATQBJAFQARQBEACAAVABPACAAQQBOAFkAIABXAEEAUgBSAEEATgBUAEkARQBTACAATwBGACAATQBFAFIAQwBIAEEATgBUAEEAQgBJAEwASQBUAFkALAAgAEYASQBUAE4ARQBTAFMAIABGAE8AUgAgAEEAIABQAEEAUgBUAEkAQwBVAEwAQQBSACAAUABVAFIAUABPAFMARQAgAEEATgBEACAATgBPAE4ASQBOAEYAUgBJAE4ARwBFAE0ARQBOAFQAIABPAEYAIABDAE8AUABZAFIASQBHAEgAVAAsACAAUABBAFQARQBOAFQALAAgAFQAUgBBAEQARQBNAEEAUgBLACwAIABPAFIAIABPAFQASABFAFIAIABSAEkARwBIAFQALgAgAEkATgAgAE4ATwAgAEUAVgBFAE4AVAAgAFMASABBAEwATAAgAEIASQBUAFMAVABSAEUAQQBNACAATwBSACAAVABIAEUAIABHAE4ATwBNAEUAIABGAE8AVQBOAEQAQQBUAEkATwBOACAAQgBFACAATABJAEEAQgBMAEUAIABGAE8AUgAgAEEATgBZACAAQwBMAEEASQBNACwAIABEAEEATQBBAEcARQBTACAATwBSACAATwBUAEgARQBSACAATABJAEEAQgBJAEwASQBUAFkALAAgAEkATgBDAEwAVQBEAEkATgBHACAAQQBOAFkAIABHAEUATgBFAFIAQQBMACwAIABTAFAARQBDAEkAQQBMACwAIABJAE4ARABJAFIARQBDAFQALAAgAEkATgBDAEkARABFAE4AVABBAEwALAAgAE8AUgAgAEMATwBOAFMARQBRAFUARQBOAFQASQBBAEwAIABEAEEATQBBAEcARQBTACwAIABXAEgARQBUAEgARQBSACAASQBOACAAQQBOACAAQQBDAFQASQBPAE4AIABPAEYAIABDAE8ATgBUAFIAQQBDAFQALAAgAFQATwBSAFQAIABPAFIAIABPAFQASABFAFIAVwBJAFMARQAsACAAQQBSAEkAUwBJAE4ARwAgAEYAUgBPAE0ALAAgAE8AVQBUACAATwBGACAAVABIAEUAIABVAFMARQAgAE8AUgAgAEkATgBBAEIASQBMAEkAVABZACAAVABPACAAVQBTAEUAIABUAEgARQAgAEYATwBOAFQAIABTAE8ARgBUAFcAQQBSAEUAIABPAFIAIABGAFIATwBNACAATwBUAEgARQBSACAARABFAEEATABJAE4ARwBTACAASQBOACAAVABIAEUAIABGAE8ATgBUACAAUwBPAEYAVABXAEEAUgBFAC4ACgAKAEUAeABjAGUAcAB0ACAAYQBzACAAYwBvAG4AdABhAGkAbgBlAGQAIABpAG4AIAB0AGgAaQBzACAAbgBvAHQAaQBjAGUALAAgAHQAaABlACAAbgBhAG0AZQBzACAAbwBmACAARwBuAG8AbQBlACwAIAB0AGgAZQAgAEcAbgBvAG0AZQAgAEYAbwB1AG4AZABhAHQAaQBvAG4ALAAgAGEAbgBkACAAQgBpAHQAcwB0AHIAZQBhAG0AIABJAG4AYwAuACwAIABzAGgAYQBsAGwAIABuAG8AdAAgAGIAZQAgAHUAcwBlAGQAIABpAG4AIABhAGQAdgBlAHIAdABpAHMAaQBuAGcAIABvAHIAIABvAHQAaABlAHIAdwBpAHMAZQAgAHQAbwAgAHAAcgBvAG0AbwB0AGUAIAB0AGgAZQAgAHMAYQBsAGUALAAgAHUAcwBlACAAbwByACAAbwB0AGgAZQByACAAZABlAGEAbABpAG4AZwBzACAAaQBuACAAdABoAGkAcwAgAEYAbwBuAHQAIABTAG8AZgB0AHcAYQByAGUAIAB3AGkAdABoAG8AdQB0ACAAcAByAGkAbwByACAAdwByAGkAdAB0AGUAbgAgAGEAdQB0AGgAbwByAGkAegBhAHQAaQBvAG4AIABmAHIAbwBtACAAdABoAGUAIABHAG4AbwBtAGUAIABGAG8AdQBuAGQAYQB0AGkAbwBuACAAbwByACAAQgBpAHQAcwB0AHIAZQBhAG0AIABJAG4AYwAuACwAIAByAGUAcwBwAGUAYwB0AGkAdgBlAGwAeQAuACAARgBvAHIAIABmAHUAcgB0AGgAZQByACAAaQBuAGYAbwByAG0AYQB0AGkAbwBuACwAIABjAG8AbgB0AGEAYwB0ADoAIABmAG8AbgB0AHMAIABh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WxQDWgsDWf4DWBQDV/4DVv4DVRsZBVUyA1T+A1P+A1L+A1F9A1D+A08UA07+A00BLQVN/gNMuwNLKANKSRgFSjcDSUMSBUkYA0hFGAVI/gNHQxIFR2QDRkUYBUa7A0UYA0RDEgVENwNDQhEFQxIDQ7gCQEAJBEJBDwVCEQNCuAIAQAkEQUAOBUEPA0G4AcBACQRAPwwFQA4DQLgBgEAJBD8MCQU/DAM/uAFAQGQEPv4DPQEtBT36Azz+AzsoAzr+AzkRQgU5ZAM4MRoFOEsDN/4DNi0UBTb+AzVLAzQwGgU0SwMzMBoFM/4DMhFCBTL+AzEtFAUxGgMwGgMvLRQFLxgDLgkWBS67Ay0sEwUtFAMtuAKAQAkELBARBSwTAyy4AkBAlgQrKiUFK/4DKgkWBSolAykCOgUp/gMo/gMn/gMmDwMlFkIFJUUDJA8DI/4DIg8PBSL+AyEgLQUhfQMgLQMfSwMeEUIFHv4DHf4DHBsZBRz+AxsAEAUbGQMa/gMZ/gMY/gMXFkIFF0YDFhUtBRZCAxUUEAUVLQMUEAMTABAFExQDEhFCBRL+AxEBLQURQgMQDw8FEBEDELgCAEAJBA8ODAUPDwMPuAHAQAkEDg0KBQ4MAw64AYBACQQNDAkFDQoDDbgBQLQEDAkDDLgBAEA3BAv+AwoJFgUK/gMJFgMIEAMH/gMGAS0FBv4DBRQDAwI6BQP6AwIBLQUCOgMBABAFAS0DABADAbgBZIWNASsrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrACsrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrHQA="  # NOQA
+            "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AYYAAwABBAkADRMmAcAAAwABBAkADgBoFOYAAwABBAkAyAAWFU4AAwABBAkAyQAwFWQAAwABBAkAygAIFZQAAwABBAkAywAOFZwAAwABBAnZAwAaFaoAQwBvAHAAeQByAGkAZwBoAHQAIAAoAGMAKQAgADIAMAAwADMAIABiAHkAIABCAGkAdABzAHQAcgBlAGEAbQAsACAASQBuAGMALgAgAEEAbABsACAAUgBpAGcAaAB0AHMAIABSAGUAcwBlAHIAdgBlAGQALgAKAEQAZQBqAGEAVgB1ACAAYwBoAGEAbgBnAGUAcwAgAGEAcgBlACAAaQBuACAAcAB1AGIAbABpAGMAIABkAG8AbQBhAGkAbgAKAEQAZQBqAGEAVgB1ACAAUwBhAG4AcwAgAE0AbwBuAG8AQgBvAG8AawBEAGUAagBhAFYAdQAgAFMAYQBuAHMAIABNAG8AbgBvAEQAZQBqAGEAVgB1ACAAUwBhAG4AcwAgAE0AbwBuAG8AIABCAG8AbwBrAFYAZQByAHMAaQBvAG4AIAAyAC4AMwA0AEQAZQBqAGEAVgB1AFMAYQBuAHMATQBvAG4AbwBEAGUAagBhAFYAdQAgAGYAbwBuAHQAcwAgAHQAZQBhAG0AaAB0AHQAcAA6AC8ALwBkAGUAagBhAHYAdQAuAHMAbwB1AHIAYwBlAGYAbwByAGcAZQAuAG4AZQB0AEYAbwBuAHQAcwAgAGEAcgBlACAAKABjACkAIABCAGkAdABzAHQAcgBlAGEAbQAgACgAcwBlAGUAIABiAGUAbABvAHcAKQAuACAARABlAGoAYQBWAHUAIABjAGgAYQBuAGcAZQBzACAAYQByAGUAIABpAG4AIABwAHUAYgBsAGkAYwAgAGQAbwBtAGEAaQBuAC4ACgAKAEIAaQB0AHMAdAByAGUAYQBtACAAVgBlAHIAYQAgAEYAbwBuAHQAcwAgAEMAbwBwAHkAcgBpAGcAaAB0AAoALQAtAC0ALQAtAC0ALQAtAC0ALQAtAC0ALQAtAC0ALQAtAC0ALQAtAC0ALQAtAC0ALQAtAC0ALQAtAC0ACgAKAEMAbwBwAHkAcgBpAGcAaAB0ACAAKABjACkAIAAyADAAMAAzACAAYgB5ACAAQgBpAHQAcwB0AHIAZQBhAG0ALAAgAEkAbgBjAC4AIABBAGwAbAAgAFIAaQBnAGgAdABzACAAUgBlAHMAZQByAHYAZQBkAC4AIABCAGkAdABzAHQAcgBlAGEAbQAgAFYAZQByAGEAIABpAHMAIABhACAAdAByAGEAZABlAG0AYQByAGsAIABvAGYAIABCAGkAdABzAHQAcgBlAGEAbQAsACAASQBuAGMALgAKAAoAUABlAHIAbQBpAHMAcwBpAG8AbgAgAGkAcwAgAGgAZQByAGUAYgB5ACAAZwByAGEAbgB0AGUAZAAsACAAZgByAGUAZQAgAG8AZgAgAGMAaABhAHIAZwBlACwAIAB0AG8AIABhAG4AeQAgAHAAZQByAHMAbwBuACAAbwBiAHQAYQBpAG4AaQBuAGcAIABhACAAYwBvAHAAeQAgAG8AZgAgAHQAaABlACAAZgBvAG4AdABzACAAYQBjAGMAbwBtAHAAYQBuAHkAaQBuAGcAIAB0AGgAaQBzACAAbABpAGMAZQBuAHMAZQAgACgAIgBGAG8AbgB0AHMAIgApACAAYQBuAGQAIABhAHMAcwBvAGMAaQBhAHQAZQBkACAAZABvAGMAdQBtAGUAbgB0AGEAdABpAG8AbgAgAGYAaQBsAGUAcwAgACgAdABoAGUAIAAiAEYAbwBuAHQAIABTAG8AZgB0AHcAYQByAGUAIgApACwAIAB0AG8AIAByAGUAcAByAG8AZAB1AGMAZQAgAGEAbgBkACAAZABpAHMAdAByAGkAYgB1AHQAZQAgAHQAaABlACAARgBvAG4AdAAgAFMAbwBmAHQAdwBhAHIAZQAsACAAaQBuAGMAbAB1AGQAaQBuAGcAIAB3AGkAdABoAG8AdQB0ACAAbABpAG0AaQB0AGEAdABpAG8AbgAgAHQAaABlACAAcgBpAGcAaAB0AHMAIAB0AG8AIAB1AHMAZQAsACAAYwBvAHAAeQAsACAAbQBlAHIAZwBlACwAIABwAHUAYgBsAGkAcwBoACwAIABkAGkAcwB0AHIAaQBiAHUAdABlACwAIABhAG4AZAAvAG8AcgAgAHMAZQBsAGwAIABjAG8AcABpAGUAcwAgAG8AZgAgAHQAaABlACAARgBvAG4AdAAgAFMAbwBmAHQAdwBhAHIAZQAsACAAYQBuAGQAIAB0AG8AIABwAGUAcgBtAGkAdAAgAHAAZQByAHMAbwBuAHMAIAB0AG8AIAB3AGgAbwBtACAAdABoAGUAIABGAG8AbgB0ACAAUwBvAGYAdAB3AGEAcgBlACAAaQBzACAAZgB1AHIAbgBpAHMAaABlAGQAIAB0AG8AIABkAG8AIABzAG8ALAAgAHMAdQBiAGoAZQBjAHQAIAB0AG8AIAB0AGgAZQAgAGYAbwBsAGwAbwB3AGkAbgBnACAAYwBvAG4AZABpAHQAaQBvAG4AcwA6AAoACgBUAGgAZQAgAGEAYgBvAHYAZQAgAGMAbwBwAHkAcgBpAGcAaAB0ACAAYQBuAGQAIAB0AHIAYQBkAGUAbQBhAHIAawAgAG4AbwB0AGkAYwBlAHMAIABhAG4AZAAgAHQAaABpAHMAIABwAGUAcgBtAGkAcwBzAGkAbwBuACAAbgBvAHQAaQBjAGUAIABzAGgAYQBsAGwAIABiAGUAIABpAG4AYwBsAHUAZABlAGQAIABpAG4AIABhAGwAbAAgAGMAbwBwAGkAZQBzACAAbwBmACAAbwBuAGUAIABvAHIAIABtAG8AcgBlACAAbwBmACAAdABoAGUAIABGAG8AbgB0ACAAUwBvAGYAdAB3AGEAcgBlACAAdAB5AHAAZQBmAGEAYwBlAHMALgAKAAoAVABoAGUAIABGAG8AbgB0ACAAUwBvAGYAdAB3AGEAcgBlACAAbQBhAHkAIABiAGUAIABtAG8AZABpAGYAaQBlAGQALAAgAGEAbAB0AGUAcgBlAGQALAAgAG8AcgAgAGEAZABkAGUAZAAgAHQAbwAsACAAYQBuAGQAIABpAG4AIABwAGEAcgB0AGkAYwB1AGwAYQByACAAdABoAGUAIABkAGUAcwBpAGcAbgBzACAAbwBmACAAZwBsAHkAcABoAHMAIABvAHIAIABjAGgAYQByAGEAYwB0AGUAcgBzACAAaQBuACAAdABoAGUAIABGAG8AbgB0AHMAIABtAGEAeQAgAGIAZQAgAG0AbwBkAGkAZgBpAGUAZAAgAGEAbgBkACAAYQBkAGQAaQB0AGkAbwBuAGEAbAAgAGcAbAB5AHAAaABzACAAbwByACAAIABvAHIAIABjAGgAYQByAGEAYwB0AGUAcgBzACAAbQBhAHkAIABiAGUAIABhAGQAZABlAGQAIAB0AG8AIAB0AGgAZQAgAEYAbwBuAHQAcwAsACAAbwBuAGwAeQAgAGkAZgAgAHQAaABlACAAZgBvAG4AdABzACAAYQByAGUAIAByAGUAbgBhAG0AZQBkACAAdABvACAAbgBhAG0AZQBzACAAbgBvAHQAIABjAG8AbgB0AGEAaQBuAGkAbgBnACAAZQBpAHQAaABlAHIAIAB0AGgAZQAgAHcAbwByAGQAcwAgACIAQgBpAHQAcwB0AHIAZQBhAG0AIgAgAG8AcgAgAHQAaABlACAAdwBvAHIAZAAgACIAVgBlAHIAYQAiAC4ACgAKAFQAaABpAHMAIABMAGkAYwBlAG4AcwBlACAAYgBlAGMAbwBtAGUAcwAgAG4AdQBsAGwAIABhAG4AZAAgAHYAbwBpAGQAIAB0AG8AIAB0AGgAZQAgAGUAeAB0AGUAbgB0ACAAYQBwAHAAbABpAGMAYQBiAGwAZQAgAHQAbwAgAEYAbwBuAHQAcwAgAG8AcgAgAEYAbwBuAHQAIABTAG8AZgB0AHcAYQByAGUAIAB0AGgAYQB0ACAAaABhAHMAIABiAGUAZQBuACAAbQBvAGQAaQBmAGkAZQBkACAAYQBuAGQAIABpAHMAIABkAGkAcwB0AHIAaQBiAHUAdABlAGQAIAB1AG4AZABlAHIAIAB0AGgAZQAgACIAQgBpAHQAcwB0AHIAZQBhAG0AIABWAGUAcgBhACIAIABuAGEAbQBlAHMALgAKAAoAVABoAGUAIABGAG8AbgB0ACAAUwBvAGYAdAB3AGEAcgBlACAAbQBhAHkAIABiAGUAIABzAG8AbABkACAAYQBzACAAcABhAHIAdAAgAG8AZgAgAGEAIABsAGEAcgBnAGUAcgAgAHMAbwBmAHQAdwBhAHIAZQAgAHAAYQBjAGsAYQBnAGUAIABiAHUAdAAgAG4AbwAgAGMAbwBwAHkAIABvAGYAIABvAG4AZQAgAG8AcgAgAG0AbwByAGUAIABvAGYAIAB0AGgAZQAgAEYAbwBuAHQAIABTAG8AZgB0AHcAYQByAGUAIAB0AHkAcABlAGYAYQBjAGUAcwAgAG0AYQB5ACAAYgBlACAAcwBvAGwAZAAgAGIAeQAgAGkAdABzAGUAbABmAC4ACgAKAFQASABFACAARgBPAE4AVAAgAFMATwBGAFQAVwBBAFIARQAgAEkAUwAgAFAAUgBPAFYASQBEAEUARAAgACIAQQBTACAASQBTACIALAAgAFcASQBUAEgATwBVAFQAIABXAEEAUgBSAEEATgBUAFkAIABPAEYAIABBAE4AWQAgAEsASQBOAEQALAAgAEUAWABQAFIARQBTAFMAIABPAFIAIABJAE0AUABMAEkARQBEACwAIABJAE4AQwBMAFUARABJAE4ARwAgAEIAVQBUACAATgBPAFQAIABMAEkATQBJAFQARQBEACAAVABPACAAQQBOAFkAIABXAEEAUgBSAEEATgBUAEkARQBTACAATwBGACAATQBFAFIAQwBIAEEATgBUAEEAQgBJAEwASQBUAFkALAAgAEYASQBUAE4ARQBTAFMAIABGAE8AUgAgAEEAIABQAEEAUgBUAEkAQwBVAEwAQQBSACAAUABVAFIAUABPAFMARQAgAEEATgBEACAATgBPAE4ASQBOAEYAUgBJAE4ARwBFAE0ARQBOAFQAIABPAEYAIABDAE8AUABZAFIASQBHAEgAVAAsACAAUABBAFQARQBOAFQALAAgAFQAUgBBAEQARQBNAEEAUgBLACwAIABPAFIAIABPAFQASABFAFIAIABSAEkARwBIAFQALgAgAEkATgAgAE4ATwAgAEUAVgBFAE4AVAAgAFMASABBAEwATAAgAEIASQBUAFMAVABSAEUAQQBNACAATwBSACAAVABIAEUAIABHAE4ATwBNAEUAIABGAE8AVQBOAEQAQQBUAEkATwBOACAAQgBFACAATABJAEEAQgBMAEUAIABGAE8AUgAgAEEATgBZACAAQwBMAEEASQBNACwAIABEAEEATQBBAEcARQBTACAATwBSACAATwBUAEgARQBSACAATABJAEEAQgBJAEwASQBUAFkALAAgAEkATgBDAEwAVQBEAEkATgBHACAAQQBOAFkAIABHAEUATgBFAFIAQQBMACwAIABTAFAARQBDAEkAQQBMACwAIABJAE4ARABJAFIARQBDAFQALAAgAEkATgBDAEkARABFAE4AVABBAEwALAAgAE8AUgAgAEMATwBOAFMARQBRAFUARQBOAFQASQBBAEwAIABEAEEATQBBAEcARQBTACwAIABXAEgARQBUAEgARQBSACAASQBOACAAQQBOACAAQQBDAFQASQBPAE4AIABPAEYAIABDAE8ATgBUAFIAQQBDAFQALAAgAFQATwBSAFQAIABPAFIAIABPAFQASABFAFIAVwBJAFMARQAsACAAQQBSAEkAUwBJAE4ARwAgAEYAUgBPAE0ALAAgAE8AVQBUACAATwBGACAAVABIAEUAIABVAFMARQAgAE8AUgAgAEkATgBBAEIASQBMAEkAVABZACAAVABPACAAVQBTAEUAIABUAEgARQAgAEYATwBOAFQAIABTAE8ARgBUAFcAQQBSAEUAIABPAFIAIABGAFIATwBNACAATwBUAEgARQBSACAARABFAEEATABJAE4ARwBTACAASQBOACAAVABIAEUAIABGAE8ATgBUACAAUwBPAEYAVABXAEEAUgBFAC4ACgAKAEUAeABjAGUAcAB0ACAAYQBzACAAYwBvAG4AdABhAGkAbgBlAGQAIABpAG4AIAB0AGgAaQBzACAAbgBvAHQAaQBjAGUALAAgAHQAaABlACAAbgBhAG0AZQBzACAAbwBmACAARwBuAG8AbQBlACwAIAB0AGgAZQAgAEcAbgBvAG0AZQAgAEYAbwB1AG4AZABhAHQAaQBvAG4ALAAgAGEAbgBkACAAQgBpAHQAcwB0AHIAZQBhAG0AIABJAG4AYwAuACwAIABzAGgAYQBsAGwAIABuAG8AdAAgAGIAZQAgAHUAcwBlAGQAIABpAG4AIABhAGQAdgBlAHIAdABpAHMAaQBuAGcAIABvAHIAIABvAHQAaABlAHIAdwBpAHMAZQAgAHQAbwAgAHAAcgBvAG0AbwB0AGUAIAB0AGgAZQAgAHMAYQBsAGUALAAgAHUAcwBlACAAbwByACAAbwB0AGgAZQByACAAZABlAGEAbABpAG4AZwBzACAAaQBuACAAdABoAGkAcwAgAEYAbwBuAHQAIABTAG8AZgB0AHcAYQByAGUAIAB3AGkAdABoAG8AdQB0ACAAcAByAGkAbwByACAAdwByAGkAdAB0AGUAbgAgAGEAdQB0AGgAbwByAGkAegBhAHQAaQBvAG4AIABmAHIAbwBtACAAdABoAGUAIABHAG4AbwBtAGUAIABGAG8AdQBuAGQAYQB0AGkAbwBuACAAbwByACAAQgBpAHQAcwB0AHIAZQBhAG0AIABJAG4AYwAuACwAIAByAGUAcwBwAGUAYwB0AGkAdgBlAGwAeQAuACAARgBvAHIAIABmAHUAcgB0AGgAZQByACAAaQBuAGYAbwByAG0AYQB0AGkAbwBuACwAIABjAG8AbgB0AGEAYwB0ADoAIABmAG8AbgB0AHMAIABh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WxQDWgsDWf4DWBQDV/4DVv4DVRsZBVUyA1T+A1P+A1L+A1F9A1D+A08UA07+A00BLQVN/gNMuwNLKANKSRgFSjcDSUMSBUkYA0hFGAVI/gNHQxIFR2QDRkUYBUa7A0UYA0RDEgVENwNDQhEFQxIDQ7gCQEAJBEJBDwVCEQNCuAIAQAkEQUAOBUEPA0G4AcBACQRAPwwFQA4DQLgBgEAJBD8MCQU/DAM/uAFAQGQEPv4DPQEtBT36Azz+AzsoAzr+AzkRQgU5ZAM4MRoFOEsDN/4DNi0UBTb+AzVLAzQwGgU0SwMzMBoFM/4DMhFCBTL+AzEtFAUxGgMwGgMvLRQFLxgDLgkWBS67Ay0sEwUtFAMtuAKAQAkELBARBSwTAyy4AkBAlgQrKiUFK/4DKgkWBSolAykCOgUp/gMo/gMn/gMmDwMlFkIFJUUDJA8DI/4DIg8PBSL+AyEgLQUhfQMgLQMfSwMeEUIFHv4DHf4DHBsZBRz+AxsAEAUbGQMa/gMZ/gMY/gMXFkIFF0YDFhUtBRZCAxUUEAUVLQMUEAMTABAFExQDEhFCBRL+AxEBLQURQgMQDw8FEBEDELgCAEAJBA8ODAUPDwMPuAHAQAkEDg0KBQ4MAw64AYBACQQNDAkFDQoDDbgBQLQEDAkDDLgBAEA3BAv+AwoJFgUK/gMJFgMIEAMH/gMGAS0FBv4DBRQDAwI6BQP6AwIBLQUCOgMBABAFAS0DABADAbgBZIWNASsrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrACsrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrHQA="
+        # NOQA
         )
         # this is dejavusans
 
@@ -28965,7 +27118,8 @@ def fallback_font(name, size):
             "AAEAAAABAAAAAQAAAAEAAAADAAAAAQAUAAQAGAAcACAAJAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwAAAAEAFgAFABoAHgAiACYAKgAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAAABABgABgAcACAAJAAoACwAMAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAAAAQAUAAQAGAAcACAAJAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwAAAAEAFgAFABoAHgAiACYAKgAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAAABABgABgAcACAAJAAoACwAMAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAEAEgABAA4AAAAAAAEAAAABAAAAAwACABQAGAABABAAAAAAAAEAAAABAAAAAQAAAAMAAAABAA4AAQASAAAAAQAAAAEAAAADAAAAAQAQAAIAFAAYAAAAAQAAAAEAAAABAAAAAwAAAAEAEgADABYAGgAeAAAAAQAAAAEAAAABAAAAAQAAAAMAAAABAA4AAQASAAAAAQAAAAEAAAADAAAAAQAQAAIAFAAYAAAAAQAAAAEAAAABAAAAAwAAAAEAEgADABYAGgAeAAAAAQAAAAEAAAABAAAAAQAAAAMAAAABAA4AAQASAAAAAQAAAAEAAAADAAAAAQAQAAIAFAAYAAAAAQAAAAEAAAABAAAAAwAAAAEAEgADABYAGgAeAAAAAQAAAAEAAAABAAAAAQAAAAMAAAABAA4AAQASAAAAAQAAAAEAAAADAAAAAQAQAAIAFAAYAAAAAQAAAAEAAAABAAAAAwAAAAEAEgADABYAGgAeAAAAAQAAAAEAAAABAAAAAQAAAAMAAQAUAAEAEAABABgAAAABAAAAAQAAAAEAAAADAAEAFgABABIAAgAaAB4AAAABAAAAAQAAAAEAAAABAAAAAwABABYAAQASAAIAGgAeAAAAAQAAAAEAAAABAAAAAQAAAAMAAgAUABgAAQAQAAAAAAABAAAAAQAAAAEAAAADAAMAFgAaAB4AAQASAAAAAAABAAAAAQAAAAEAAAABAAAAAwAEABgAHAAgACQAAQAUAAAAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAgAUABgAAQAQAAAAAAABAAAAAQAAAAEAAAADAAMAFgAaAB4AAQASAAAAAAABAAAAAQAAAAEAAAABAAAAAwAEABgAHAAgACQAAQAUAAAAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAgAUABgAAQAQAAAAAAABAAAAAQAAAAEAAAADAAMAFgAaAB4AAQASAAAAAAABAAAAAQAAAAEAAAABAAAAAwAEABgAHAAgACQAAQAUAAAAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAgAUABgAAQAQAAAAAAABAAAAAQAAAAEAAAADAAIAFAAYAAEAEAAAAAAAAQAAAAEAAAABAAAAAwADABYAGgAeAAEAEgAAAAAAAQAAAAEAAAABAAAAAQAAAAMABAAYABwAIAAkAAEAFAAAAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAUAGgAeACIAJgAqAAEAFgAAAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwAGABwAIAAkACgALAAwAAEAGAAAAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAgAWABoAAQASAAEAHgAAAAEAAAABAAAAAQAAAAEAAAADAAMAGAAcACAAAQAUAAEAJAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwACABgAHAABABQAAgAgACQAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAwAYABwAIAABABQAAQAkAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAQAGgAeACIAJgABABYAAQAqAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwADABoAHgAiAAEAFgACACYAKgAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMABAAcACAAJAAoAAEAGAACACwAMAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAMAGgAeACIAAQAWAAIAJgAqAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwAEABoAHgAiACYAAQAWAAEAKgAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMABQAcACAAJAAoACwAAQAYAAEAMAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAQAHAAgACQAKAABABgAAgAsADAAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwAFAB4AIgAmACoALgABABoAAgAyADYAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAgAYABwAAQAUAAIAIAAkAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAMAGgAeACIAAQAWAAIAJgAqAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwACABoAHgABABYAAwAiACYAKgAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAwAaAB4AIgABABYAAgAmACoAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAQAHAAgACQAKAABABgAAgAsADAAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwADABwAIAAkAAEAGAADACgALAAwAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMABAAeACIAJgAqAAEAGgADAC4AMgA2AAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAMAHAAgACQAAQAYAAMAKAAsADAAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwAEABwAIAAkACgAAQAYAAIALAAwAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMABQAeACIAJgAqAC4AAQAaAAIAMgA2AAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAQAHgAiACYAKgABABoAAwAuADIANgAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwAFACAAJAAoACwAMAABABwAAwA0ADgAPAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAgAYABwAAQAUAAIAIAAkAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAIAGAAcAAEAFAACACAAJAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwADABoAHgAiAAEAFgACACYAKgAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAwAaAB4AIgABABYAAgAmACoAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAIAGgAeAAEAFgADACIAJgAqAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwADABoAHgAiAAEAFgACACYAKgAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMABAAcACAAJAAoAAEAGAACACwAMAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAMAHAAgACQAAQAYAAMAKAAsADAAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwAEAB4AIgAmACoAAQAaAAMALgAyADYAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAgAaAB4AAQAWAAMAIgAmACoAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAMAGgAeACIAAQAWAAIAJgAqAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwAEABwAIAAkACgAAQAYAAIALAAwAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAwAcACAAJAABABgAAwAoACwAMAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAQAHgAiACYAKgABABoAAwAuADIANgAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwADABwAIAAkAAEAGAADACgALAAwAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMABAAcACAAJAAoAAEAGAACACwAMAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAQAHAAgACQAKAABABgAAgAsADAAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwAEAB4AIgAmACoAAQAaAAMALgAyADYAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAgAaAB4AAQAWAAMAIgAmACoAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAMAHAAgACQAAQAYAAMAKAAsADAAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwAEABwAIAAkACgAAQAYAAIALAAwAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMABQAeACIAJgAqAC4AAQAaAAIAMgA2AAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAQAHgAiACYAKgABABoAAwAuADIANgAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwACABYAGgABABIAAQAeAAAAAQAAAAEAAAABAAAAAQAAAAMAAwAYABwAIAABABQAAQAkAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAIAGAAcAAEAFAACACAAJAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwADABgAHAAgAAEAFAABACQAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMABAAaAB4AIgAmAAEAFgABACoAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAMAGgAeACIAAQAWAAIAJgAqAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwAEABwAIAAkACgAAQAYAAIALAAwAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAwAaAB4AIgABABYAAgAmACoAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAQAGgAeACIAJgABABYAAQAqAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwAFABwAIAAkACgALAABABgAAQAwAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMABAAcACAAJAAoAAEAGAACACwAMAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAUAHgAiACYAKgAuAAEAGgACADIANgAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwAAAAEADgABABIAAAABAAAAAQAAAAMAAAABAA4AAQASAAAAAQAAAAEAAAADAAAAAQAOAAEAEgAAAAEAAAABAAAAAwABABQAAQAQAAEAGAAAAAEAAAABAAAAAQAAAAMAAQAUAAEAEAABABgAAAABAAAAAQAAAAEAAAADAAEAFAABABAAAQAYAAAAAQAAAAEAAAABAAAAAwACABQAGAABABAAAAAAAAEAAAABAAAAAQAAAAMAAwAWABoAHgABABIAAAAAAAEAAAABAAAAAQAAAAEAAAADAAIAFAAYAAEAEAAAAAAAAQAAAAEAAAABAAAAAwACABQAGAABABAAAAAAAAEAAAABAAAAAQAAAAMAAgAUABgAAQAQAAAAAAABAAAAAQAAAAEAAAADAAIAFAAYAAEAEAAAAAAAAQAAAAEAAAABAAAAAwACABQAGAABABAAAAAAAAEAAAABAAAAAQAAAAMAAgAUABgAAQAQAAAAAAABAAAAAQAAAAEAAAADAAIAFAAYAAEAEAAAAAAAAQAAAAEAAAABAAAAAwACABQAGAABABAAAAAAAAEAAAABAAAAAQAAAAMAAgAUABgAAQAQAAAAAAABAAAAAQAAAAEAAAADAAIAFAAYAAEAEAAAAAAAAQAAAAEAAAABAAAAAwACABQAGAABABAAAAAAAAEAAAABAAAAAQAAAAMAAAABAA4AAQASAAAAAQAAAAEAAAADAAEAFAABABAAAQAYAAAAAQAAAAEAAAABAAAAAwABABYAAQASAAIAGgAeAAAAAQAAAAEAAAABAAAAAQAAAAMAAQAYAAEAFAADABwAIAAkAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAEAGgABABYABAAeACIAJgAqAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAIAAIAqAABAAMAEQAdAEIAAwAAAAEADgABABIAAAABAAAAAQABAAMAAwAAAAIAEAAUAAEAGAAAAAEAAAABAAAAAQAAAAMAAQAYAAIAEAAUAAAAAAABAAAAAQAAAAEAAAADAAIAGgAeAAIAEgAWAAAAAAABAAAAAQAAAAEAAAABAAAAAwACABwAIAACABQAGAABACQAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAQAYAAIAEAAUAAAAAAABAAAAAQAAAAEAAAADAAAAAgAOABIAAAAAAAEAAAABAAAAAwABABgAAgAQABQAAAAAAAEAAAABAAAAAQAAAAMAAQAYAAIAEAAUAAAAAAABAAAAAQAAAAEAAAADAAAAAgAQABYAAQAaAAAAAQABAAMAAQAAAAEAAAADAAAAAgAQABYAAQAaAAAAAQABAAMAAQAAAAEAAAADAAEAFAABABAAAQAYAAAAAQAAAAEAAAABAAAAAwABABIAAQAOAAAAAAABAAAAAQAAAAMAAwAWABoAHgABABIAAAAAAAEAAAABAAAAAQAAAAEAAAADAAIAFAAYAAEAEAAAAAAAAQAAAAEAAAABAAAAAwADABYAGgAeAAEAEgAAAAAAAQAAAAEAAAABAAAAAQAAAAMAAgAUABgAAQAQAAAAAAABAAAAAQAAAAEAAAADAAIAFAAYAAEAEAAAAAAAAQAAAAEAAAABAAAAAwACABQAGAABABAAAAAAAAEAAAABAAAAAQAAAAMAAwAWABoAHgABABIAAAAAAAEAAAABAAAAAQAAAAEAAAADAAEAFAABABAAAQAYAAAAAQAAAAEAAAABAAAAAwABABYAAQASAAIAGgAeAAAAAQAAAAEAAAABAAAAAQAAAAMAAQAWAAEAEgACABoAHgAAAAEAAAABAAAAAQAAAAEAAAADAAEAFgABABIAAgAaAB4AAAABAAAAAQAAAAEAAAABAAAAAwACABQAGAABABAAAAAAAAEAAAABAAAAAQAAAAMAAwAWABoAHgABABIAAAAAAAEAAAABAAAAAQAAAAEAAAADAAIAFAAYAAEAEAAAAAAAAQAAAAEAAAABAAAAAwACABQAGAABABAAAAAAAAEAAAABAAAAAQAAAAMAAgAUABgAAQAQAAAAAAABAAAAAQAAAAEAAAADAAIAFAAYAAEAEAAAAAAAAQAAAAEAAAABAAAAAwACABQAGAABABAAAAAAAAEAAAABAAAAAQAAAAMAAwAWABoAHgABABIAAAAAAAEAAAABAAAAAQAAAAEAAAADAAIAFAAYAAEAEAAAAAAAAQAAAAEAAAABAAAAAwACABQAGAABABAAAAAAAAEAAAABAAAAAQAAAAMAAgAUABgAAQAQAAAAAAABAAAAAQAAAAEAAAADAAIAFAAYAAEAEAAAAAAAAQAAAAEAAAABAAAAAwABABQAAQAQAAEAGAAAAAEAAAABAAAAAQAAAAMAAQAUAAEAEAABABgAAAABAAAAAQAAAAEAAAADAAIAFAAYAAEAEAAAAAAAAQAAAAEAAAABAAAAAwADABYAGgAeAAEAEgAAAAAAAQAAAAEAAAABAAAAAQAAAAMAAgAUABgAAQAQAAAAAAABAAAAAQAAAAEAAAADAAMAFgAaAB4AAQASAAAAAAABAAAAAQAAAAEAAAABAAAAAwABABQAAQAQAAEAGAAAAAEAAAABAAAAAQAAAAMAAQAUAAEAEAABABgAAAABAAAAAQAAAAEAAAADAAEAFAABABAAAQAYAAAAAQAAAAEAAAABAAAAAwACABYAGgABABIAAQAeAAAAAQAAAAEAAAABAAAAAQAAAAMAAQAUAAEAEAABABgAAAABAAAAAQAAAAEAAAADAAEAFAABABAAAQAYAAAAAQAAAAEAAAABAAAAAwACABYAGgABABIAAQAeAAAAAQAAAAEAAAABAAAAAQAAAAMABAAcACAAJAAoAAEAGAACACwAMAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAEAEgABAA4AAAAAAAEAAAABAAAAAwACABQAGAABABAAAAAAAAEAAAABAAAAAQAAAAMAAQASAAEADgAAAAAAAQAAAAEAAAADAAIAFAAYAAEAEAAAAAAAAQAAAAEAAAABAAAAAwABABIAAQAOAAAAAAABAAAAAQAAAAMAAQASAAEADgAAAAAAAQAAAAEAAAADAAQAGAAcACAAJAABABQAAAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwAEABgAHAAgACQAAQAUAAAAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAQASAAEADgAAAAAAAQAAAAEAAAADAAIAFAAYAAEAEAAAAAAAAQAAAAEAAAABAAAAAwABABIAAQAOAAAAAAABAAAAAQAAAAMAAQAUAAEAEAABABgAAAABAAAAAQAAAAEAAAADAAIAFAAYAAEAEAAAAAAAAQAAAAEAAAABAAAAAwABABYAAQASAAIAGgAeAAAAAQAAAAEAAAABAAAAAQAAAAMAAgAWABoAAQASAAEAHgAAAAEAAAABAAAAAQAAAAEAAAADAAMAFgAaAB4AAQASAAAAAAABAAAAAQAAAAEAAAABAAAAAwABABIAAQAOAAAAAAABAAAAAQAAAAMAAQASAAEADgAAAAAAAQAAAAEAAAADAAEAEgABAA4AAAAAAAEAAAABAAAAAwABABQAAQAQAAEAGAAAAAEAAAABAAAAAQAAAAMAAQAUAAEAEAABABgAAAABAAAAAQAAAAEAAAADAAEAFAABABAAAQAYAAAAAQAAAAEAAAABAAAAAwACABQAGAABABAAAAAAAAEAAAABAAAAAQAAAAMAAgAUABgAAQAQAAAAAAABAAAAAQAAAAEAAAADAAIAFAAYAAEAEAAAAAAAAQAAAAEAAAABAAAAAwABABYAAQASAAIAGgAeAAAAAQAAAAEAAAABAAAAAQAAAAMAAQAWAAEAEgACABoAHgAAAAEAAAABAAAAAQAAAAEAAAADAAEAFgABABIAAgAaAB4AAAABAAAAAQAAAAEAAAABAAAAAwAC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AAEAEgABAA4AAAAAAAEAAAABAAMAEgDFANQAAQAGAMEAAQABABMAAgAKAAIABwBkAAEAAgDQANEAAgAKAAIA0ADRAAEAAgAHAGQAAgAKAAIA0gDTAAEAAgAZABsAAgAKAAIAGQAbAAEAAgDSANMAAwABABIAAQAOAAAAAAABAAAAAQAAAAMAAQASAAEADgAAAAAAAQAAAAEAAAADAAAAAQAOAAEAEgAAAAEAAAABAAAAAwABABIAAQAOAAAAAAABAAAAAQAAAAMAAAABABAAAgAUABoAAAABAAAAAQABAAMAAQAAAAMAAgAUABoAAQAQAAAAAAABAAAAAQABAAMAAQAAAAMAAAABAA4AAQASAAAAAQAAAAEAAAADAAEAEgABAA4AAAAAAAEAAAABAAAAAwAAAAEAEAACABQAGgAAAAEAAAABAAEAAwABAAAAAwACABQAGgABABAAAAAAAAEAAAABAAEAAwABAAAAAwAAAAEADgABABIAAAABAAAAAQAAAAMAAAABABAAAgAUABgAAAABAAAAAQAAAAEAAAADAAAAAQAQAAIAFAAYAAAAAQAAAAEAAAABAAAAAwAAAAEAEAACABQAGAAAAAEAAAABAAAAAQAAAAMAAgAWABoAAQASAAEAHgAAAAEAAAABAAAAAQAAAAEAAAADAAMAGAAcACAAAQAUAAEAJAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwADABgAHAAgAAEAFAABACQAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMABAAaAB4AIgAmAAEAFgABACoAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAEAFAABABAAAQAYAAAAAQAAAAEAAAABAAAAAwACABYAGgABABIAAQAeAAAAAQAAAAEAAAABAAAAAQAAAAMAAQAWAAEAEgACABoAHgAAAAEAAAABAAAAAQAAAAEAAAADAAIAGAAcAAEAFAACACAAJAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwABABgAAQAUAAMAHAAgACQAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAgAaAB4AAQAWAAMAIgAmACoAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAEAGAABABQAAwAcACAAJAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwACABoAHgABABYAAwAiACYAKgAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAQAUAAEAEAABABgAAAABAAAAAQAAAAEAAAADAAEAFgABABIAAgAaAB4AAAABAAAAAQAAAAEAAAABAAAAAwABABgAAQAUAAMAHAAgACQAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAQAYAAEAFAADABwAIAAkAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAIAFgAaAAEAEgABAB4AAAABAAAAAQAAAAEAAAABAAAAAwACABgAHAABABQAAgAgACQAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAgAaAB4AAQAWAAMAIgAmACoAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAIAGgAeAAEAFgADACIAJgAqAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwACABYAGgABABIAAQAeAAAAAQAAAAEAAAABAAAAAQAAAAMAAwAYABwAIAABABQAAQAkAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAMAGAAcACAAAQAUAAEAJAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwADABgAHAAgAAEAFAABACQAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMABAAaAB4AIgAmAAEAFgABACoAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAQAGgAeACIAJgABABYAAQAqAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwAFABwAIAAkACgALAABABgAAQAwAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMABAAaAB4AIgAmAAEAFgABACoAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAUAHAAgACQAKAAsAAEAGAABADAAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwAAAAEADgABABQAAAABAAEAAwABAAAAAwAAAAIAEAAUAAEAGAAAAAEAAAABAAAAAQAAAAMAAAACABIAFgACABoAHgAAAAEAAAABAAAAAQAAAAEAAAADAAAAAgAUABgAAwAcACAAJAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwAAAAIAFgAaAAQAHgAiACYAKgAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAAACABIAFgACABoAHgAAAAEAAAABAAAAAQAAAAEAAAADAAAAAgAUABgAAwAcACAAJAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwAAAAIAFgAaAAQAHgAiACYAKgAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAAACABgAHAAFACAAJAAoACwAMAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAAAAgAQABQAAQAYAAAAAQAAAAEAAAABAAAAAwAAAAIAEgAWAAIAGgAeAAAAAQAAAAEAAAABAAAAAQAAAAMAAAACABQAGAADABwAIAAkAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAAAAgAWABoABAAeACIAJgAqAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwAAAAIAEgAWAAIAGgAeAAAAAQAAAAEAAAABAAAAAQAAAAMAAAACABIAFgACABoAHgAAAAEAAAABAAAAAQAAAAEAAAADAAAAAgAUABgAAwAcACAAJAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwAAAAIAFAAYAAMAHAAgACQAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAAACABYAGgAEAB4AIgAmACoAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAAAAgAWABoABAAeACIAJgAqAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwAAAAIAGAAcAAUAIAAkACgALAAwAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAAACABgAHAAFACAAJAAoACwAMAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAAAAgAQABQAAQAYAAAAAQAAAAEAAAABAAAAAwAAAAIAEgAWAAIAGgAeAAAAAQAAAAEAAAABAAAAAQAAAAMAAAACABAAFAABABgAAAABAAAAAQAAAAEAAAADAAAAAgASABYAAgAaAB4AAAABAAAAAQAAAAEAAAABAAAAAwACABoAHgACABIAFgAAAAAAAQAAAAEAAAABAAAAAQAAAAMAAgAYABwAAQAUAAIAIAAkAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAIAFgAaAAEAEgABAB4AAAABAAAAAQAAAAEAAAABAAAAAwACABgAHAABABQAAgAgACQAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAgAWABoAAQASAAEAHgAAAAEAAAABAAAAAQAAAAEAAAADAAIAGAAcAAEAFAACACAAJAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwACABYAGgABABIAAQAeAAAAAQAAAAEAAAABAAAAAQAAAAMAAgAYABwAAQAUAAIAIAAkAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAIAFgAaAAEAEgABAB4AAAABAAAAAQAAAAEAAAABAAAAAwACABgAHAABABQAAgAgACQAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAgAWABoAAQASAAEAHgAAAAEAAAABAAAAAQAAAAEAAAADAAIAGAAcAAEAFAACACAAJAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwACABYAGgABABIAAQAeAAAAAQAAAAEAAAABAAAAAQAAAAMAAgAYABwAAQAUAAIAIAAkAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAIAFgAaAAEAEgABAB4AAAABAAAAAQAAAAEAAAABAAAAAwACABgAHAABABQAAgAgACQAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAgAWABoAAQASAAEAHgAAAAEAAAABAAAAAQAAAAEAAAADAAIAGAAcAAEAFAACACAAJAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwACABYAGgABABIAAQAeAAAAAQAAAAEAAAABAAAAAQAAAAMAAgAYABwAAQAUAAIAIAAkAAAAAQAAAAEAAAABAAAAAQAAAAEAAAADAAIAFgAaAAEAEgABAB4AAAABAAAAAQAAAAEAAAABAAAAAwADABYAGgAeAAEAEgAAAAAAAQAAAAEAAAABAAAAAQAAAAMAAgAUABgAAQAQAAAAAAABAAAAAQAAAAEAAAADAAAAAQAUAAQAGAAcACAAJAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwAAAAEAFAAEABgAHAAgACQAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAAABABIAAwAWABoAHgAAAAEAAAABAAAAAQAAAAEAAAADAAAAAQASAAMAFgAaAB4AAAABAAAAAQAAAAEAAAABAAAAAwAAAAEAEgADABYAGgAeAAAAAQAAAAEAAAABAAAAAQAAAAMAAAABABIAAwAWABoAHgAAAAEAAAABAAAAAQAAAAEAAAADAAAAAQASAAMAFgAaAB4AAAABAAAAAQAAAAEAAAABAAAAAwAAAAEAEgADABYAGgAeAAAAAQAAAAEAAAABAAAAAQAAAAMAAAABABIAAwAWABoAHgAAAAEAAAABAAAAAQAAAAEAAAADAAAAAQASAAMAFgAaAB4AAAABAAAAAQAAAAEAAAABAAAAAwAAAAEAEgADABYAGgAeAAAAAQAAAAEAAAABAAAAAQAAAAMAAQAYAAEADgAAAAAAAgABABMAHAAAAAEAAAADAAIAGgAeAAEAEAAAAAAAAgABABMAHAAAAAEAAAABAAAAAwADABwAIAAkAAEAEgAAAAAAAgABABMAHAAAAAEAAAABAAAAAQAAAAMAAQAYAAEADgAAAAAAAgABABMAHAAAAAEAAAADAAIAGgAeAAEAEAAAAAAAAgABABMAHAAAAAEAAAABAAAAAwADABwAIAAkAAEAEgAAAAAAAgABABMAHAAAAAEAAAABAAAAAQAAAAMABAAeACIAJgAqAAEAFAAAAAAAAgABABMAHAAAAAEAAAABAAAAAQAAAAEAAAADAAEAGAABAA4AAAAAAAIAAQATABwAAAABAAAAAwACABoAHgABABAAAAAAAAIAAQATABwAAAABAAAAAQAAAAMAAgAaACQAAQAQAAAAAAACAAEAEwAcAAAAAgABABMAHAAAAAEAAAADAAAAAQASAAMAFgAaAB4AAAABAAAAAQAAAAEAAAABAAAAAwAAAAEAFAAEABgAHAAgACQAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAAABAA4AAQASAAAAAQAAAAEAAAADAAEAEgABAA4AAAAAAAEAAAABAAAAAwABABIAAQAOAAAAAAABAAAAAQAAAAMAAAACABAAFAABABgAAAABAAAAAQAAAAEABwACAAMACwAMABEAHQBCAAMAAAABAA4AAQASAAAAAQAAAAEAAAADAAEAFgABABIAAgAaAB4AAAABAAAAAQAAAAEAAAABAAAAAwACABQAGAABABAAAAAAAAEAAAABAAAAAQAAAAMAAQAUAAEAEAABABgAAAABAAAAAQAAAAEAAAADAAEAEgABAA4AAAAAAAEAAAABAAAAAwAAAAEADgABABIAAAABAAAAAQAAAAMAAQAWAAEAEgACABoAHgAAAAEAAAABAAAAAQAAAAEAAAADAAEAEgABAA4AAAAAAAEAAAABAAAAAwAAAAEADgABABIAAAABAAAAAQAAAAMAAAABAA4AAQASAAAAAQAAAAEAAAADAAAAAQAQAAIAFAAYAAAAAQAAAAEAAAABAAAAAwABABYAAQASAAIAGgAeAAAAAQAAAAEAAAABAAAAAQAAAAMAAQAWAAEAEgACABoAHgAAAAEAAAABAAAAAQAAAAEAAAADAAEAFAABABAAAQAYAAAAAQAAAAEAAAABAAAAAwACABQAGAABABAAAAAAAAEAAAABAAAAAQAAAAMAAwAWABoAHgABABIAAAAAAAEAAAABAAAAAQAAAAEAAAADAAIAFAAYAAEAEAAAAAAAAQAAAAEAAAABAAAAAwADABYAGgAeAAEAEgAAAAAAAQAAAAEAAAABAAAAAQAAAAMAAwAWABoAHgABABIAAAAAAAEAAAABAAAAAQAAAAEAAAADAAQAGAAcACAAJAABABQAAAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwABABIAAQAOAAAAAAABAAAAAQAAAAMAAAABABAAAgAUABgAAAABAAAAAQAAAAEAAAADAAAAAQAOAAEAEgAAAAEAAAABAAAAAwABABIAAQAOAAAAAAABAAAAAQAAAAMAAAABAA4AAQASAAAAAQAAAAEAAAADAAAAAQAOAAEAEgAAAAEAAAABAAAAAwAAAAEADgABABIAAAABAAAAAQAAAAMAAAABABAAAgAUABgAAAABAAAAAQAAAAEAAAADAAAAAQAOAAEAEgAAAAEAAAABAAAAAwAAAAEAEAACABQAGAAAAAEAAAABAAAAAQAAAAMAAAABAA4AAQASAAAAAQAAAAEAAAADAAEAEgABAA4AAAAAAAEAAAABAAAAAwAAAAEADgABABIAAAABAAAAAQAAAAMAAAABAA4AAQASAAAAAQAAAAEAAAADAAAAAQAOAAEAEgAAAAEAAAABAAAAAwAAAAEADgABABIAAAABAAAAAQAAAAMAAAABAA4AAQASAAAAAQAAAAEAAAADAAEAEgABAA4AAAAAAAEAAAABAAAAAwACABQAGAABABAAAAAAAAEAAAABAAAAAQAAAAMAAwAWABoAHgABABIAAAAAAAEAAAABAAAAAQAAAAEAAAADAAAAAQAOAAEAEgAAAAEAAAABAAAAAwABABIAAQAOAAAAAAABAAAAAQAAAAMAAgAUABgAAQAQAAAAAAABAAAAAQAAAAEAAAADAAMAFgAaAB4AAQASAAAAAAABAAAAAQAAAAEAAAABAAAAAwACABQAGAABABAAAAAAAAEAAAABAAAAAQAAAAMAAQASAAEADgAAAAAAAQAAAAEAAAADAAIAFAAYAAEAEAAAAAAAAQAAAAEAAAABAAAAAwACABQAGAABABAAAAAAAAEAAAABAAAAAQAAAAMAAwAWABoAHgABABIAAAAAAAEAAAABAAAAAQAAAAEAAAADAAIAFAAYAAEAEAAAAAAAAQAAAAEAAAABAAAAAwABABIAAQAOAAAAAAABAAAAAQAAAAMAAAABAA4AAQASAAAAAQAAAAEAAAADAAAAAQAQAAIAFAAYAAAAAQAAAAEAAAABAAAAAwABABQAAQAQAAEAGAAAAAEAAAABAAAAAQAAAAMAAQAUAAEAEAABABgAAAABAAAAAQAAAAEAAAADAAAAAQAOAAEAEgAAAAEAAAABAAAAAwAAAAEAEAACABQAGAAAAAEAAAABAAAAAQAAAAMAAQAUAAEAEAABABgAAAABAAAAAQAAAAEAAAADAAIAFAAYAAEAEAAAAAAAAQAAAAEAAAABAAAAAwACABQAGAABABAAAAAAAAEAAAABAAAAAQAAAAMAAAABAA4AAQASAAAAAQAAAAEAAAADAAAAAQAOAAEAEgAAAAEAAAABAAAAAwAAAAEADgABABIAAAABAAAAAQAAAAMAAAABAA4AAQASAAAAAQAAAAEAAAADAAAAAQAOAAEAEgAAAAEAAAABAAAAAwAAAAEADgABABIAAAABAAAAAQAAAAMAAAABAA4AAQASAAAAAQAAAAEAAAADAAAAAQAOAAEAEgAAAAEAAAABAAAAAwAAAAEADgABABIAAAABAAAAAQAAAAMAAAABAA4AAQASAAAAAQAAAAEAAAADAAAAAQAOAAEAEgAAAAEAAAABAAAAAwAAAAEADgABABIAAAABAAAAAQAAAAMAAAABAA4AAQASAAAAAQAAAAEAAAADAAAAAQAOAAEAEgAAAAEAAAABAAAAAwAAAAEADgABABIAAAABAAAAAQAAAAMAAQASAAEADgAAAAAAAQAAAAEAAAADAAEAEgABAA4AAAAAAAEAAAABAAAAAwABABIAAQAOAAAAAAABAAAAAQAAAAMAAQASAAEADgAAAAAAAQAAAAEAAAADAAEAEgABAA4AAAAAAAEAAAABAAAAAwAAAAEADgABABIAAAABAAAAAQAAAAMAAQASAAEADgAAAAAAAQAAAAEAAAADAAIAFAAYAAEAEAAAAAAAAQAAAAEAAAABAAAAAwADABYAGgAeAAEAEgAAAAAAAQAAAAEAAAABAAAAAQAAAAMAAAABAA4AAQASAAAAAQAAAAEAAAADAAEAEgABAA4AAAAAAAEAAAABAAAAAwACABQAGAABABAAAAAAAAEAAAABAAAAAQAAAAMAAwAWABoAHgABABIAAAAAAAEAAAABAAAAAQAAAAEAAAADAAEAEgABAA4AAAAAAAEAAAABAAAAAwACABQAGAABABAAAAAAAAEAAAABAAAAAQAAAAMAAQASAAEADgAAAAAAAQAAAAEAAAADAAIAFAAYAAEAEAAAAAAAAQAAAAEAAAABAAAAAwACABQAGAABABAAAAAAAAEAAAABAAAAAQAAAAMAAwAWABoAHgABABIAAAAAAAEAAAABAAAAAQAAAAEAAAADAAEAEgABAA4AAAAAAAEAAAABAAAAAwACABQAGAABABAAAAAAAAEAAAABAAAAAQAAAAMAAgAUABgAAQAQAAAAAAABAAAAAQAAAAEAAAADAAIAFAAYAAEAEAAAAAAAAQAAAAEAAAABAAAAAwAAAAQAFAAYABwAIAABACQAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAAAEABIAFgAaAB4AAAAAAAEAAAABAAAAAQAAAAEAAAADAAEAEgABAA4AAAAAAAEAAAABAAAAAwAAAAQAFAAYABwAIAABACQAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAAAEABIAFgAaAB4AAAAAAAEAAAABAAAAAQAAAAEAAAADAAAABwAaAB4AIgAoACwAMAA0AAEAOAAAAAEAAAABAAAAAQABAAMAAQAAAAEAAAABAAAAAQAAAAEAAAADAAAABwAYABwAIAAmACoALgAyAAAAAAABAAAAAQAAAAEAAQADAAEAAAABAAAAAQAAAAEAAAADAAAAEwAyADYAOgA+AEQASABOAFIAVgBaAF4AYgBmAGwAcAB0AHgAfACAAAEAhAAAAAEAAAABAAAAAQAAAAEAAQADAAEAAAABAAEAAwABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAEAAwABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAwAAABMAMAA0ADgAPABCAEYATABQAFQAWABcAGAAZABqAG4AcgB2AHoAfgAAAAAAAQAAAAEAAAABAAAAAQABAAMAAQAAAAEAAQADAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAQADAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAMAAAAOACgALAAwADYAOgBAAEQASABMAFAAVgBaAF4AYgABAGYAAAABAAAAAQAAAAEAAQADAAEAAAABAAEAAwABAAAAAQAAAAEAAAABAAAAAQABAAMAAQAAAAEAAAABAAAAAQAAAAEAAAADAAAADgAmACoALgA0ADgAPgBCAEYASgBOAFQAWABcAGAAAAAAAAEAAAABAAAAAQABAAMAAQAAAAEAAQADAAEAAAABAAAAAQAAAAEAAAABAAEAAwABAAAAAQAAAAEAAAABAAAAAwAAABMAMgA2ADoAQABEAEoATgBSAFYAWgBgAGQAaABsAHAAdgB6AH4AggABAIYAAAABAAAAAQAAAAEAAQADAAEAAAABAAEAAwABAAAAAQAAAAEAAAABAAAAAQABAAMAAQAAAAEAAAABAAAAAQAAAAEAAQADAAEAAAABAAAAAQAAAAEAAAABAAAAAwAAABMAMAA0ADgAPgBCAEgATABQAFQAWABeAGIAZgBqAG4AdAB4AHwAgAAAAAAAAQAAAAEAAAABAAEAAwABAAAAAQABAAMAAQAAAAEAAAABAAAAAQAAAAEAAQADAAEAAAABAAAAAQAAAAEAAAABAAEAAwABAAAAAQAAAAEAAAABAAAAAwAAAAEADgABABIAAAABAAAAAQAAAAMAAAABAAwAAAAAAAEAAAABAAYAWwABAAEATAABAAYAswABAAEAEgAAAAMDwgGQAAUABAWZBTMAAAEeBZkFMwAAA9AAhgIACAACDwUCAgIEAwIE4AAq/8AAJHsAAAAJAAAAAE1TICAAQAANJfwGAP4AAAAINgKoIAAB/wAAAAADtwUOAAAAIAAUAAAAAwAAAAMAAAAcAAEAAAAAARwAAwABAAAAHAAEAQAAAAA8ACAABAAcAAAADQB+AKAAowClAKgArQC0ANYA9gD/ATEBUwF4AZICxgLaAtwgCiAUIBkgHSAmIC8gRCBfIKwl/P//AAAAAAANACAAoACiAKUAqACtALQAwADYAPgBMQFSAXgBkgLGAtoC3CAAIBAgGCAcICYgLyBEIF8grCX8//8AAf/1/+P/wv/B/8D/vv+6/7T/qf+o/6f/dv9W/zL/Gf3m/dP90uCv4Krgp+Cl4J3gleCB4GfgG9rMAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEGAAABAAAAAAAAAAECAAAAAgAAAAAAAAAAAAAAAAAAAAEAAAMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9AQUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVpbXF1eX2BhAG1ucHJ6f4SJiIqMi42PkZCSk5WUlpeZm5qcnp2hoKKjAABjZAAAAIcAAABoZgBvgAAAAABlAAAAAAAAAAAAjp8AAAAAqwAAAADDYmlsfqipvb7Bwr/AAACmqsXHAAAAAAAAAAAAa3NqdHF2d3h1fH0Ae4KDgaesrgAAAK0AAAAAAAAAAAeeAAD+kwAAAAAAAAAAAAAAAABQAGoAcwCAAIAAhgCNAJMAvwDbAGIAgwCTAJkAoACmAKkAsADBAMkA1wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD+eQVtAAwDtwAGABMAAP/6/+3+pv/t/rgFDgAGABMAAP/6/+3+kwUOABMEIAAGABMAAP/6/+3/EP/uBQ4AEwQgAAYAEwAA//r/7v6T/xD+uAYSAAoFDgAGAA0C0v/6//MB/f/6Aj8ABgAN/zb/+v/zAocABgAPAAD/+v/xB57+r/6nAAAAAAAAAAAAAAAAAFAAUQBaAFsAXABdAGAAYQBiAGQAaABpAGoAawBsAG0AbgBoAGkAbgBgAGcAbgBmAGgAXwBhAGMAZABmAGgAagBrAGwAbQBuAG8AcABvAHIAdAB1AHYAdgBwAHIAcwB0AHUAdgBvAHAAcQByAHMAdQB3AHcAeAB5AHoAewB8AH0AewB8AH0AdwB5AHoAfAB4AHoAfAB9AHgAfQB+AH8AgACBAIIAfgB/AIEAggB+AH8AgACBAIIAgwCEAIUAhgCHAIgAiQCDAIQAhQCGAIcAiACJAIMAhACFAIYAhwCIAIkAiQCGAIcAiACJAIoAiwCMAI0AjgCPAIoAiwCMAI0AjgCPAIoAiwCMAI0AjgCPAI0AigCLAIwAjQCOAI8AkACQAJEAkgCTAJQAlQCWAJgAmQCbAJwAkACRAJIAkwCUAJUAlgCXAJgAmQCaAJ4AnwCmAJAAkQCVAJgAnwCQAJEAlgCXALwAxgC1AK4ArwC2AGgAaQBjAGoAbwBwAHEAbwBwAHEAcgBmAGwAbQBwAHkAfAB/AIMAhgCHAIgAiQCKAHQAdQB2AHcAegB7AHwAfQB+AIIAhQCGAIoAiACJAIMAeAB7AIIAgwCGAIcAiACJAHYAeQB6AHwAfQB+AIMAhQCIAIkAigBzAHQAdQB3AHoAfQCIAIkAigCLAIwAjQCOAJAAlACLAIwAjQCRAJIAkwCUAJUAjACNAJEAlQCPAJAAkQCSAJMAlACVAIsAjACNAI4AjwCQAJEAkgCTAJQAlQCLAIwAjQCOAI8AkACRAJIAkwCWAJcAmACZAJwAlgCXAJgAmQCaAJsAnACWAJkAmgCcAJYAlwCYAJkAmgCbAJwAlwCYAJkAmgCbAJwAlwCYAJkAmgCbAJwAlgCdAKAAoQCdAJ4AnwCgAKEAogCdAJ8AoAChAJ8AogCdAJ4AnwCgAKEAogCdAJ4AoAChAJ0AngCgAKIAnQCjAKQApQCmAKcAowCkAKYApwCjAKQApQCmAKcApgCjAKcAqACpAKoAqwCsAKwAqACpAKoAqwCsAKgAqQCqAKsArACoAKoAqwCsAK4ArQCuAK8AsACxALIAswC0ALUAtgC3ALgArQCuAK0ArgCvALAAsQCyALMAtAC1ALYAtwC4AK0ArgCvALAAsQCyALMAtAC1ALYAtwC4ALMArgCvALAAsgC1ALYAtwC4ALkAugC7ALwAvgDAAMEAwgDCALkAugC7ALwAvQC+AL8AwADBAMIAxAC6ALsAvgC/AMAAwgDDAMQAuQC6AL8AwADCAMYAxwDJAMoAywDMAM8AxQDHAM4AxQDHAMgAzwDQANIA0wDXAQ0A0ADRAOkA0AD9ANAF5AAOAEEAAAW6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"  # NOQA
             "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"  # NOQA
             "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AGUAcgBzAC4AIABJAHQAIABmAGUAYQB0AHUAcgBlAHMAIAByAGUAYQBsACAAaQB0AGEAbABpAGMAcwAsACAAcwBtAGEAbABsACAAYwBhAHAAcwAsACAAYQBuAGQAIABtAHUAbAB0AGkAcABsAGUAIABuAHUAbQBlAHIAYQBsACAAcwBlAHQAcwAuACAASQB0AHMAIABwAHIAbwBwAG8AcgB0AGkAbwBuAHMAIABhAGwAbABvAHcAIABoAGkAZwBoACAAaQBtAHAAYQBjAHQAIABpAG4AIAB0AGkAZwBoAHQAbAB5ACAAcwBlAHQAIABsAGkAbgBlAHMAIABvAGYAIABiAGkAZwAgAGEAbgBkACAAcwBtAGEAbABsACAAdABlAHgAdAAgAGEAbABpAGsAZQAuACAAQwBhAGwAaQBiAHIAaQAnAHMAIABtAGEAbgB5ACAAYwB1AHIAdgBlAHMAIABhAG4AZAAgAHQAaABlACAAbgBlAHcAIAByAGEAcwB0AGUAcgBpAHMAZQByACAAdABlAGEAbQAgAHUAcAAgAGkAbgAgAGIAaQBnAGcAZQByACAAcwBpAHoAZQBzACAAdABvACAAcgBlAHYAZQBhAGwAIABhACAAdwBhAHIAbQAgAGEAbgBkACAAcwBvAGYAdAAgAGMAaABhAHIAYQBjAHQAZQByAC4AaAB0AHQAcAA6AC8ALwB3AHcAdwAuAG0AaQBjAHIAbwBzAG8AZgB0AC4AYwBvAG0ALwB0AHkAcABvAGcAcgBhAHAAaAB5AC8AYwB0AGYAbwBuAHQAcwBoAHQAdABwADoALwAvAGwAdQBjAGEAcwBmAG8AbgB0AHMALgBjAG8AbQBNAGkAYwByAG8AcwBvAGYAdAAgAHMAdQBwAHAAbABpAGUAZAAgAGYAbwBuAHQALgAgAFkAbwB1ACAAbQBhAHkAIAB1AHMAZQAgAHQAaABpAHMAIABmAG8AbgB0ACAAdABvACAAYwByAGUAYQB0AGUALAAgAGQAaQBzAHAAbABhAHkALAAgAGEAbgBkACAAcAByAGkAbgB0ACAAYwBvAG4AdABlAG4AdAAgAGEAcwAgAHAAZQByAG0AaQB0AHQAZQBkACAAYgB5ACAAdABoAGUAIABsAGkAYwBlAG4AcwBlACAAdABlAHIAbQBzACAAbwByACAAdABlAHIAbQBzACAAbwBmACAAdQBzAGUALAAgAG8AZgAgAHQAaABlACAATQBpAGMAcgBvAHMAbwBmAHQAIABwAHIAbwBkAHUAYwB0ACwAIABzAGUAcgB2AGkAYwBlACwAIABvAHIAIABjAG8AbgB0AGUAbgB0ACAAaQBuACAAdwBoAGkAYwBoACAAdABoAGkAcwAgAGYAbwBuAHQAIAB3AGEAcwAgAGkAbgBjAGwAdQBkAGUAZAAuACAAWQBvAHUAIABtAGEAeQAgAG8AbgBsAHkAIAAoAGkAKQAgAGUAbQBiAGUAZAAgAHQAaABpAHMAIABmAG8AbgB0ACAAaQBuACAAYwBvAG4AdABlAG4AdAAgAGEAcwAgAHAAZQByAG0AaQB0AHQAZQBkACAAYgB5ACAAdABoAGUAIABlAG0AYgBlAGQAZABpAG4AZwAgAHIAZQBzAHQAcgBpAGMAdABpAG8AbgBzACAAaQBuAGMAbAB1AGQAZQBkACAAaQBuACAAdABoAGkAcwAgAGYAbwBuAHQAOwAgAGEAbgBkACAAKABpAGkAKQAgAHQAZQBtAHAAbwByAGEAcgBpAGwAeQAgAGQAbwB3AG4AbABvAGEAZAAgAHQAaABpAHMAIABmAG8AbgB0ACAAdABvACAAYQAgAHAAcgBpAG4AdABlAHIAIABvAHIAIABvAHQAaABlAHIAIABvAHUAdABwAHUAdAAgAGQAZQB2AGkAYwBlACAAdABvACAAaABlAGwAcAAgAHAAcgBpAG4AdAAgAGMAbwBuAHQAZQBuAHQALgAgAEEAbgB5ACAAbwB0AGgAZQByACAAdQBzAGUAIABpAHMAIABwAHIAbwBoAGkAYgBpAHQAZQBkAC4ADQAKAA0ACgBUAGgAZQAgAGYAbwBsAGwAbwB3AGkAbgBnACAAbABpAGMAZQBuAHMAZQAsACAAYgBhAHMAZQBkACAAbwBuACAAdABoAGUAIABNAEkAVAAgAGwAaQBjAGUAbgBzAGUAIAAoAGgAdAB0AHAAOgAvAC8AZQBuAC4AdwBpAGsAaQBwAGUAZABpAGEALgBvAHIAZwAvAHcAaQBrAGkALwBNAEkAVABfAEwAaQBjAGUAbgBzAGUAKQAsACAAYQBwAHAAbABpAGUAcwAgAHQAbwAgAHQAaABlACAATwBwAGUAbgBUAHkAcABlACAATABhAHkAbwB1AHQAIABsAG8AZwBpAGMAIABmAG8AcgAgAEIAaQBiAGwAaQBjAGEAbAAgAEgAZQBiAHIAZQB3ACAgHABMAGEAeQBvAHUAdAAgAEwAbwBnAGkAYyAdACAAYQBzACAAagBvAGkAbgB0AGwAeQAgAGQAZQB2AGUAbABvAHAAZQBkACAAYgB5ACAAUgBhAGwAcABoACAASABhAG4AYwBvAGMAawAgAGEAbgBkACAASgBvAGgAbgAgAEgAdQBkAHMAbwBuAC4AIAANAAoADQAKAFAAZQByAG0AaQBzAHMAaQBvAG4AIABpAHMAIABoAGUAcgBlAGIAeQAgAGcAcgBhAG4AdABlAGQALAAgAGYAcgBlAGUAIABvAGYAIABjAGgAYQByAGcAZQAsACAAdABvACAAYQBuAHkAIABwAGUAcgBzAG8AbgAgAG8AYgB0AGEAaQBuAGkAbgBnACAAYQAgAGMAbwBwAHkAIABvAGYAIAB0AGgAZQAgAE8AcABlAG4AVAB5AHAAZQAgAEwAYQB5AG8AdQB0ACAAbABvAGcAaQBjACAAZgBvAHIAIABCAGkAYgBsAGkAYwBhAGwAIABIAGUAYgByAGUAdwAgAGEAbgBkACAAYQBzAHMAbwBjAGkAYQB0AGUAZAAgAGQAbwBjAHUAbQBlAG4AdABhAHQAaQBvAG4AIABmAGkAbABlAHMAIAAoAHQAaABlACAgHABMAGEAeQBvAHUAdAAgAEwAbwBnAGkAYwAgAFMAbwBmAHQAdwBhAHIAZSAdACkALAAgAHQAbwAgAGQAZQBhAGwAIABpAG4AIAB0AGgAZQAgAEwAYQB5AG8AdQB0ACAATABvAGcAaQBjACAAUwBvAGYAdAB3AGEAcgBlACAAdwBpAHQAaABvAHUAdAAgAHIAZQBzAHQAcgBpAGMAdABpAG8AbgAsACAAaQBuAGMAbAB1AGQAaQBuAGcAIAB3AGkAdABoAG8AdQB0ACAAbABpAG0AaQB0AGEAdABpAG8AbgAgAHQAaABlACAAcgBpAGcAaAB0AHMAIAB0AG8AIAB1AHMAZQAsACAAYwBvAHAAeQAsACAAbQBvAGQAaQBmAHkALAAgAG0AZQByAGcAZQAsACAAcAB1AGIAbABpAHMAaAAsACAAZABpAHMAdAByAGkAYgB1AHQAZQAsACAAcwB1AGIAbABpAGMAZQBu"  # NOQA
-            "AHMAZQAsACAAYQBuAGQALwBvAHIAIABzAGUAbABsACAAYwBvAHAAaQBlAHMAIABvAGYAIAB0AGgAZQAgAEwAYQB5AG8AdQB0ACAATABvAGcAaQBjACAAUwBvAGYAdAB3AGEAcgBlACwAIABhAG4AZAAgAHQAbwAgAHAAZQByAG0AaQB0ACAAcABlAHIAcwBvAG4AcwAgAHQAbwAgAHcAaABvAG0AIAB0AGgAZQAgAEwAYQB5AG8AdQB0ACAATABvAGcAaQBjACAAUwBvAGYAdAB3AGEAcgBlACAAaQBzACAAZgB1AHIAbgBpAHMAaABlAGQAIAB0AG8AIABkAG8AIABzAG8ALAAgAHMAdQBiAGoAZQBjAHQAIAB0AG8AIAB0AGgAZQAgAGYAbwBsAGwAbwB3AGkAbgBnACAAYwBvAG4AZABpAHQAaQBvAG4AcwA6AA0ACgANAAoAVABoAGUAIABhAGIAbwB2AGUAIABjAG8AcAB5AHIAaQBnAGgAdAAgAG4AbwB0AGkAYwBlACAAYQBuAGQAIAB0AGgAaQBzACAAcABlAHIAbQBpAHMAcwBpAG8AbgAgAG4AbwB0AGkAYwBlACAAcwBoAGEAbABsACAAYgBlACAAaQBuAGMAbAB1AGQAZQBkACAAaQBuACAAYQBsAGwAIABjAG8AcABpAGUAcwAgAG8AcgAgAHMAdQBiAHMAdABhAG4AdABpAGEAbAAgAHAAbwByAHQAaQBvAG4AcwAgAG8AZgAgAHQAaABlACAATABhAHkAbwB1AHQAIABMAG8AZwBpAGMAIABTAG8AZgB0AHcAYQByAGUALgANAAoADQAKAFQASABFACAAUwBPAEYAVABXAEEAUgBFACAASQBTACAAUABSAE8AVgBJAEQARQBEACAAJwBBAFMAIABJAFMAJwAsACAAVwBJAFQASABPAFUAVAAgAFcAQQBSAFIAQQBOAFQAWQAgAE8ARgAgAEEATgBZACAASwBJAE4ARAAsACAARQBYAFAAUgBFAFMAUwAgAE8AUgAgAEkATQBQAEwASQBFAEQALAAgAEkATgBDAEwAVQBEAEkATgBHACAAQgBVAFQAIABOAE8AVAAgAEwASQBNAEkAVABFAEQAIABUAE8AIABUAEgARQAgAFcAQQBSAFIAQQBOAFQASQBFAFMAIABPAEYAIABNAEUAUgBDAEgAQQBOAFQAQQBCAEkATABJAFQAWQAsACAARgBJAFQATgBFAFMAUwAgAEYATwBSACAAQQAgAFAAQQBSAFQASQBDAFUATABBAFIAIABQAFUAUgBQAE8AUwBFACAAQQBOAEQAIABOAE8ATgBJAE4ARgBSAEkATgBHAEUATQBFAE4AVAAuACAASQBOACAATgBPACAARQBWAEUATgBUACAAUwBIAEEATABMACAAVABIAEUAIABBAFUAVABIAE8AUgBTACAATwBSACAAQwBPAFAAWQBSAEkARwBIAFQAIABIAE8ATABEAEUAUgBTACAAQgBFACAATABJAEEAQgBMAEUAIABGAE8AUgAgAEEATgBZACAAQwBMAEEASQBNACwAIABEAEEATQBBAEcARQBTACAATwBSACAATwBUAEgARQBSACAATABJAEEAQgBJAEwASQBUAFkALAAgAFcASABFAFQASABFAFIAIABJAE4AIABBAE4AIABBAEMAVABJAE8ATgAgAE8ARgAgAEMATwBOAFQAUgBBAEMAVAAsACAAVABPAFIAVAAgAE8AUgAgAE8AVABIAEUAUgBXAEkAUwBFACwAIABBAFIASQBTAEkATgBHACAARgBSAE8ATQAsACAATwBVAFQAIABPAEYAIABPAFIAIABJAE4AIABDAE8ATgBOAEUAQwBUAEkATwBOACAAVwBJAFQASAAgAFQASABFACAAUwBPAEYAVABXAEEAUgBFACAATwBSACAAVABIAEUAIABVAFMARQAgAE8AUgAgAE8AVABIAEUAUgAgAEQARQBBAEwASQBOAEcAUwAgAEkATgAgAFQASABFACAAUwBPAEYAVABXAEEAUgBFAC4ADQAKAGgAdAB0AHAAOgAvAC8AdwB3AHcALgBtAGkAYwByAG8AcwBvAGYAdAAuAGMAbwBtAC8AdAB5AHAAbwBnAHIAYQBwAGgAeQAvAGYAbwBuAHQAcwAvAGQAZQBmAGEAdQBsAHQALgBhAHMAcAB4AFcAZQBiAGYAbwBuAHQAIAAxAC4AMABTAHUAbgAgAFMAZQBwACAAMQA3ACAAMAA4ADoAMQA3ADoAMgA4ACAAMgAwADIAMwBrAGUAZQBwAGwAZQBvAEYAbwBuAHQAIABTAHEAdQBpAHIAcgBlAGwAAgAAAAAAAP8YAIYAAAAAAAAAAAAAAAAAAAAAAAAAAADVAAABAgEDAAMABAAFAAYABwAIAAkACgALAAwADQAOAA8AEAARABIAEwAUABUAFgAXABgAGQAaABsAHAAdAB4AHwAgACEAIgAjACQAJQAmACcAKAApACoAKwAsAC0ALgAvADAAMQAyADMANAA1ADYANwA4ADkAOgA7ADwAPQA+AD8AQABBAEIAQwBEAEUARgBHAEgASQBKAEsATABNAE4ATwBQAFEAUgBTAFQAVQBWAFcAWABZAFoAWwBcAF0AXgBfAGAAYQEEAIQAhQCWAI4BBQCNAK0AyQDHAK4AYgBjAJAAZADLAGUAyADKAM8AzADNAM4A6QBmANMA0ADRAK8AZwCRANYA1ADVAGgA6wDtAIkAagBpAGsAbQBsAG4AoABvAHEAcAByAHMAdQB0AHYAdwDqAHgAegB5AHsAfQB8AKEAfwB+AIAAgQDsAO4AugDXALAAsQC7AKYA2ADdANkBBgEHAQgBCQEKAQsBDAENAQ4BDwEQAREBEgETALIAswC2ALcAtAC1AKsBFAC8ARUBFgEXARgBGQEaARsBHAEdAR4BHwEgASEBIgEjBmdseXBoMQd1bmkwMDBEB3VuaTAwQTAHdW5pMDBBRAd1bmkyMDAwB3VuaTIwMDEHdW5pMjAwMgd1bmkyMDAzB3VuaTIwMDQHdW5pMjAwNQd1bmkyMDA2B3VuaTIwMDcHdW5pMjAwOAd1bmkyMDA5B3VuaTIwMEEHdW5pMjAxMAd1bmkyMDExCmZpZ3VyZWRhc2gHdW5pMjAyRgd1bmkyMDVGBEV1cm8HdW5pMjVGQwhnbHlwaDE4MwhnbHlwaDE4NAhnbHlwaDE4NQhnbHlwaDE4NghnbHlwaDE4NwhnbHlwaDE4OAhnbHlwaDE4OQtkb2xsYXIucG51bQ1zdGVybGluZy5wbnVtDHNpeC5vbGRzdHlsZQ5laWdodC5vbGRzdHlsZQl6ZXJvLmRub20AALEJA0FTAsgCxgA4AB8CxwLGADgAHwLdADgC2gBVAtkAOALXAFUC2AA4AtcAVQLWADgC1QBVAtQAOALTAFUC0gA4AtEAVQK/ADgCvgBVAr0AOAK8AFUABALbADQC2wBUAtsAAwA0AtsAVALbAGQC2wCkAtsA1ALbAAUAawLVAAEACwLRAAEAFALCAEQCwgBkAsIAdALCAJQCwgAFAKQCvgABAKQCvAABACAChLQJGAFKILgCg7QJGAFKILgCgrQJGAFKILgCgbQJGAFKILgCgLQJGAFKILgCf7QJGAFKILgCfrQJGAFKILgCfbQJGAFKILgCfLQJGAFKILgCe7QJGAFKILgCerQJGAFKILgCebQJGAFKILgCeLQJGAFKILgCd7QJGAFKILgCdrQJGAFKILgCdbQJGAFKILgCdLQJGAFKILgCc7QJGAFKILgCcbQJGAFKILgCcLQJGAFKILgCb7QJGAFKILgCbrQJGAFKILgCbbQJGAFKILgCbLQJGAFKILgCa7QJGAFKILgCarQJGAFKILgCabQJGAFKILgCaLQJGAFKILgCZ7QJGAFKILgCZrQJGAFKILgCZbQJGAFKILgCZLQJGAFKILgCY7QJGAFKILgCYrQJGAFKILgCYbQJGAFKILgCYLQJGAFKILgCX7QJGAFKILgCXrQJGAFKILgCXbQJGAFKILgCXLQJGAFKILgCW7QJGAFKILgCWrQJGAFKILgCWbQJGAFKILgCWLQJGAFKILgCV7QJGAFKILgCVrQJGAFKILgCVbQJGAFKILgCVLQJGAFKILgCU7QJGAFKILgCUrQJGAFKILgCUbQJGAFKILgCULQJGAFKILgCT7QJGAFKILgCTrQJGAFKILgCTbQJGAFKILgCTLQJGAFKILgCS7QJGAFKILgCSrQJGAFKILgCSbQJGAFKILgCSLQJGAFKILgCR7QJGAFKILgCRrQJGAFKILgCRbQJGAFKILgCRLQJGAFKILgCQ7QJGAFKILgCQrQJGAFKILgCQbQJGAFKILgCQLQJGAFKILgCP7QJGAFKILgCPrQJGAFKILgCPbQJGAFKILgCPLQJGAFKILgCO7QJGAFKILgCOrQJGAFKILgCObQJGAFKILgCOLQJGAFKILgCN7QJGAFKILgCNrQJGAFKILgCNbQJGAFKILgCNLQJGAFKILgCM7QJGAFKILgCMrQJGAFKILgCMbQJGAFKILgCMLQJGAFKILgCL7QJGAFKILgCLrQJGAFKILgCLbQJGAFKILgCLLQJGAFKILgCK7QJGAFKILgCKrQJGAFKILgCKbQJGAFKILgCKLQJGAFKILgCJ7QJGAFKILgCJrQJGAFKILgCJbQJGAFKILgCJLQJGAFKILgCI7QJGAFKILgCIrQJGAFKILgCIbQJGAFKILgCILQJGAFKILgCH7QJGAFKILgCHrQJGAFKILgCHbQJGAFKILgCHLQJGAFKILgCG7QJGAFKILgCGrQJGAFKILgCGbQJGAFKILgCGLQJGAFKILgCF7QJGAFKILgCFrQJGAFKILgCFbQJGAFKILgCFLQJGAFKILgCE7QJGAFKILgCErQJGAFKILgCEbQJGAFKILgCELQJGAFKILgCD7QJGAFKILgCDrQJGAFKILgCDbQJGAFKILgCDLQJGAFKILgCC7QJGAFKILgCCrQJGAFKILgCCbQJGAFKILgCCLQJGAFKILgCB7QJGAFKILgCBrQJGAFKILgCBbQJGAFKILgCBLQJGAFKILgCA7QJGAFKILgCArQJGAFKILgCAbQJGAFKILgCALQJGAFKILgB/7QJGAFKILgB/rQJGAFKILgB/bQJGAFKILgB/LQJGAFKILgB+7QJGAFKILgB+rQJGAFKILgB+bQJGAFKILgB+LQJGAFKILgB97QJGAFKILgB9rQJGAFKILgB9bQJGAFKILgB9LQJGAFKILgB87QJGAFKILgB8rQJGAFKILgB8bQJGAFKILgB8LQJGAFKILgB77QJGAFKILgB7rQJGAFKILgB7bQJGAFKILgB7LQJGAFKILgB67QJGAFKILgB6rQJGAFKILgB6bQJGAFKILgB6LQJGAFKILgB57QJGAFKILgB5rQJGAFKILgB5bQJGAFKILgB5LQJGAFKILgB47QJGAFKILgB4rQJGAFKILgB4bQJGAFKILgB4LQJGAFKILgB37QJGAFKILgB3rQJGAFKILgB3bQJGAFKILgB3LQJGAFKILgB27QJGAFKILgB2rQJGAFKILgB2bQJGAFKILgB2LQJGAFKILgB17QJGAFKILgB1rQJGAFKILgB1bQJGAFKILgB1LQJGAFKILgB07QJGAFKILgB0rQJGAFKILgB0bQJGAFKILgB0LQJGAFKILgBz7QJGAFKILgBzrQJGAFKILgBzbQJGAFKILgBzLQJGAFKILgBy7QJGAFKILgByrQJGAFKILgBybQJGAFKILgByLQJGAFKILgBx7QJGAFKILgBxrQJGAFKILgBxbQJGAFKILgBxLQJGAFKILgBw7QJGAFKILgBwrQJGAFKILgBwbQJGAFKILgBwLQJGAFKILgBv7QJGAFKILgBvrQJGAFKILgBvbQJGAFKILgBvLQJGAFKILgBu7QJGAFKILgBurQJGAFKILgBubQJGAFKILgBuLQJGAFKILgBt7QJGAFKILgBtrQJGAFKILgBtbQJGAFKILgBtLQJGAFKILgBs7QJGAFKILgBsrQJGAFKILgBsbQJGAFKILgBsLQJGAFKILgBr7QJGAFKILgBrrQJGAFKILgBrbQJGAFKILgBrLQJGAFKILgBq7QJGAFKILgBqrQJGAFKILgBqbQJGAFKILgBqLQJGAFKILgBp7QJGAFKILgBprQJGAFKILgBpbQJGAFKILgBpLQJGAFKILgBo7QJGAFKILgBorQJGAFKILgBobQJGAFKILgBoLQJGAFKILgBn7QJGAFKILgBnrQJGAFKILgBnbQJGAFKILgBnLQJGAFKILgBm7QJGAFKILgBmrQJGAFKILgBmbQJGAFKILgBmLQJGAFKILgBl7QJGAFKILgBlrQJGAFKILgBlbQJGAFKILgBlLQJGAFKILgBk7QJGAFKILgBkrQJGAFKILgBkbQJGAFKILgBkLQJGAFKILgBj7QJGAFKILgBjrQJGAFKILgBjbQJGAFKILgBjLQJGAFKILgBi7QJGAFKILgBirQJGAFKILgBibQJGAFKILgBiLQJGAFKILgBh7QJGAFKILgBhrQJGAFKILgBhbQJGAFKILgBhLQJGAFKILgBg7QJGAFKILgBgrQJGAFKILgBgbQJGAFKILgBgLQJGAFKILgBf7QJGAFKILgBfrQJGAFKILgBfbQJGAFKILgBfLQJGAFKILgBe7QJGAFKILgBerQJGAFKILgBebQJGAFKILgBeLQJGAFKILgBd7QJGAFKILgBdrQJGAFKILgBdbQJGAFKILgBdLQJGAFKILgBc7QJGAFKILgBcrQJGAFKILgBcbQJGAFKILgBcLQJGAFKILgBb7QJGAFKILgBbrQJGAFKILgBbbQJGAFKILgBbLQJGAFKILgBa7QJGAFKILgBarQJGAFKILgBabQJGAFKILgBaLQJGAFKILgBZ7QJGAFKILgBZrQJGAFKILgBZbQJGAFKILgBZLQJGAFKILgBY7QJGAFKILgBYrQJGAFKILgBYbQJGAFKILgBYLQJGAFKILgBX7QJGAFKILgBXrQJGAFKILgBXbQJGAFKILgBXLQJGAFKILgBW7QJGAFKILgBWrQJGAFKILgBWbQJGAFKILgBWLQJ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H004S1VMq0tVSjhIVUmrSFVHOEZVRQM4HwAcEBwgHAMQuP/AQE4cGx5GABsBQjAbQBvgG/AbBAAbsBvAGwMSDxofGgIpDxkBQ08ZAW8ZfxmPGQMPGM8YAkAYKSxGDxfPF98X7xcEE0AXKS5GABYQFiAWAxW4/8CzFk1URrj/wLMWP0RGuP/AsxYxNUa4/8BAHxYjJkYPFQEPFR8VAkXvFQGGAAMBIAEBAAEQASABAwi4/8C0ARUfRgO9AQABAAAFAAEBkABUK0u4CABSS7AIUFuwAYiwJVOwAYiwQFFasAaIsABVWltYsQEBjlmxAQJDVLAUS1FaWLEBAY5ZhY2NAB1CS7AdU1iyA6CgHUJZS7CAU1iyA0BAHUJZS7D/U1iyAwAAHUJZK15zdXMrWEA9ABHgEfARAxW/EM8QAg8PAQ8P/w8CQA8xNUYPDh8OAg8OHw7/DgNADjE3Rg8NHw0CDw0fDf8NAxZADTE3Rrj/wEAnDFBURg8LHwsCVT8LTwsCQAs/Q0ZACy0wRgADASABAQABEAEgAQMIuP/AswEVH0YrXnN1cysrdF5zKytec3Qrc3Qrc3R0XnNZAXVec3QrKysrXnMrXnMrc3R1XnNec15zdV5zK15zACsrKysrKysrKysrKysrKysrKysrKysrKysrKysrK15zdV5zKytec19zc3NzdCsrKysrK15zdCsrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysBKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrK7EAAkNUWEH/AoQAZAKDAGQCggBkAoEAZAKAAGQCfwBkAn4AZAJ9AGQCfABkAnsAZAJ6AGQCeQBkAngAZAJ3AGQCdgBkAnUAZAJ0AGQCcwBkAnEAZAJwAGQCbwBkAm4AZAJtAGQCbABkAmsAZAJqAGQCaQBkAmgAZAJnAGQCZgBkAmUAZAJkAGQCYwBkAmIAZAJhAGQCYABkAl8AZAJeAGQCXQBkAlwAZAJbAGQCWgBkAlkAZAJYAGQCVwBkAlYAZAJVAGQCVABkAlMAZAJSAGQCUQBkAlAAZAJPAGQCTgBkAk0AZAJMAGQCSwBkAkoAZAJJAGQCSABkAkcAZAJGAGQCRQBkAkQAZAJDAGQCQgBkAkEAZAJAAGQCPwBkAj4AZAI9AGQCPABkAjsAZAI6AGQCOQBkAjgAZAI3AGQCNgBkAjUAZAI0AGQCMwBkAjIAZAIxAGQCMABkAi8AZAIuAGQCLQBkAiwAZAIrAGQCKgBkAikAZAIoAGQCJwBkAiYAZAIlAGQCJABkAiMAZAIiAGQCIQBkAiAAZAIfAGQCHgBkAh0AZAIcAGQCGwBkAhoAZAIZAGQCGABkAhcAZAIWAGQCFQBkAhQAZAITAGQCEgBkAhEAZAIQAGQCDwBkAg4AZAINAGQCDABkAgsAZAIKAGQCCQBkAggAZAIHAGQCBgBkAgUAZAIEQf8AZAIDAGQCAgBkAgEAZAIAAGQB/wBkAf4AZAH9AGQB/ABkAfsAZAH6AGQB+QBkAfgAZAH3AGQB9gBkAfUAZAH0AGQB8wBkAfIAZAHxAGQB8ABkAe8AZAHuAGQB7QBkAewAZAHrAGQB6gBkAekAZAHoAGQB5wBkAeYAZAHlAGQB5ABkAeMAZAHiAGQB4QBkAeAAZAHfAGQB3gBkAd0AZAHcAGQB2wBkAdoAZAHZAGQB2ABkAdcAZAHWAGQB1QBkAdQAZAHTAGQB0gBkAdEAZAHQAGQBzwBkAc4AZAHNAGQBzABkAcsAZAHKAGQByQBkAcgAZAHHAGQBxgBkAcUAZAHEAGQBwwBkAcIAZAHBAGQBwABkAb8AZAG+AGQBvQBkAbwAZAG7AGQBugBkAbkAZAG4AGQBtwBkAbYAZAG1AGQBtABkAbMAZAGyAGQBsQBkAbAAZAGvAGQBrgBkAa0AZAGsAGQBqwBkAaoAZAGpAGQBqABkAacAZAGmAGQBpQBkAaQAZAGjAGQBogBkAaEAZAGgAGQBnwBkAZ4AZAGdAGQBnABkAZsAZAGaAGQBmQBkAZgAZAGXAGQBlgBkAZUAZAGUAGQBkwBkAZIAZAGRAGQBkABkAY8AZAGOAGQBjQBkAYwAZAGLAGQBigBkAYkAZAGIAGQBhwBkAYYAZAGFAGRBgAGEAGQBgwBkAYIAZAGBAGQBgABkAX8AZAF+AGQBfQBkAXwAZAF7AGQBegBkAXkAZAF4AGQBdwBkAXYAZAF1AGQBdABkAXMAZAFyAGQBcQBkAXAAZAFvAGQBbgBkAW0AZAFsAGQBawBkAWoAZAFpAGQBaABkAWcAZAFmAGQBZQBkAWQAZAFjAGQBYgBkAWEAZAFgAGQBXwBkAV4AZAFdAGQBXABkAVsAZAFaAGQBWQBkAVgAZAFXAGQBVgBkAVUAZAFUAGQBUwBkAVIAZAFQAGQBTwBkAU4AZAFMAGQBSwBkAUoAZAFJAGQBSABkAUcAZAFGAGQBRQBkAUQAZAFDAGQrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrWSsrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysAc3Nzc3NzdCsrKysrKysrKysYX14A"  # NOQA
+            "AHMAZQAsACAAYQBuAGQALwBvAHIAIABzAGUAbABsACAAYwBvAHAAaQBlAHMAIABvAGYAIAB0AGgAZQAgAEwAYQB5AG8AdQB0ACAATABvAGcAaQBjACAAUwBvAGYAdAB3AGEAcgBlACwAIABhAG4AZAAgAHQAbwAgAHAAZQByAG0AaQB0ACAAcABlAHIAcwBvAG4AcwAgAHQAbwAgAHcAaABvAG0AIAB0AGgAZQAgAEwAYQB5AG8AdQB0ACAATABvAGcAaQBjACAAUwBvAGYAdAB3AGEAcgBlACAAaQBzACAAZgB1AHIAbgBpAHMAaABlAGQAIAB0AG8AIABkAG8AIABzAG8ALAAgAHMAdQBiAGoAZQBjAHQAIAB0AG8AIAB0AGgAZQAgAGYAbwBsAGwAbwB3AGkAbgBnACAAYwBvAG4AZABpAHQAaQBvAG4AcwA6AA0ACgANAAoAVABoAGUAIABhAGIAbwB2AGUAIABjAG8AcAB5AHIAaQBnAGgAdAAgAG4AbwB0AGkAYwBlACAAYQBuAGQAIAB0AGgAaQBzACAAcABlAHIAbQBpAHMAcwBpAG8AbgAgAG4AbwB0AGkAYwBlACAAcwBoAGEAbABsACAAYgBlACAAaQBuAGMAbAB1AGQAZQBkACAAaQBuACAAYQBsAGwAIABjAG8AcABpAGUAcwAgAG8AcgAgAHMAdQBiAHMAdABhAG4AdABpAGEAbAAgAHAAbwByAHQAaQBvAG4AcwAgAG8AZgAgAHQAaABlACAATABhAHkAbwB1AHQAIABMAG8AZwBpAGMAIABTAG8AZgB0AHcAYQByAGUALgANAAoADQAKAFQASABFACAAUwBPAEYAVABXAEEAUgBFACAASQBTACAAUABSAE8AVgBJAEQARQBEACAAJwBBAFMAIABJAFMAJwAsACAAVwBJAFQASABPAFUAVAAgAFcAQQBSAFIAQQBOAFQAWQAgAE8ARgAgAEEATgBZACAASwBJAE4ARAAsACAARQBYAFAAUgBFAFMAUwAgAE8AUgAgAEkATQBQAEwASQBFAEQALAAgAEkATgBDAEwAVQBEAEkATgBHACAAQgBVAFQAIABOAE8AVAAgAEwASQBNAEkAVABFAEQAIABUAE8AIABUAEgARQAgAFcAQQBSAFIAQQBOAFQASQBFAFMAIABPAEYAIABNAEUAUgBDAEgAQQBOAFQAQQBCAEkATABJAFQAWQAsACAARgBJAFQATgBFAFMAUwAgAEYATwBSACAAQQAgAFAAQQBSAFQASQBDAFUATABBAFIAIABQAFUAUgBQAE8AUwBFACAAQQBOAEQAIABOAE8ATgBJAE4ARgBSAEkATgBHAEUATQBFAE4AVAAuACAASQBOACAATgBPACAARQBWAEUATgBUACAAUwBIAEEATABMACAAVABIAEUAIABBAFUAVABIAE8AUgBTACAATwBSACAAQwBPAFAAWQBSAEkARwBIAFQAIABIAE8ATABEAEUAUgBTACAAQgBFACAATABJAEEAQgBMAEUAIABGAE8AUgAgAEEATgBZACAAQwBMAEEASQBNACwAIABEAEEATQBBAEcARQBTACAATwBSACAATwBUAEgARQBSACAATABJAEEAQgBJAEwASQBUAFkALAAgAFcASABFAFQASABFAFIAIABJAE4AIABBAE4AIABBAEMAVABJAE8ATgAgAE8ARgAgAEMATwBOAFQAUgBBAEMAVAAsACAAVABPAFIAVAAgAE8AUgAgAE8AVABIAEUAUgBXAEkAUwBFACwAIABBAFIASQBTAEkATgBHACAARgBSAE8ATQAsACAATwBVAFQAIABPAEYAIABPAFIAIABJAE4AIABDAE8ATgBOAEUAQwBUAEkATwBOACAAVwBJAFQASAAgAFQASABFACAAUwBPAEYAVABXAEEAUgBFACAATwBSACAAVABIAEUAIABVAFMARQAgAE8AUgAgAE8AVABIAEUAUgAgAEQARQBBAEwASQBOAEcAUwAgAEkATgAgAFQASABFACAAUwBPAEYAVABXAEEAUgBFAC4ADQAKAGgAdAB0AHAAOgAvAC8AdwB3AHcALgBtAGkAYwByAG8AcwBvAGYAdAAuAGMAbwBtAC8AdAB5AHAAbwBnAHIAYQBwAGgAeQAvAGYAbwBuAHQAcwAvAGQAZQBmAGEAdQBsAHQALgBhAHMAcAB4AFcAZQBiAGYAbwBuAHQAIAAxAC4AMABTAHUAbgAgAFMAZQBwACAAMQA3ACAAMAA4ADoAMQA3ADoAMgA4ACAAMgAwADIAMwBrAGUAZQBwAGwAZQBvAEYAbwBuAHQAIABTAHEAdQBpAHIAcgBlAGwAAgAAAAAAAP8YAIYAAAAAAAAAAAAAAAAAAAAAAAAAAADVAAABAgEDAAMABAAFAAYABwAIAAkACgALAAwADQAOAA8AEAARABIAEwAUABUAFgAXABgAGQAaABsAHAAdAB4AHwAgACEAIgAjACQAJQAmACcAKAApACoAKwAsAC0ALgAvADAAMQAyADMANAA1ADYANwA4ADkAOgA7ADwAPQA+AD8AQABBAEIAQwBEAEUARgBHAEgASQBKAEsATABNAE4ATwBQAFEAUgBTAFQAVQBWAFcAWABZAFoAWwBcAF0AXgBfAGAAYQEEAIQAhQCWAI4BBQCNAK0AyQDHAK4AYgBjAJAAZADLAGUAyADKAM8AzADNAM4A6QBmANMA0ADRAK8AZwCRANYA1ADVAGgA6wDtAIkAagBpAGsAbQBsAG4AoABvAHEAcAByAHMAdQB0AHYAdwDqAHgAegB5AHsAfQB8AKEAfwB+AIAAgQDsAO4AugDXALAAsQC7AKYA2ADdANkBBgEHAQgBCQEKAQsBDAENAQ4BDwEQAREBEgETALIAswC2ALcAtAC1AKsBFAC8ARUBFgEXARgBGQEaARsBHAEdAR4BHwEgASEBIgEjBmdseXBoMQd1bmkwMDBEB3VuaTAwQTAHdW5pMDBBRAd1bmkyMDAwB3VuaTIwMDEHdW5pMjAwMgd1bmkyMDAzB3VuaTIwMDQHdW5pMjAwNQd1bmkyMDA2B3VuaTIwMDcHdW5pMjAwOAd1bmkyMDA5B3VuaTIwMEEHdW5pMjAxMAd1bmkyMDExCmZpZ3VyZWRhc2gHdW5pMjAyRgd1bmkyMDVGBEV1cm8HdW5pMjVGQwhnbHlwaDE4MwhnbHlwaDE4NAhnbHlwaDE4NQhnbHlwaDE4NghnbHlwaDE4NwhnbHlwaDE4OAhnbHlwaDE4OQtkb2xsYXIucG51bQ1zdGVybGluZy5wbnVtDHNpeC5vbGRzdHlsZQ5laWdodC5vbGRzdHlsZQl6ZXJvLmRub20AALEJA0FTAsgCxgA4AB8CxwLGADgAHwLdADgC2gBVAtkAOALXAFUC2AA4AtcAVQLWADgC1QBVAtQAOALTAFUC0gA4AtEAVQK/ADgCvgBVAr0AOAK8AFUABALbADQC2wBUAtsAAwA0AtsAVALbAGQC2wCkAtsA1ALbAAUAawLVAAEACwLRAAEAFALCAEQCwgBkAsIAdALCAJQCwgAFAKQCvgABAKQCvAABACAChLQJGAFKILgCg7QJGAFKILgCgrQJGAFKILgCgbQJGAFKILgCgLQJGAFKILgCf7QJGAFKILgCfrQJGAFKILgCfbQJGAFKILgCfLQJGAFKILgCe7QJGAFKILgCerQJGAFKILgCebQJGAFKILgCeLQJGAFKILgCd7QJGAFKILgCdrQJGAFKILgCdbQJGAFKILgCdLQJGAFKILgCc7QJGAFKILgCcbQJGAFKILgCcLQJGAFKILgCb7QJGAFKILgCbrQJGAFKILgCbbQJGAFKILgCbLQJGAFKILgCa7QJGAFKILgCarQJGAFKILgCabQJGAFKILgCaLQJGAFKILgCZ7QJGAFKILgCZrQJGAFKILgCZbQJGAFKILgCZLQJGAFKILgCY7QJGAFKILgCYrQJGAFKILgCYbQJGAFKILgCYLQJGAFKILgCX7QJGAFKILgCXrQJGAFKILgCXbQJGAFKILgCXLQJGAFKILgCW7QJGAFKILgCWrQJGAFKILgCWbQJGAFKILgCWLQJGAFKILgCV7QJGAFKILgCVrQJGAFKILgCVbQJGAFKILgCVLQJGAFKILgCU7QJGAFKILgCUrQJGAFKILgCUbQJGAFKILgCULQJGAFKILgCT7QJGAFKILgCTrQJGAFKILgCTbQJGAFKILgCTLQJGAFKILgCS7QJGAFKILgCSrQJGAFKILgCSbQJGAFKILgCSLQJGAFKILgCR7QJGAFKILgCRrQJGAFKILgCRbQJGAFKILgCRLQJGAFKILgCQ7QJGAFKILgCQrQJGAFKILgCQbQJGAFKILgCQLQJGAFKILgCP7QJGAFKILgCPrQJGAFKILgCPbQJGAFKILgCPLQJGAFKILgCO7QJGAFKILgCOrQJGAFKILgCObQJGAFKILgCOLQJGAFKILgCN7QJGAFKILgCNrQJGAFKILgCNbQJGAFKILgCNLQJGAFKILgCM7QJGAFKILgCMrQJGAFKILgCMbQJGAFKILgCMLQJGAFKILgCL7QJGAFKILgCLrQJGAFKILgCLbQJGAFKILgCLLQJGAFKILgCK7QJGAFKILgCKrQJGAFKILgCKbQJGAFKILgCKLQJGAFKILgCJ7QJGAFKILgCJrQJGAFKILgCJbQJGAFKILgCJLQJGAFKILgCI7QJGAFKILgCIrQJGAFKILgCIbQJGAFKILgCILQJGAFKILgCH7QJGAFKILgCHrQJGAFKILgCHbQJGAFKILgCHLQJGAFKILgCG7QJGAFKILgCGrQJGAFKILgCGbQJGAFKILgCGLQJGAFKILgCF7QJGAFKILgCFrQJGAFKILgCFbQJGAFKILgCFLQJGAFKILgCE7QJGAFKILgCErQJGAFKILgCEbQJGAFKILgCELQJGAFKILgCD7QJGAFKILgCDrQJGAFKILgCDbQJGAFKILgCDLQJGAFKILgCC7QJGAFKILgCCrQJGAFKILgCCbQJGAFKILgCCLQJGAFKILgCB7QJGAFKILgCBrQJGAFKILgCBbQJGAFKILgCBLQJGAFKILgCA7QJGAFKILgCArQJGAFKILgCAbQJGAFKILgCALQJGAFKILgB/7QJGAFKILgB/rQJGAFKILgB/bQJGAFKILgB/LQJGAFKILgB+7QJGAFKILgB+rQJGAFKILgB+bQJGAFKILgB+LQJGAFKILgB97QJGAFKILgB9rQJGAFKILgB9bQJGAFKILgB9LQJGAFKILgB87QJGAFKILgB8rQJGAFKILgB8bQJGAFKILgB8LQJGAFKILgB77QJGAFKILgB7rQJGAFKILgB7bQJGAFKILgB7LQJGAFKILgB67QJGAFKILgB6rQJGAFKILgB6bQJGAFKILgB6LQJGAFKILgB57QJGAFKILgB5rQJGAFKILgB5bQJGAFKILgB5LQJGAFKILgB47QJGAFKILgB4rQJGAFKILgB4bQJGAFKILgB4LQJGAFKILgB37QJGAFKILgB3rQJGAFKILgB3bQJGAFKILgB3LQJGAFKILgB27QJGAFKILgB2rQJGAFKILgB2bQJGAFKILgB2LQJGAFKILgB17QJGAFKILgB1rQJGAFKILgB1bQJGAFKILgB1LQJGAFKILgB07QJGAFKILgB0rQJGAFKILgB0bQJGAFKILgB0LQJGAFKILgBz7QJGAFKILgBzrQJGAFKILgBzbQJGAFKILgBzLQJGAFKILgBy7QJGAFKILgByrQJGAFKILgBybQJGAFKILgByLQJGAFKILgBx7QJGAFKILgBxrQJGAFKILgBxbQJGAFKILgBxLQJGAFKILgBw7QJGAFKILgBwrQJGAFKILgBwbQJGAFKILgBwLQJGAFKILgBv7QJGAFKILgBvrQJGAFKILgBvbQJGAFKILgBvLQJGAFKILgBu7QJGAFKILgBurQJGAFKILgBubQJGAFKILgBuLQJGAFKILgBt7QJGAFKILgBtrQJGAFKILgBtbQJGAFKILgBtLQJGAFKILgBs7QJGAFKILgBsrQJGAFKILgBsbQJGAFKILgBsLQJGAFKILgBr7QJGAFKILgBrrQJGAFKILgBrbQJGAFKILgBrLQJGAFKILgBq7QJGAFKILgBqrQJGAFKILgBqbQJGAFKILgBqLQJGAFKILgBp7QJGAFKILgBprQJGAFKILgBpbQJGAFKILgBpLQJGAFKILgBo7QJGAFKILgBorQJGAFKILgBobQJGAFKILgBoLQJGAFKILgBn7QJGAFKILgBnrQJGAFKILgBnbQJGAFKILgBnLQJGAFKILgBm7QJGAFKILgBmrQJGAFKILgBmbQJGAFKILgBmLQJGAFKILgBl7QJGAFKILgBlrQJGAFKILgBlbQJGAFKILgBlLQJGAFKILgBk7QJGAFKILgBkrQJGAFKILgBkbQJGAFKILgBkLQJGAFKILgBj7QJGAFKILgBjrQJGAFKILgBjbQJGAFKILgBjLQJGAFKILgBi7QJGAFKILgBirQJGAFKILgBibQJGAFKILgBiLQJGAFKILgBh7QJGAFKILgBhrQJGAFKILgBhbQJGAFKILgBhLQJGAFKILgBg7QJGAFKILgBgrQJGAFKILgBgbQJGAFKILgBgLQJGAFKILgBf7QJGAFKILgBfrQJGAFKILgBfbQJGAFKILgBfLQJGAFKILgBe7QJGAFKILgBerQJGAFKILgBebQJGAFKILgBeLQJGAFKILgBd7QJGAFKILgBdrQJGAFKILgBdbQJGAFKILgBdLQJGAFKILgBc7QJGAFKILgBcrQJGAFKILgBcbQJGAFKILgBcLQJGAFKILgBb7QJGAFKILgBbrQJGAFKILgBbbQJGAFKILgBbLQJGAFKILgBa7QJGAFKILgBarQJGAFKILgBabQJGAFKILgBaLQJGAFKILgBZ7QJGAFKILgBZrQJGAFKILgBZbQJGAFKILgBZLQJGAFKILgBY7QJGAFKILgBYrQJGAFKILgBYbQJGAFKILgBYLQJGAFKILgBX7QJGAFKILgBXrQJGAFKILgBXbQJGAFKILgBXLQJGAFKILgBW7QJGAFKILgBWrQJGAFKILgBWbQJGAFKILgBWLQJ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H004S1VMq0tVSjhIVUmrSFVHOEZVRQM4HwAcEBwgHAMQuP/AQE4cGx5GABsBQjAbQBvgG/AbBAAbsBvAGwMSDxofGgIpDxkBQ08ZAW8ZfxmPGQMPGM8YAkAYKSxGDxfPF98X7xcEE0AXKS5GABYQFiAWAxW4/8CzFk1URrj/wLMWP0RGuP/AsxYxNUa4/8BAHxYjJkYPFQEPFR8VAkXvFQGGAAMBIAEBAAEQASABAwi4/8C0ARUfRgO9AQABAAAFAAEBkABUK0u4CABSS7AIUFuwAYiwJVOwAYiwQFFasAaIsABVWltYsQEBjlmxAQJDVLAUS1FaWLEBAY5ZhY2NAB1CS7AdU1iyA6CgHUJZS7CAU1iyA0BAHUJZS7D/U1iyAwAAHUJZK15zdXMrWEA9ABHgEfARAxW/EM8QAg8PAQ8P/w8CQA8xNUYPDh8OAg8OHw7/DgNADjE3Rg8NHw0CDw0fDf8NAxZADTE3Rrj/wEAnDFBURg8LHwsCVT8LTwsCQAs/Q0ZACy0wRgADASABAQABEAEgAQMIuP/AswEVH0YrXnN1cysrdF5zKytec3Qrc3Qrc3R0XnNZAXVec3QrKysrXnMrXnMrc3R1XnNec15zdV5zK15zACsrKysrKysrKysrKysrKysrKysrKysrKysrKysrK15zdV5zKytec19zc3NzdCsrKysrK15zdCsrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysBKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrK7EAAkNUWEH/AoQAZAKDAGQCggBkAoEAZAKAAGQCfwBkAn4AZAJ9AGQCfABkAnsAZAJ6AGQCeQBkAngAZAJ3AGQCdgBkAnUAZAJ0AGQCcwBkAnEAZAJwAGQCbwBkAm4AZAJtAGQCbABkAmsAZAJqAGQCaQBkAmgAZAJnAGQCZgBkAmUAZAJkAGQCYwBkAmIAZAJhAGQCYABkAl8AZAJeAGQCXQBkAlwAZAJbAGQCWgBkAlkAZAJYAGQCVwBkAlYAZAJVAGQCVABkAlMAZAJSAGQCUQBkAlAAZAJPAGQCTgBkAk0AZAJMAGQCSwBkAkoAZAJJAGQCSABkAkcAZAJGAGQCRQBkAkQAZAJDAGQCQgBkAkEAZAJAAGQCPwBkAj4AZAI9AGQCPABkAjsAZAI6AGQCOQBkAjgAZAI3AGQCNgBkAjUAZAI0AGQCMwBkAjIAZAIxAGQCMABkAi8AZAIuAGQCLQBkAiwAZAIrAGQCKgBkAikAZAIoAGQCJwBkAiYAZAIlAGQCJABkAiMAZAIiAGQCIQBkAiAAZAIfAGQCHgBkAh0AZAIcAGQCGwBkAhoAZAIZAGQCGABkAhcAZAIWAGQCFQBkAhQAZAITAGQCEgBkAhEAZAIQAGQCDwBkAg4AZAINAGQCDABkAgsAZAIKAGQCCQBkAggAZAIHAGQCBgBkAgUAZAIEQf8AZAIDAGQCAgBkAgEAZAIAAGQB/wBkAf4AZAH9AGQB/ABkAfsAZAH6AGQB+QBkAfgAZAH3AGQB9gBkAfUAZAH0AGQB8wBkAfIAZAHxAGQB8ABkAe8AZAHuAGQB7QBkAewAZAHrAGQB6gBkAekAZAHoAGQB5wBkAeYAZAHlAGQB5ABkAeMAZAHiAGQB4QBkAeAAZAHfAGQB3gBkAd0AZAHcAGQB2wBkAdoAZAHZAGQB2ABkAdcAZAHWAGQB1QBkAdQAZAHTAGQB0gBkAdEAZAHQAGQBzwBkAc4AZAHNAGQBzABkAcsAZAHKAGQByQBkAcgAZAHHAGQBxgBkAcUAZAHEAGQBwwBkAcIAZAHBAGQBwABkAb8AZAG+AGQBvQBkAbwAZAG7AGQBugBkAbkAZAG4AGQBtwBkAbYAZAG1AGQBtABkAbMAZAGyAGQBsQBkAbAAZAGvAGQBrgBkAa0AZAGsAGQBqwBkAaoAZAGpAGQBqABkAacAZAGmAGQBpQBkAaQAZAGjAGQBogBkAaEAZAGgAGQBnwBkAZ4AZAGdAGQBnABkAZsAZAGaAGQBmQBkAZgAZAGXAGQBlgBkAZUAZAGUAGQBkwBkAZIAZAGRAGQBkABkAY8AZAGOAGQBjQBkAYwAZAGLAGQBigBkAYkAZAGIAGQBhwBkAYYAZAGFAGRBgAGEAGQBgwBkAYIAZAGBAGQBgABkAX8AZAF+AGQBfQBkAXwAZAF7AGQBegBkAXkAZAF4AGQBdwBkAXYAZAF1AGQBdABkAXMAZAFyAGQBcQBkAXAAZAFvAGQBbgBkAW0AZAFsAGQBawBkAWoAZAFpAGQBaABkAWcAZAFmAGQBZQBkAWQAZAFjAGQBYgBkAWEAZAFgAGQBXwBkAV4AZAFdAGQBXABkAVsAZAFaAGQBWQBkAVgAZAFXAGQBVgBkAVUAZAFUAGQBUwBkAVIAZAFQAGQBTwBkAU4AZAFMAGQBSwBkAUoAZAFJAGQBSABkAUcAZAFGAGQBRQBkAUQAZAFDAGQrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrWSsrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysrKysAc3Nzc3NzdCsrKysrKysrKysYX14A"
+        # NOQA
         )
         # this is calibri
 
@@ -29014,18 +27168,15 @@ def getfont(fontname, fontsize):
                 else:
                     #  refer to https://github.com/python-pillow/Pillow/issues/3730 for explanation (in order to load >= 500 fonts)
                     with open(filename, "rb") as f:
-                        result = ImageFont.truetype(
-                            font=io.BytesIO(f.read()), size=int(fontsize)
-                        )
+                        result = ImageFont.truetype(font=io.BytesIO(f.read()), size=int(fontsize))
                 break
             except Exception:
                 raise
 
     if result is None:
         if Pythonista:
-            result = ImageFont.truetype(
-                "Arial", size=int(fontsize)
-            )  # fallback to arial, because Pythonista does not support file handles in ImageFont
+            result = ImageFont.truetype("Arial", size=int(
+                fontsize))  # fallback to arial, because Pythonista does not support file handles in ImageFont
         else:
             result = fallback_font(normalize(fontlist[0]), size=int(fontsize))
 
@@ -29070,22 +27221,7 @@ def arrow_polygon(size: float) -> Tuple:
         length of the arrow
     """
     size /= 4
-    return (
-        -2 * size,
-        -size,
-        0,
-        -size,
-        0,
-        -2 * size,
-        2 * size,
-        0,
-        0,
-        2 * size,
-        0,
-        size,
-        -2 * size,
-        size,
-    )
+    return (-2 * size, -size, 0, -size, 0, -2 * size, 2 * size, 0, 0, 2 * size, 0, size, -2 * size, size)
 
 
 def centered_rectangle(width: float, height: float) -> Tuple:
@@ -29103,9 +27239,7 @@ def centered_rectangle(width: float, height: float) -> Tuple:
     return -width / 2, -height / 2, width / 2, height / 2
 
 
-def regular_polygon(
-    radius: float = 1, number_of_sides: int = 3, initial_angle: float = 0
-) -> List:
+def regular_polygon(radius: float = 1, number_of_sides: int = 3, initial_angle: float = 0) -> List:
     """
     creates a polygon tuple with a regular polygon (within a circle) for use with sim.Animate
 
@@ -29186,9 +27320,7 @@ def can_animate(try_only: bool = True) -> bool:
     except ImportError:
         if try_only:
             return False
-        raise ImportError(
-            "PIL is required for animation. Install with pip install Pillow or see salabim manual"
-        )
+        raise ImportError("PIL is required for animation. Install with pip install Pillow or see salabim manual")
 
     g.dummy_image = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
 
@@ -29197,9 +27329,7 @@ def can_animate(try_only: bool = True) -> bool:
             if not g.tkinter_loaded:
                 if try_only:
                     return False
-                raise ImportError(
-                    "PyDroid animation requires that the main program imports tkinter"
-                )
+                raise ImportError("PyDroid animation requires that the main program imports tkinter")
         try:
             import tkinter
             import tkinter.font
@@ -29240,19 +27370,25 @@ def can_animate3d(try_only: bool = True) -> bool:
             import OpenGL.GL as gl
             import OpenGL.GLU as glu
             import OpenGL.GLUT as glut
+            import OpenGL
         except ImportError:
             if try_only:
                 return False
             else:
                 raise ImportError(
-                    "OpenGL is required for animation3d. Install with pip install PyOpenGL or see salabim manual"
-                )
+                    "OpenGL is required for animation3d. Install with pip install PyOpenGL or see salabim manual")
+        try:
+            glut.glutInit()
+        except OpenGL.error.NullFunctionError:
+            raise ImportError(
+                "Installed OpenGL does not support glut. Try 'pip install OpenGL-glut' or see the salabim documentation")
+
         return True
     else:
         if try_only:
             return False
         else:
-            raise ImportError("cannot even animate, let alone animate3d")
+            raise ImportError("cannot animate, let alone animate3d")
 
 
 def can_video(try_only: bool = True) -> bool:
@@ -29284,13 +27420,9 @@ def can_video(try_only: bool = True) -> bool:
             if try_only:
                 return False
             if PyPy:
-                raise NotImplementedError(
-                    "video production is not supported under PyPy."
-                )
+                raise NotImplementedError("video production is not supported under PyPy.")
             else:
-                raise ImportError(
-                    "cv2 required for video production. Install with pip install opencv-python"
-                )
+                raise ImportError("cv2 required for video production. Install with pip install opencv-python")
     return True
 
 
@@ -29371,17 +27503,14 @@ class ImageContainer:
                         from pillow_heif import register_heif_opener  # type: ignore
                     except ImportError:
                         raise ImportError(
-                            "pillow_heif is required for reading .heic files. Install with pip install pillow_heif"
-                        )
+                            "pillow_heif is required for reading .heic files. Install with pip install pillow_heif")
                     register_heif_opener()
                 if spec.count("//") == 1 and spec.count("///") == 0:
                     try:
                         im = Image.open(spec)  # try a file with one //
                     except Exception:
                         try:
-                            im = Image.open(
-                                io.BytesIO(urllib.request.urlopen(spec).read())
-                            )
+                            im = Image.open(io.BytesIO(urllib.request.urlopen(spec).read()))
                         except Exception as e:
                             raise FileNotFoundError(f"could not open URL {spec}: {e}")
                 else:
@@ -29425,9 +27554,7 @@ class ImageContainer:
                     break
             self._duration = end_time
 
-            self.images[-1].end_time = (
-                inf  # so we can't accidently have a problem at the end
-            )
+            self.images[-1].end_time = inf  # so we can't accidently have a problem at the end
 
     def duration(self):
         return self._duration
@@ -29442,9 +27569,7 @@ class ImageContainer:
             t_to = self._duration
 
         if not (0 <= t_from < t_to):
-            raise ValueError(
-                f"animation_from={t_from} not with 0 and animation_to={t_to}"
-            )
+            raise ValueError(f"animation_from={t_from} not with 0 and animation_to={t_to}")
         if t_to > self._duration:
             raise ValueError(f"animation_to={t_to} > duration={self._duration}")
         if pingpong:
@@ -29607,9 +27732,7 @@ def _set_env(env):
 
     if env is None:
         if g.default_env is None:
-            raise ValueError(
-                "no default environment. Did yout forget to call sim.Environment()?"
-            )
+            raise ValueError("no default environment. Did yout forget to call sim.Environment()?")
         return g.default_env
     return env
 
@@ -29619,19 +27742,12 @@ App = Environment
 
 def set_environment_aliases():
     cwd_parts = Path.cwd().parts
-    if (
-        len(cwd_parts) >= 2
-        and cwd_parts[-2] == "salabim"
-        and cwd_parts[-1] in ("manual", "manual_yield")
-    ):
+    if len(cwd_parts) >= 2 and cwd_parts[-2] == "salabim" and cwd_parts[-1] in ("manual", "manual_yield"):
         return  # do not set when using Sphinx build!
 
     for name, obj in list(globals().items()):
-        if (
-            (not name.startswith("_") or name in ("_Trajectory", "_Distribution"))
-            and name != "yieldless"
-            and name != "Environment"
-        ):
+        if (not name.startswith("_") or name in (
+        "_Trajectory", "_Distribution")) and name != "yieldless" and name != "Environment":
             if inspect.isclass(obj) and obj.__module__ == Environment.__module__:
                 if issubclass(obj, Exception):
                     exec(f"Environment.{name}={name}")
@@ -29643,9 +27759,7 @@ def set_environment_aliases():
                     if sig is not None and "env" in sig.parameters:
                         sig1 = "self," + ",".join(map(str, sig.parameters.values()))
                         sig2 = ",".join(
-                            str(v) if str(v.kind).startswith("VAR") else k
-                            for k, v in sig.parameters.items()
-                        )
+                            str(v) if str(v.kind).startswith("VAR") else k for k, v in sig.parameters.items())
                         s = f"""\
 def {name}({sig1}):
     if env is None:
@@ -29727,20 +27841,6 @@ def captured_stdout_as_list(column_name: str = None) -> list:
     return captured_stdout_as_str().splitlines()
 
 
-def set_projection_dot_view_matrix():
-    # modelview_matrix = numpy.array(
-    #     gl.glGetDoublev(gl.GL_MODELVIEW_MATRIX), dtype=numpy.float64
-    # ).T
-    # view_matrix equals to I
-    projection_matrix = numpy.array(
-        gl.glGetDoublev(gl.GL_PROJECTION_MATRIX), dtype=numpy.float64
-    ).T
-    global Projection_dot_view_matrix
-    Projection_dot_view_matrix = numpy.array(
-        gl.glGetDoublev(gl.GL_PROJECTION_MATRIX), dtype=numpy.float64
-    ).T
-
-
 class capture_stdout:
     """
     specifies how to capture stdout
@@ -29807,12 +27907,7 @@ class redirect_stdout:
     If file is a file handle, the file will not be closed.
     """
 
-    def __init__(
-        self,
-        file: Union[str, Path, "file"] = None,
-        mode: str = None,
-        include_print: bool = True,
-    ):
+    def __init__(self, file: Union[str, Path, "file"] = None, mode: str = None, include_print: bool = True):
         self.stdout = sys.stdout
         self.include_print = include_print
         if isinstance(file, (str, bytes, Path)):
@@ -29829,7 +27924,8 @@ class redirect_stdout:
         self.mode = mode
         sys.stdout = self
 
-    def __enter__(self): ...
+    def __enter__(self):
+        ...
 
     def close(self):
         self.flush()
